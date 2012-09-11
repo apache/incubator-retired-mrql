@@ -1,0 +1,29 @@
+MRQL: an Optimization Framework for Map-Reduce Queries
+
+MRQL (the Map-Reduce Query Language) is an SQL-like query language for
+large-scale, distributed data analysis. MRQL is powerful enough to
+express most common data analysis tasks over many different kinds of
+raw data, including hierarchical data and nested collections, such as
+XML data. It is more powerful than other current languages, such as
+Hive and Pig Latin, since it can operate on more complex data and
+supports more powerful query constructs, thus eliminating the need for
+using explicit map-reduce code.
+
+MRQL can run in two modes: in MR (Map-Reduce) mode using Apache Hadoop
+and in BSP (Bulk Synchronous Parallel) mode using Apache Hama. Both
+modes use Apache's HDFS (the Hadoop Distributed File System) to read
+and write their data.
+
+In MR mode, an MRQL query is translated to a workflow of map-reduce
+jobs, where each job reads its input and writes its output on
+HDFS. This simplifies reliability and fault tolerance but it imposes a
+high overhead to complex MR workflows and graph algorithms, such as
+PageRank, which require repetitive MR jobs. In addition, MR does not
+preserve data in memory between the map and reduce tasks or across
+consecutive MR jobs. This restriction requires to read data at every
+step, even when the data is constant. BSP, on the other hand, does not
+suffer from this restriction, and, under certain circumstances, allows
+complex repetitive algorithms to run entirely in the collective memory
+of a cluster. BSP is a good choice when fault tolerance is less
+important, data (both input and indermediate) can fit in the cluster
+memory, and data processing requires complex/repetitive steps.

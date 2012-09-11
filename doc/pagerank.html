@@ -1,0 +1,50 @@
+<html>
+<head>
+<TITLE>PageRank on MRQL</TITLE>
+</head>
+<BODY BGCOLOR="#FFFFFF" TEXT="#000000">
+<center>
+<H2>PageRank on MRQL</H2>
+</center>
+<p>
+The following instructions assume that you have already installed Hadoop in your cluster
+and you have tested it using some examples.
+The following tests use the PageRank query <a href="pagerank.mrql">queries/pagerank.mrql</a>.
+<p>
+<h3>Run PageRank on a Hadoop MapReduce Cluster</h3>
+
+First, you need to generate a random graph and store it in a HDFS file using the MRQL program
+<a href="RMAT.mrql">queries/RMAT.mrql</a>:
+<pre>
+mrql -dist -C queries/RMAT.mrql 100000 1000000
+</pre>
+This will create a graph with 100K nodes and 1M edges using the RMAT algorithm,
+will remove duplicate edges, and store the graph in HDFS as the sequence file <tt>graph.bin</tt>.
+You can adjust these numbers to fit your cluster.
+Then, run PageRank in map-reduce mode using:
+<pre>
+mrql -dist -C queries/pagerank.mrql
+</pre>
+
+<p>
+<h3>Run PageRank on a Hama Cluster</h3>
+
+To run the same query using Hama, you need to know the number of simultaneous BSP tasks that can run
+in parallel on your Hama cluster without a problem. For example, if you have 16 nodes with 4 cores each,
+you need to set <tt>-bsp_tasks</tt> less than 64, eg 50.
+First, you need to generate a random graph and store it in a HDFS file
+(if you haven't done so for the MapReduce example):
+<pre>
+mrql.bsp -dist -C -bsp_tasks 50 queries/RMAT.mrql 100000 1000000
+</pre>
+This will create a graph with 100K nodes and 1M edges using the RMAT algorithm,
+will remove duplicate edges, and store the graph in HDFS as the sequence file <tt>graph.bin</tt>.
+You can adjust these numbers to fit your cluster.
+Then, run PageRank in BSP mode using:
+<pre>
+mrql.bsp -dist -C -bsp_tasks 50 queries/pagerank.mrql
+</pre>
+<p>
+<hr>
+<p>
+<address>Last modified: 08/22/12 by <a href="http://lambda.uta.edu/">Leonidas Fegaras</a></address></body></html>

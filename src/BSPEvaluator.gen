@@ -1,0 +1,158 @@
+/********************************************************************************
+   Copyright 2011-2012 Leonidas Fegaras, University of Texas at Arlington
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+   File: BSPEvaluator.gen
+   The MRQL BSP plan evaluator on Hama
+   Programmer: Leonidas Fegaras, UTA
+   Date: 10/14/10 - 08/15/12
+
+********************************************************************************/
+
+package hadoop.mrql;
+
+import Gen.*;
+import java.io.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hama.HamaConfiguration;
+
+
+class Evaluator extends Interpreter {
+
+    final static void init ( Configuration conf ) {
+	Config.bsp_mode = true;
+	if (Config.hadoop_mode && Config.local_hadoop_mode) {
+	    conf.set("bsp.master.address","local");
+	    conf.set("mapred.job.tracker","local");
+	    conf.set("hama.zookeeper.quorum","localhost");
+	    conf.set("bsp.local.tasks.maximum","1");
+	    conf.set("fs.default.name","file:///");
+	}
+    }
+
+    final static Configuration new_configuration () {
+	return new HamaConfiguration();
+    }
+
+    public static MR_bool synchronize ( MR_bool mr_exit ) {
+	return BSPPlan.BSPop.synchronize(mr_exit);
+    }
+
+    final static MRData aggregate ( Tree acc_fnc,
+				    Tree zero,
+				    Tree plan,
+				    Environment env ) throws Exception {
+	match plan {
+	case BSP(`n,`superstep,`init_state,`o,...S):
+	    DataSet ds = eval(S.head(),env,"-");
+	    for ( Tree s: S.tail() )
+		ds.merge(eval(s,env,"-"));
+	    return BSPPlan.BSPaggregate(closure(superstep,env),
+					init_state,
+					closure(acc_fnc,env),
+					zero,
+					ds);
+	}
+	throw new Error("Cannot perform the aggregation: "+plan);
+    }
+
+    final static DataSet eval ( final Tree e,
+				final Environment env,
+				final String counter ) {
+	return eval(e,env);
+    }
+
+    // evaluate MRQL BSP physical operators using Hama (returns a DataSet)
+    final static DataSet eval ( final Tree e, final Environment env ) {
+	if (Config.trace_execution) {
+	    tab_count += 3;
+	    System.out.println(tabs(tab_count)+print_query(e));
+	};
+	DataSet res = evalD(e,env);
+	if (Config.trace_execution) 
+	    try {
+		System.out.println(tabs(tab_count)
+				   +"-> "+Plan.collect(res));
+		tab_count -= 3;
+	    } catch (Exception ex) {
+		throw new Error("Cannot collect the operator output: "+e);
+	    };
+	return res;
+    }
+
+    // evaluate MRQL BSP physical operators using Hama (returns a DataSet)
+    final static DataSet evalD ( final Tree e, final Environment env ) {
+	try {
+	    match e {
+	    case BSP(`n,`superstep,`init_state,`o,...S):
+		DataSet ds = eval(S.head(),env);
+		for ( Tree s: S.tail() )
+		    ds.merge(eval(s,env));
+		return BSPPlan.BSP((int)((LongLeaf)n).value(),
+				   closure(superstep,env),
+				   init_state,
+				   o.equals(#<true>),
+				   ds);
+	    case BinarySource(`n,`file,_):
+		return Plan.binarySource((int)((LongLeaf)n).value(),file.stringValue());
+	    case ParsedSource(`n,`parser,`file,...args):
+		Class<? extends Parser> p = DataSource.parserDirectory.get(parser.toString());
+		if (p == null)
+		    throw new Error("Unknown parser: "+parser);
+		return Plan.parsedSource((int)((LongLeaf)n).value(),
+					 p,((MR_string)evalE(file,env)).get(),args);
+	    case Generator(`n,`min,`max,`size):
+		return Plan.generator((int)((LongLeaf)n).value(),
+				      ((MR_long)evalE(min,env)).get(),
+				      ((MR_long)evalE(max,env)).get(),
+				      ((MR_long)evalE(size,env)).get());
+	    case Merge(`x,`y):
+		return Plan.merge(eval(x,env),eval(y,env));
+	    case apply(`f,`arg):
+		if (!f.is_variable())
+		    return ((MR_dataset)evalF(f,env).eval(evalE(arg))).dataset();
+		MRData fnc = variable_lookup(f.toString(),global_env);
+		if (fnc == null)
+		    throw new Error("Unknown function: "+f);
+		MRData t = evalE(arg,env);
+		if (!(t instanceof Tuple))
+		    throw new Error("Expected a tuple in function application: "+t);
+		return ((MR_dataset)((Lambda)fnc).lambda().eval(t)).dataset();
+	    case `v:
+		if (!v.is_variable())
+		    fail;
+		MRData x = variable_lookup(v.toString(),env);
+		if (x != null)
+		    if (x instanceof MR_dataset)
+			return ((MR_dataset)x).dataset();
+		x = variable_lookup(v.toString(),global_env);
+		if (x != null)
+		    if (x instanceof MR_dataset)
+			return ((MR_dataset)x).dataset();
+		throw new Error("Variable "+v+" is not bound");
+	    };
+	    throw new Error("Cannot evaluate the BSP plan: "+e);
+	} catch (Error msg) {
+	    if (!Config.trace)
+		throw new Error(msg.getMessage());
+	    System.err.println(msg.getMessage());
+	    throw new Error("Evaluation error in: "+print_query(e));
+	} catch (Exception ex) {
+	    System.err.println(ex.getMessage());
+	    ex.printStackTrace();
+	    throw new Error("Evaluation error in: "+print_query(e));
+	}
+    }
+}

@@ -1,0 +1,22 @@
+// Kronecker graph generator parameters:
+a = 0.57;
+b = 0.19;
+c = 0.19;
+d = 1-(a+b+c);
+
+function randomEdge ( imin: int, imax: int, jmin: int, jmax: int ): (int,int) {
+   if (imin = imax and jmin = jmax)
+   then (imin,jmin)
+   else let n = random(1000)
+        in if (n as float <= 1000*a)
+           then randomEdge(imin,(imin+imax)/2,jmin,(jmin+jmax)/2)
+           else if (n as float <= 1000*(a+b))
+                then randomEdge((imin+imax)/2,imax,jmin,(jmin+jmax)/2)
+                else if (n as float <= 1000*(a+b+c))
+                     then randomEdge(imin,(imin+imax)/2,(jmin+jmax)/2,jmax)
+                     else randomEdge((imin+imax)/2,imax,(jmin+jmax)/2,jmax)
+};
+
+store "graph.bin"
+ from select distinct randomEdge(0,toInt(args[0]),0,toInt(args[0]))
+        from i in 1...(toLong(args[1]));

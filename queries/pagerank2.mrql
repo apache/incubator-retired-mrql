@@ -1,0 +1,24 @@
+// preprocessing: for each node, group its outgoing links into a bag
+graph = select (key,select x.to from x in n)
+          from n in source(line,"queries/links.txt",",",type(<id:string,to:string>))
+         group by key: n.id;
+
+store graph_size := count(graph);
+
+// damping factor
+factor = 0.85;
+
+select (x.id,x.rank)
+from x in (repeat nodes = select < id: key, rank: 1.0/graph_size as double, adjacent: al >
+                            from (key,al) in graph
+             step select (< id: m.id, rank: n.rank, adjacent: m.adjacent >,
+                          abs((n.rank-m.rank)/m.rank) > 0.1)
+                    from n in (select < id: key,
+                                        rank: (1-factor)/graph_size+factor*sum(select x.rank from x in c) >
+                                 from c in ( select < id: a, rank: n.rank/count(n.adjacent) >
+                                               from n in nodes, a in n.adjacent )
+                                group by key: c.id),
+                         m in nodes
+                   where n.id = m.id
+            limit 10)
+order by x.rank desc;

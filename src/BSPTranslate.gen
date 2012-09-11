@@ -1,0 +1,402 @@
+/********************************************************************************
+   Copyright 2011-2012 Leonidas Fegaras, University of Texas at Arlington
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+   File: BSPTranslate.gen
+   Translate MR plans to BSP physical plans
+   Programmer: Leonidas Fegaras, UTA
+   Date: 06/01/12 - 08/15/12
+
+********************************************************************************/
+
+package hadoop.mrql;
+
+import Gen.*;
+
+
+class BSPTranslate extends Translate {
+    final static int orM = ClassImporter.find_method_number("or",#[bool,bool]);
+    final static int notM = ClassImporter.find_method_number("not",#[bool]);
+    final static int eqM = ClassImporter.find_method_number("eq",#[int,int]);
+    final static int plusM = ClassImporter.find_method_number("plus",#[int,int]);
+    final static int neqM = ClassImporter.find_method_number("neq",#[int,int]);
+    final static int geqM = ClassImporter.find_method_number("geq",#[long,long]);
+    final static int gtM = ClassImporter.find_method_number("gt",#[int,int]);
+    final static int unionM = ClassImporter.find_method_number("union",#[bag(any),bag(any)]);
+    final static int countM = ClassImporter.find_method_number("count",#[bag(any)]);
+    final static int coerceM = ClassImporter.find_method_number("coerce",#[any,int]);
+    final static Trees data_source_operations = #[BinarySource,ParsedSource,Generator];
+
+    private static int source_num = 0;
+
+    public static void reset () {
+	source_num = 0;
+    }
+
+    // add a new source num to every BSP operation
+    public static Tree preprocess ( Tree e ) {
+	match e {
+	case lambda(`v,`b):
+	    return #<lambda(`v,`(preprocess(b)))>;
+	case `f(...as):
+	    if (!data_source_operations.member(#<`f>))
+		fail;
+	    return #<`f(`(source_num++),...as)>;
+	case `f(...as):
+	    Trees bs = #[];
+	    for (Tree a: as)
+		bs = bs.append(preprocess(a));
+	    return #<`f(...bs)>;
+	};
+	return e;
+    }
+
+    // return the source num of a BSP operation
+    private static int source_num ( Tree e ) {
+	match e {
+	case BSP(`i,...):
+	    return (int)((LongLeaf)i).value();
+	case `f(`i,...):
+	    if (!data_source_operations.member(#<`f>))
+		fail;
+	    return (int)((LongLeaf)i).value();
+	};
+	return -1;
+    }
+
+    // optimizations after BSP fusion
+    private static Tree post_simplify ( Tree e ) {
+	match e {
+	case cmap(lambda(`x,`S(`a)),`b):
+	    if (is_collection(S))
+		return post_simplify(#<map(lambda(`x,`a),`b)>);
+	    else fail
+	case `f(...as):
+	    Trees bs = #[];
+	    for (Tree a: as)
+		bs = bs.append(post_simplify(a));
+	    return #<`f(...bs)>;
+	};
+	return e;
+    }
+
+    private static Tree processBSP ( Tree e ) {
+	return post_simplify(simplify_all(rename(e)));
+    }
+
+    private static Tree mkBSP ( Tree superstep, Tree state, Tree orderp, Tree input ) {
+	int sn = source_num(input);
+	superstep = processBSP(subst(#<i_>,#<`sn>,superstep));
+	return #<BSP(`sn,`superstep,`state,`orderp,`input)>;
+    }
+
+    private static Tree mkBSPL ( Tree superstep, Tree state, Tree orderp, Trees input ) {
+	int sn = source_num(input.nth(0));
+	superstep = processBSP(subst(#<i_>,#<`sn>,superstep));
+	return #<BSP(`sn,`superstep,`state,`orderp,...input)>;
+    }
+
+    private static Tree mkBSP2 ( Tree superstep, Tree state, Tree orderp, Tree left, Tree right ) {
+	int sn = source_num(left);
+	superstep = processBSP(subst(#<i_>,#<`sn>,superstep));
+	return #<BSP(`sn,`superstep,`state,`orderp,`left,`right)>;
+    }
+
+    public static Tree mr2bsp ( Tree e ) {
+	match e {
+	case Aggregate(`acc,`zero,`S):
+	    return #<Aggregate(`acc,`zero,`(mr2bsp(S)))>;
+	case cMap(`f,`S):
+	    return mkBSP(#<lambda(tuple(ms,as,k),
+				  tuple(BAG(),
+					cmap(lambda(tuple(kk,c),
+						    cmap(lambda(x,bag(tuple(i_,x))),
+							 apply(`f,c))),
+					     as),
+					tuple(),
+					TRUE()))>,
+			 #<tuple()>,
+			 #<false>,
+			 mr2bsp(S));
+	case AggregateMap(`f,`acc,`zero,`S):
+	    return mkBSP(#<lambda(tuple(ms,as,k),
+				  tuple(BAG(),
+					aggregate(`acc,`zero,
+						  cmap(lambda(tuple(kk,c),
+							      apply(`f,c)),
+						       as)),
+					tuple(),
+					TRUE()))>,
+			 #<tuple()>,
+			 #<false>,
+			 mr2bsp(S));
+	case MapReduce(`m,`r,`S,`o):
+	    return mkBSP(#<lambda(tuple(ms,as,b),
+				  if(b,
+				     tuple(cmap(lambda(tuple(k,c),
+						       bag(tuple(k,tuple(k,c)))),
+						cmap(lambda(tuple(k,c),apply(`m,c)),
+						     as)),
+					   bag(),
+					   false,
+					   FALSE()),
+				     tuple(BAG(),
+					   cmap(lambda(tuple(k,s),
+						       cmap(lambda(x,bag(`(o.equals(#<true>)
+									   ? #<tuple(i_,x,k)>
+									   : #<tuple(i_,x)>))),
+							    apply(`r,tuple(k,s)))),
+						groupBy(ms)),
+					   false,
+					   TRUE())))>,
+			 #<true>,
+			 o,
+			 mr2bsp(S));
+	case MapAggregateReduce(`m,`r,`acc,`zero,`S,_):
+	    return mkBSP(#<lambda(tuple(ms,as,b),
+				  if(b,
+				     tuple(cmap(lambda(tuple(k,c),
+						       bag(tuple(k,tuple(k,c)))),
+					       cmap(lambda(tuple(k,c),apply(`m,c)),
+						    as)),
+					   bag(),
+					   false,
+					   FALSE()),
+				     tuple(BAG(),
+					   aggregate(`acc,`zero,
+						     cmap(`r,groupBy(ms))),
+					   false,
+					   TRUE())))>,
+			 #<true>,
+			 #<false>,
+			 mr2bsp(S));
+	case MapCombineReduce(`m,`c,`r,`S,`o):
+	    return mkBSP(#<lambda(tuple(ms,as,b),
+				  if(b,
+				     tuple(cmap(lambda(tuple(k,s),
+						       cmap(lambda(x,bag(tuple(k,tuple(k,x)))),
+							    apply(`c,tuple(k,s)))),
+						groupBy(cmap(lambda(tuple(k,c),apply(`m,c)),
+							    as))),
+					   bag(),
+					   false,
+					   FALSE()),
+				     tuple(BAG(),
+					   cmap(lambda(tuple(k,s),
+						       cmap(lambda(x,bag(tuple(i_,x,k))),
+							    apply(`r,tuple(k,s)))),
+						groupBy(ms)),
+					   false,
+					   TRUE())))>,
+			 #<true>,
+			 o,
+			 mr2bsp(S));
+	case MapReduce2(`mx,`my,`r,`x,`y,`o):
+	    return mkBSP2(#<lambda(tuple(ms,as,b),
+				   if(b,
+				      tuple(cmap(lambda(tuple(k,c),
+							if(callM(eq,`eqM,k,i_),
+							   cmap(lambda(tuple(kk,cc),
+								       bag(tuple(kk,tuple(kk,tuple(1,cc))))),
+								apply(`mx,c)),
+							   cmap(lambda(tuple(kk,cc),
+								       bag(tuple(kk,tuple(kk,tuple(2,cc))))),
+								apply(`my,c)))),
+						 as),
+					    bag(),
+					    false,
+					    FALSE()),
+				      tuple(BAG(),
+					    cmap(lambda(tuple(k,s),
+							cmap(lambda(x,bag(`(o.equals(#<true>)
+									    ? #<tuple(i_,x,k)>
+									    : #<tuple(i_,x)>))),
+							     apply(`r,
+								   tuple(cmap(lambda(tuple(nx,x),
+										     if(callM(eq,`eqM,nx,1),
+											bag(x),
+											bag())),
+									      s),
+									 cmap(lambda(tuple(ny,y),
+										     if(callM(eq,`eqM,ny,2),
+											bag(y),
+											bag())),
+									      s))))),
+						 groupBy(ms)),
+					    false,
+					    TRUE())))>,
+			  #<true>,
+			  o,
+			  mr2bsp(x),
+			  mr2bsp(y));
+	case MapAggregateReduce2(`mx,`my,`r,`acc,`zero,`x,`y,_):
+	    return mkBSP2(#<lambda(tuple(ms,as,b),
+				   if(b,
+				      tuple(cmap(lambda(tuple(k,c),
+							if(callM(eq,`eqM,k,i_),
+							   cmap(lambda(tuple(kk,cc),
+								       bag(tuple(kk,tuple(kk,tuple(1,cc))))),
+								apply(`mx,c)),
+							   cmap(lambda(tuple(kk,cc),
+								       bag(tuple(kk,tuple(kk,tuple(2,cc))))),
+								apply(`my,c)))),
+						 as),
+					    bag(),
+					    false,
+					    FALSE()),
+				      tuple(BAG(),
+					    aggregate(`acc,`zero,
+						      cmap(lambda(tuple(k,s),
+								  apply(`r,
+									tuple(cmap(lambda(tuple(nx,x),
+											  if(callM(eq,`eqM,nx,1),
+											     bag(x),
+											     bag())),
+										   s),
+									      cmap(lambda(tuple(ny,y),
+											  if(callM(eq,`eqM,ny,2),
+											     bag(y),
+											     bag())),
+										   s)))),
+							   groupBy(ms))),
+					    false,
+					    TRUE())))>,
+			  #<true>,
+			  #<false>,
+			  mr2bsp(x),
+			  mr2bsp(y));
+	case MapJoin(`mx,`my,`r,`x,`y):
+	    return mr2bsp(#<MapReduce2(`mx,`my,
+				       lambda(tuple(xs,ys),cmap(lambda(x,apply(`r,tuple(x,ys))),xs)),
+				       `x,`y,false)>);
+	case MapAggregateJoin(`mx,`my,`r,`acc,`zero,`x,`y):
+	    return mr2bsp(#<MapAggregateReduce2(`mx,`my,
+						lambda(tuple(xs,ys),cmap(lambda(x,apply(`r,tuple(x,ys))),xs)),
+						`acc,`zero,`x,`y)>);
+	case Repeat(lambda(`v,`b),`ds,`max):
+	    match bspSimplify(mr2bsp(b)) {
+	    case BSP(`n,`s,`k0,_,...as):
+		Tree extra_sources = #<bag()>;
+		// extra sources (in addition to the repeat target) must be materialized in memory
+		//  and carry through the repeat steps
+		for ( Tree a: as )
+		    if (!a.equals(v))
+			extra_sources = #<callM(union,`unionM,`extra_sources,`a)>;
+		return mkBSP(#<lambda(tuple(ms,`v,tuple(k,firstp,steps,S)),
+				      let(tuple(ts,bs,kk,b),
+					  apply(`s,
+						tuple(ms,
+						      if(firstp,
+							 callM(union,`unionM,`v,S),
+							 `v),
+						      k)),
+					  if(b,
+					     tuple(bag(),
+						   callM(union,`unionM,
+							 map(lambda(tuple(z,tuple(x,bb)),tuple(z,x)),bs),
+							 S),
+						   tuple(`k0,false,callM(add,`plusM,steps,1),S),
+						   if(callM(gt,`gtM,steps,`max),
+						      TRUE(),       // if # of steps <= limit, exit
+						      callM(not,`notM,  // ... else check the stopping condition
+							    aggregate(lambda(tuple(x,y),callM(or,`orM,x,y)),
+								      false,
+								      map(lambda(tuple(z,tuple(x,bb)),bb),bs))))),
+							       
+					     tuple(ts,
+						   bs,
+						   tuple(kk,false,steps,S),
+						   FALSE()))))>,
+			     #<tuple(`k0,true,1,`extra_sources)>,
+			     #<false>,
+			     mr2bsp(ds));
+	    case `x: throw new Error("Cannot compile the repeat function: "+x);
+	    }
+	case Closure(lambda(`v,`b),`ds,`max):
+	    match bspSimplify(mr2bsp(b)) {
+	    case BSP(`n,`s,`k0,_,...as):
+		Tree extra_sources = #<bag()>;
+		// extra sources (in addition to the closure target) must be materialized in memory
+		//  and carry through the closure steps
+		for ( Tree a: as )
+		    if (!a.equals(v))
+			extra_sources = #<callM(union,`unionM,`extra_sources,`a)>;
+		return mkBSP(#<lambda(tuple(ms,`v,tuple(k,firstp,len,steps,S)),
+				      let(tuple(ts,bs,kk,b),
+					  apply(`s,
+						tuple(ms,
+						      if(firstp,
+							 callM(union,`unionM,`v,S),
+							 `v),
+						      k)),
+					  if(b,
+					     let(newS,bs,
+						 let(newLen,callM(count,`countM,newS),
+						     tuple(bag(),
+							   callM(union,`unionM,newS,S),
+							   tuple(`k0,false,newLen,callM(add,`plusM,steps,1),S),
+							   if(callM(gt,`gtM,steps,`max),
+							      TRUE(),       // if # of steps <= limit, exit
+							      // ... else check if the new size is the same as the old size
+							      callM(geq,`geqM,len,newLen))))),
+					     tuple(ts,
+						   bs,
+						   tuple(kk,false,len,steps,S),
+						   FALSE()))))>,
+			     #<tuple(`k0,true,callM(coerce,`coerceM,0,`(MRContainer.LONG)),1,`extra_sources)>,
+			     #<false>,
+			     mr2bsp(ds));
+	    case `x: throw new Error("Cannot compile the closure function: "+x);
+	    }
+	case CrossProduct(`mx,`my,`r,`x,`y):
+	    throw new Error("BSP mode does not support cross products: "+e);
+	case CrossAggregateProduct(`mx,`my,`r,`acc,`zero,`x,`y):
+	    throw new Error("BSP mode does not support cross products: "+e);
+	case `f(...as):
+	    Trees bs = #[];
+	    for ( Tree a: as )
+		bs = bs.append(mr2bsp(a));
+	    return #<`f(...bs)>;
+	};
+	return e;
+    }
+
+    public static Tree bspSimplify ( Tree e ) {
+	match e {
+	case BSP(_,`s2,`k2,`o,...r,BSP(_,`s1,`k1,_,...s),...t):
+	    return bspSimplify(mkBSPL(#<lambda(tuple(ms,as,tuple(b,k)),
+					       if(b,
+						  let(tuple(ts,bs,kk,bb),apply(`s1,tuple(ms,as,k)),
+                                                      let(exit,
+							  synchronize(bb),   // poll all peers: do you want to exit?
+							  // all peers must aggree to exit the inner BSP
+							  //    and proceed to the outer BSP
+							  tuple(ts,bs,tuple(callM(not,`notM,exit),
+									    if(exit,`k2,kk)),FALSE()))),
+						  let(tuple(ts,bs,kk,bb),apply(`s2,tuple(ms,as,k)),
+						      tuple(ts,bs,tuple(false,kk),bb))))>,
+				      #<tuple(true,`k1)>,
+				      o,
+				      #[...r,...s,...t]));
+	case lambda(...):
+	    fail
+	case `f(...as):
+	    Trees bs = #[];
+	    for ( Tree a: as )
+		bs = bs.append(bspSimplify(a));
+	    return #<`f(...bs)>;
+	};
+	return e;
+    }
+}

@@ -1,0 +1,8 @@
+S = source(xml,"/home/fegaras/data/dblp.xml",{"article","incollection","book","inproceedings"});
+
+select ( select text(b.title) from b in S where b.@key = x, count(a) )
+from a in S,
+     c in a.cite
+where text(c) <> "..."
+group by x: text(c)
+order by inv(count(a));

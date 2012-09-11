@@ -1,0 +1,29 @@
+DBLP = source(xml,"/home/fegaras/data/dblp2.xml",{"article","incollection","book","inproceedings"});
+
+graph = select (key,select text(x) from x in c)
+          from a in DBLP,
+               c in a.cite
+         where text(c) <> "..."
+         group by key: a.@key;
+
+store graph_size := count(graph);
+
+// damping factor
+factor = 0.85;
+
+select (text(a.title),x.rank)
+from x in (repeat nodes = select < id: key, rank: 1.0/graph_size as double, adjacent: al >
+                            from (key,al) in graph
+             step select (< id: m.id, rank: n.rank, adjacent: m.adjacent >,
+                          abs((n.rank-m.rank)/m.rank) > 0.1)
+                    from n in (select < id: key,
+                                        rank: (1-factor)/graph_size+factor*sum(select x.rank from x in c) >
+                                 from c in ( select < id: a, rank: n.rank/count(n.adjacent) >
+                                               from n in nodes, a in n.adjacent )
+                                group by key: c.id),
+                         m in nodes
+                   where n.id = m.id
+            limit 20),
+     a in DBLP
+where a.@key=x.id
+order by x.rank desc;

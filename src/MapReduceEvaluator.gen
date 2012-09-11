@@ -1,0 +1,221 @@
+/********************************************************************************
+   Copyright 2011-2012 Leonidas Fegaras, University of Texas at Arlington
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+   File: MapReduceEvaluator.gen
+   The MRQL plan evaluator on Hadoop
+   Programmer: Leonidas Fegaras, UTA
+   Date: 10/14/10 - 08/15/12
+
+********************************************************************************/
+
+package hadoop.mrql;
+
+import java_cup.runtime.*;
+import Gen.*;
+import java.util.*;
+import java.io.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.conf.Configuration;
+
+
+class Evaluator extends Interpreter {
+
+    final static void init ( Configuration conf ) {
+	Config.bsp_mode = false;
+	if (Config.hadoop_mode && Config.local_hadoop_mode) {
+	    conf.set("mapred.job.tracker","local");
+	    conf.set("fs.default.name","file:///");
+	}
+    }
+
+    final static Configuration new_configuration () {
+	return new Configuration();
+    }
+
+    public static MR_bool synchronize ( MR_bool mr_exit ) {
+	throw new Error("You can only synchronize BSP tasks");
+    }
+
+    final static Bag collect ( final DataSet x ) throws Exception {
+	return MapReducePlan.collect(x);
+    }
+
+    final static MRData aggregate ( Tree acc_fnc,
+				    Tree zero,
+				    Tree plan,
+				    Environment env ) throws Exception {
+	return MapReducePlan.aggregate(acc_fnc,zero,eval(plan,env,"-"));
+    }
+
+    // evaluate MRQL physical operators using Hadoop (returns a DataSet)
+    final static DataSet eval ( final Tree e,
+				final Environment env,
+				final String counter ) {
+	if (Config.trace_execution) {
+	    tab_count += 3;
+	    System.out.println(tabs(tab_count)+print_query(e));
+	};
+	DataSet res = evalD(e,env,counter);
+	if (Config.trace_execution) 
+	    try {
+		System.out.println(tabs(tab_count)
+				   +"-> "+MapReducePlan.collect(res));
+		tab_count -= 3;
+	    } catch (Exception ex) {
+		throw new Error("Cannot collect the operator output: "+e);
+	    };
+	return res;
+    }
+
+    // evaluate MRQL physical operators using Hadoop (returns a DataSet)
+    final static DataSet evalD ( final Tree e,
+				 final Environment env,
+				 final String counter ) {
+	try {
+	    match e {
+	    case cMap(`f,`s):
+		return MapReducePlan.cMap(closure(f,env),null,null,eval(s,env,"-"),counter);
+	    case AggregateMap(`f,`acc,`zero,`s):
+		return MapReducePlan.cMap(closure(f,env),closure(acc,env),
+					  (zero.equals(#<null>))?null:zero,
+					  eval(s,env,"-"),counter);
+	    case MapReduce(`m,`r,`s,`o):
+		return MapReducePlan.mapReduce(closure(m,env),#<null>,closure(r,env),
+					       null,null,
+					       eval(s,env,"-"),
+					       Config.reduce_tasks,counter,
+					       o.equals(#<true>));
+	    case MapAggregateReduce(`m,`r,`acc,`zero,`s,`o):
+		return MapReducePlan.mapReduce(closure(m,env),null,closure(r,env),
+					       closure(acc,env),
+					       (zero.equals(#<null>))?null:zero,
+					       eval(s,env,"-"),
+					       Config.reduce_tasks,counter,
+					       o.equals(#<true>));
+	    case MapCombineReduce(`m,`c,`r,`s,`o):
+		return MapReducePlan.mapReduce(closure(m,env),closure(c,env),closure(r,env),
+					       null,null,
+					       eval(s,env,"-"),
+					       Config.reduce_tasks,counter,
+					       o.equals(#<true>));
+	    case CrossProduct(`mx,`my,`r,`x,`y):
+		return MapReducePlan.crossProduct(closure(mx,env),closure(my,env),closure(r,env),
+						  null,null,
+						  eval(x,env,"-"),
+						  eval(y,env,"-"),
+						  counter);
+	    case CrossAggregateProduct(`mx,`my,`r,`acc,`zero,`x,`y):
+		return MapReducePlan.crossProduct(closure(mx,env),closure(my,env),closure(r,env),
+						  closure(acc,env),
+						  (zero.equals(#<null>))?null:zero,
+						  eval(x,env,"-"),
+						  eval(y,env,"-"),
+						  counter);
+	    case MapReduce2(`mx,`my,`r,`x,`y,`o):
+		return eval(#<MapAggregateReduce2(`mx,`my,`r,null,null,`x,`y,`o)>,env,counter);
+	    case MapAggregateReduce2(`mx,`my,`r,`acc,`zero,`x,`y,`o):
+		return MapReducePlan.mapReduce2(closure(mx,env),closure(my,env),
+						closure(r,env),closure(acc,env),
+						(zero.equals(#<null>))?null:zero,
+						eval(x,env,"-"),
+						eval(y,env,"-"),
+						Config.reduce_tasks,counter,
+						o.equals(#<true>));
+	    case MapJoin(`mx,`my,`r,`x,`y):
+		return MapReducePlan.mapJoin(closure(mx,env),closure(my,env),closure(r,env),
+					     null,null,
+					     eval(x,env,"-"),
+					     eval(y,env,"-"),
+					     counter);
+	    case MapAggregateJoin(`mx,`my,`r,`acc,`zero,`x,`y):
+		return MapReducePlan.mapJoin(closure(mx,env),closure(my,env),closure(r,env),
+					     closure(acc,env),
+					     (zero.equals(#<null>))?null:zero,
+					     eval(x,env,"-"),
+					     eval(y,env,"-"),
+					     counter);
+	    case BinarySource(`file,_):
+		return Plan.binarySource(file.stringValue());
+	    case ParsedSource(`parser,`file,...args):
+		Class<? extends Parser> p = DataSource.parserDirectory.get(parser.toString());
+		if (p == null)
+		    throw new Error("Unknown parser: "+parser);
+		return Plan.parsedSource(p,((MR_string)evalE(file,env)).get(),args);
+	    case Merge(`x,`y):
+		return Plan.merge(eval(x,env,"-"),eval(y,env,"-"));
+	    case Repeat(lambda(`v,`b),`s,`n):
+		final String nm = v.toString();
+		final Tree body = b;
+		Function loop_fnc = new Function () {
+			public MRData eval ( MRData s ) {
+			    return new MR_dataset(Evaluator.eval(body,new Environment(nm,s,env),nm));
+			}; };
+		return MapReducePlan.repeat(loop_fnc,eval(s,env,"-"),((MR_int)evalE(n,env)).get());
+	    case Closure(lambda(`v,`b),`s,`n):
+		final String nm = v.toString();
+		final Tree body = b;
+		Function loop_fnc = new Function () {
+			public MRData eval ( MRData s ) {
+			    return new MR_dataset(Evaluator.eval(body,new Environment(nm,s,env),"-"));
+			}; };
+		return MapReducePlan.closure(loop_fnc,eval(s,env,"-"),((MR_int)evalE(n,env)).get());
+	    case Generator(`min,`max,`size):
+		return Plan.generator(((MR_long)evalE(min,env)).get(),
+				      ((MR_long)evalE(max,env)).get(),
+				      ((MR_long)evalE(size,env)).get());
+	    case let(`v,`u,`body):
+		return eval(body,new Environment(v.toString(),evalE(u,env),env),"-");
+	    case Let(`v,`u,`body):
+		return eval(body,new Environment(v.toString(),new MR_dataset(eval(u,env,"-")),env),"-");
+	    case If(`c,`x,`y):
+		if (((MR_bool)evalE(c,env)).get())
+		    return eval(x,env,"-");
+		else return eval(y,env,"-");
+	    case apply(`f,`arg):
+		if (!f.is_variable())
+		    return ((MR_dataset)evalF(f,env).eval(evalE(arg))).dataset();
+		MRData fnc = variable_lookup(f.toString(),global_env);
+		if (fnc == null)
+		    throw new Error("Unknown function: "+f);
+		MRData t = evalE(arg,env);
+		if (!(t instanceof Tuple))
+		    throw new Error("Expected a tuple in function application: "+t);
+		return ((MR_dataset)((Lambda)fnc).lambda().eval(t)).dataset();
+	    case `v:
+		if (!v.is_variable())
+		    fail;
+		MRData x = variable_lookup(v.toString(),env);
+		if (x != null)
+		    if (x instanceof MR_dataset)
+			return ((MR_dataset)x).dataset();
+		x = variable_lookup(v.toString(),global_env);
+		if (x != null)
+		    if (x instanceof MR_dataset)
+			return ((MR_dataset)x).dataset();
+		throw new Error("Variable "+v+" is not bound");
+	    };
+	    throw new Error("Cannot evaluate the map-reduce plan: "+e);
+	} catch (Error msg) {
+	    if (!Config.trace)
+		throw new Error(msg.getMessage());
+	    System.err.println(msg.getMessage());
+	    throw new Error("Evaluation error in: "+print_query(e));
+	} catch (Exception ex) {
+	    System.err.println(ex.getMessage());
+	    ex.printStackTrace();
+	    throw new Error("Evaluation error in: "+print_query(e));
+	}
+    }
+}
