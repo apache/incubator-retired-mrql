@@ -61,11 +61,13 @@ endif
 
 
 all:	${SOURCES}
+	@mkdir -p tmp source
 	@rm -rf classes/hadoop; cd classes; ${JAR} xf ../gen.jar; ${JAR} xf ../jline-1.0.jar; cd ..
 	@${JAVAC} ${SOURCES}
 	@${JAR} cf mrql.jar -C classes/ .
 
 bsp:	${BSOURCES}
+	@mkdir -p tmp source
 	@rm -rf classes/hadoop; cd classes; ${JAR} xf ../gen.jar; ${JAR} xf ../jline-1.0.jar; cd ..
 	@${JAVAC} ${BSOURCES}
 	@${JAR} cf mrql-bsp.jar -C classes/ .
