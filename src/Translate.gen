@@ -3070,23 +3070,17 @@ class Translate {
 	    Tree b1 = simplify_all(subst(#<nth(`v,0)>,#<bag(nth(`nv,0))>,
 					 subst(#<nth(`v,1)>,#<nth(`nv,1)>,
 					       b)));
-	    Tree b2 = simplify_all(subst(#<nth(`v,0)>,#<nth(`nv,1)>,
-					 subst(#<nth(`v,1)>,#<bag(nth(`nv,0))>,
-					       b)));
 	    Tree nr = subst(#<nth(`v,0)>,#<nth(`nv,1)>,
 			    subst(#<nth(`v,1)>,#<nth(`nv,0)>,
 				  b));
 	    Tree cond1 = makePlan(#<call(leq,dataset_size(`Y),`(Config.mapjoin_size))>);
-	    Tree cond2 = makePlan(#<call(leq,dataset_size(`X),`(Config.mapjoin_size))>);
-	    Tree cond3 = makePlan(#<call(lt,dataset_size(`X),dataset_size(`Y))>);
+	    Tree cond2 = makePlan(#<call(lt,dataset_size(`X),dataset_size(`Y))>);
 	    return #<Let(`X,`(physical_plan(x)),Let(`Y,`(physical_plan(y)),
-			  If(`cond1,
-			     MapJoin(`mx,`my,lambda(`nv,`b1),`X,`Y),
-			     If(`cond2,
-				MapJoin(`my,`mx,lambda(`nv,`b2),`Y,`X),
-				If(`cond3,
+			     If(`cond1,
+				MapJoin(`mx,`my,lambda(`nv,`b1),`X,`Y),
+				If(`cond2,
 				   MapAggregateReduce2(`my,`mx,lambda(`nv,`nr),null,null,`Y,`X,false),
-				   MapAggregateReduce2(`mx,`my,lambda(`v,`b),null,null,`X,`Y,false))))))>;
+				   MapAggregateReduce2(`mx,`my,lambda(`v,`b),null,null,`X,`Y,false)))))>;
 	case MapAggregateReduce2(`mx,`my,lambda(`v,`b),`acc,`zero,`x,`y,false):
 	    Tree X = new_var();
 	    Tree Y = new_var();

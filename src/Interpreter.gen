@@ -283,6 +283,10 @@ class Interpreter extends Translate {
 		   +tab(n)+"Choice 2: "+print_plan(x2,n+10,pv)+"\n"
 		   +tab(n)+"Choice 3: "+print_plan(x3,n+10,pv)+"\n"
 		   +tab(n)+"Choice 4: "+print_plan(x4,n+10,pv);
+	case If(_,`x1,If(_,`x2,`x3)):
+	    return "Choice 1: "+print_plan(x1,n+10,pv)+"\n"
+		   +tab(n)+"Choice 2: "+print_plan(x2,n+10,pv)+"\n"
+		   +tab(n)+"Choice 3: "+print_plan(x3,n+10,pv);
 	case If(`c,`x,`y):
 	    return "Choice 1: "+print_plan(x,n+10,pv)+"\n"
 		   +tab(n)+"Choice 2: "+print_plan(y,n+10,pv);

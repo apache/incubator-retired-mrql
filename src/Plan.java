@@ -53,9 +53,13 @@ class Plan {
 
     // remove all temporary files
     public static void clean () throws IOException {
-	FileSystem fs = FileSystem.get(conf);
-	for (String p: temporary_paths)
-	    fs.delete(new Path(p),true);
+        for (String p: temporary_paths)
+            try {
+                Path path = new Path(p);
+                path.getFileSystem(conf).delete(path,true);
+            } catch (Exception ex) {
+                FileSystem.getLocal(conf).delete(new Path(p),true);
+            };
 	temporary_paths.clear();
 	DataSource.dataSourceDirectory.clear();
     }
