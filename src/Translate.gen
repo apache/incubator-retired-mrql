@@ -3063,23 +3063,51 @@ class Translate {
 	    return physical_plan(#<MapAggregateReduce2(`mx,`my,`r,null,null,`x,`y,`o)>);
         // convert a reduce-side join to a fragment-replicate join, if either of the join
         //   inputs is small to fit in memory (dataset sizes are extracted from file statistics)
+	case MapAggregateReduce2(`mx,`my,
+				 lambda(`v,cmap(lambda(`vx,cmap(lambda(`vy,`b),nth(`nx,1))),nth(`ny,0))),
+				 null,null,`x,`y,false):
+	    if (!nx.equals(v) || !ny.equals(v) || occurences(v,b) > 0)
+		fail;
+	    Tree X = new_var();
+	    Tree Y = new_var();
+	    Tree nv = new_var();
+	    Tree L1 = simplify_all(#<lambda(`nv,cmap(lambda(`vx,cmap(lambda(`vy,`b),nth(`nv,1))),bag(nth(`nv,0))))>);
+	    nv = new_var();
+	    Tree L2 = simplify_all(#<lambda(`nv,cmap(lambda(`vx,cmap(lambda(`vy,`b),bag(nth(`nv,0)))),nth(`nv,1)))>);
+	    nv = new_var();
+	    Tree L3 = #<lambda(`nv,cmap(lambda(`vx,cmap(lambda(`vy,`b),nth(`nv,0))),nth(`nv,1)))>;
+	    Tree cond1 = makePlan(#<call(leq,dataset_size(`Y),`(Config.mapjoin_size))>);
+	    Tree cond2 = makePlan(#<call(leq,dataset_size(`X),`(Config.mapjoin_size))>);
+	    Tree cond3 = makePlan(#<call(lt,dataset_size(`X),dataset_size(`Y))>);
+	    return #<Let(`X,`(physical_plan(x)),Let(`Y,`(physical_plan(y)),
+			  If(`cond1,
+			     MapJoin(`mx,`my,`L1,`X,`Y),
+			     If(`cond2,
+				MapJoin(`my,`mx,`L2,`Y,`X),
+				If(`cond3,
+				   MapAggregateReduce2(`my,`mx,`L3,null,null,`Y,`X),
+				   MapAggregateReduce2(`mx,`my,
+						       lambda(`v,cmap(lambda(`vx,cmap(lambda(`vy,`b),nth(`nx,1))),
+								      nth(`ny,0))),
+						       null,null,`X,`Y))))))>;
 	case MapAggregateReduce2(`mx,`my,lambda(`v,`b),null,null,`x,`y,false):
 	    Tree X = new_var();
 	    Tree Y = new_var();
 	    Tree nv = new_var();
-	    Tree b1 = simplify_all(subst(#<nth(`v,0)>,#<bag(nth(`nv,0))>,
+	    Tree L1 = simplify_all(subst(#<nth(`v,0)>,#<bag(nth(`nv,0))>,
 					 subst(#<nth(`v,1)>,#<nth(`nv,1)>,
-					       b)));
-	    Tree nr = subst(#<nth(`v,0)>,#<nth(`nv,1)>,
+					       #<lambda(`nv,`b)>)));
+	    nv = new_var();
+	    Tree L2 = subst(#<nth(`v,0)>,#<nth(`nv,1)>,
 			    subst(#<nth(`v,1)>,#<nth(`nv,0)>,
-				  b));
+				  #<lambda(`nv,`b)>));
 	    Tree cond1 = makePlan(#<call(leq,dataset_size(`Y),`(Config.mapjoin_size))>);
 	    Tree cond2 = makePlan(#<call(lt,dataset_size(`X),dataset_size(`Y))>);
 	    return #<Let(`X,`(physical_plan(x)),Let(`Y,`(physical_plan(y)),
 			     If(`cond1,
-				MapJoin(`mx,`my,lambda(`nv,`b1),`X,`Y),
+				MapJoin(`mx,`my,`L1,`X,`Y),
 				If(`cond2,
-				   MapAggregateReduce2(`my,`mx,lambda(`nv,`nr),null,null,`Y,`X,false),
+				   MapAggregateReduce2(`my,`mx,`L2,null,null,`Y,`X,false),
 				   MapAggregateReduce2(`mx,`my,lambda(`v,`b),null,null,`X,`Y,false)))))>;
 	case MapAggregateReduce2(`mx,`my,lambda(`v,`b),`acc,`zero,`x,`y,false):
 	    Tree X = new_var();
