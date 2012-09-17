@@ -27,3 +27,6 @@ complex repetitive algorithms to run entirely in the collective memory
 of a cluster. BSP is a good choice when fault tolerance is less
 important, data (both input and indermediate) can fit in the cluster
 memory, and data processing requires complex/repetitive steps.
+
+Installation Instructions:
+https://github.com/fegaras/mrql/wiki
