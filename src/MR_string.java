@@ -4,7 +4,8 @@ import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
 import org.apache.hadoop.io.*;
-//import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.*;
+
 
 final public class MR_string implements MRData {
     private String value;
@@ -19,18 +20,15 @@ final public class MR_string implements MRData {
 
     final public void write ( DataOutput out ) throws IOException {
 	out.writeByte(MRContainer.STRING);
-	//Text.writeString(out,value);
-	out.writeUTF(value);
+	Text.writeString(out,value);
     }
 
     final public static MR_string read ( DataInput in ) throws IOException {
-	//return new MR_string(Text.readString(in));
-	return new MR_string(in.readUTF());
+	return new MR_string(Text.readString(in));
     }
 
     public void readFields ( DataInput in ) throws IOException {
-	//value = Text.readString(in);
-	value = in.readUTF();
+	value = Text.readString(in);
     }
 
     public int compareTo ( MRData x ) {
