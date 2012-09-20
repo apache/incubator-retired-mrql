@@ -1,0 +1,6 @@
+*~
+tmp/*
+classes/*
+mrql/*
+mrql-bsp.jar
+mrql.jar

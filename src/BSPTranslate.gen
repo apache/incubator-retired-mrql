@@ -194,7 +194,9 @@ class BSPTranslate extends Translate {
 					   FALSE()),
 				     tuple(BAG(),
 					   cmap(lambda(tuple(k,s),
-						       cmap(lambda(x,bag(tuple(i_,x,k))),
+						       cmap(lambda(x,bag(`(o.equals(#<true>)
+									   ? #<tuple(i_,x,k)>
+									   : #<tuple(i_,x)>))),
 							    apply(`r,tuple(k,s)))),
 						groupBy(ms)),
 					   false,
