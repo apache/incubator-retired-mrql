@@ -1,0 +1,14 @@
+// generate random points in the 4 squares: [2..4,6..8]*[2..4,6..8]
+// used in kmeans.mrql
+
+function randomV ( v: double ) : double {
+  let x = random(100000)/10000.0
+  in if ((x >= v and x <= v*2.0)
+         or (x >= v*3.0 and x <= v*4.0))
+     then x
+     else randomV(v)
+};
+
+store "points.bin"
+ from select < X: randomV(2.0), Y: randomV(2.0) >
+        from i in 1...(toLong(args[0]));

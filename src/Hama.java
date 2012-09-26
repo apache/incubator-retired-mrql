@@ -83,6 +83,25 @@ class BSPPlan extends Plan {
 	    }
 	}
 
+	public static Bag distribute ( Bag s ) {
+	    if (!Config.hadoop_mode)
+		return s;
+	    try {
+		for ( MRData e: s )
+		    for ( String p: all_peers )
+			this_peer.send(p,new MRContainer(e));
+		this_peer.sync();
+		MRContainer msg;
+		Bag res = new Bag();
+		while ((msg = this_peer.getCurrentMessage()) != null)
+		    res.add(msg.data());
+		this_peer.clear();
+		return res;
+	    } catch (Exception ex) {
+		throw new Error(ex);
+	    }
+	}
+
 	private Bag readLocalSnapshot ( final BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer ) {
 	    return new Bag(new BagIterator() {
 		    final MRContainer key = new MRContainer();
@@ -248,6 +267,7 @@ class BSPPlan extends Plan {
 		    Plan.conf = conf;
 		this_peer = peer;
 		all_peers = peer.getAllPeerNames();
+		Arrays.sort(all_peers);  // is this necessary?
 		Tree code = Tree.parse(conf.get("mrql.superstep"));
 		superstep_fnc = functional_argument(conf,code);
 		code = Tree.parse(conf.get("mrql.initial.state"));

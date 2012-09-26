@@ -73,7 +73,7 @@ select (e.name,d.name) from e in E, d in D where e.dno=d.dno order by e.address;
 
 select (k,e) from e in E group by k: e.dno;
 
-(select (k,e) from e in E group by k: e.dno)[10];
+(select (k,e) from e in E group by k: e.dno order by k)[1];
 
 (select e from e in E order by e.dno)[1:2];
 

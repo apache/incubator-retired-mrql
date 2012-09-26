@@ -50,6 +50,10 @@ class Evaluator extends Interpreter {
 	return BSPPlan.BSPop.synchronize(mr_exit);
     }
 
+    public static Bag distribute ( Bag s ) {
+	return BSPPlan.BSPop.distribute(s);
+    }
+
     final static MRData aggregate ( Tree acc_fnc,
 				    Tree zero,
 				    Tree plan,
@@ -120,6 +124,8 @@ class Evaluator extends Interpreter {
 				      ((MR_long)evalE(size,env)).get());
 	    case Merge(`x,`y):
 		return Plan.merge(eval(x,env),eval(y,env));
+	    case Dump(`s):
+		return Plan.fileCache((Bag)evalE(s,env));
 	    case apply(`f,`arg):
 		if (!f.is_variable())
 		    return ((MR_dataset)evalF(f,env).eval(evalE(arg))).dataset();

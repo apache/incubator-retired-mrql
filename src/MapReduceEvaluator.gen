@@ -48,6 +48,10 @@ class Evaluator extends Interpreter {
 	throw new Error("You can only synchronize BSP tasks");
     }
 
+    public static Bag distribute ( Bag s ) {
+	throw new Error("You can only distribute in BSP tasks");
+    }
+
     final static Bag collect ( final DataSet x ) throws Exception {
 	return MapReducePlan.collect(x);
     }

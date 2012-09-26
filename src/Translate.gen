@@ -1600,12 +1600,16 @@ class Translate {
 	case index(`a,`i):
 	    Tree ti = type_inference2(i);
 	    match type_inference2(a) {
-	    case `T(tuple(`tk,`tv)):
-		if (is_collection(T) && subtype(ti,tk)) {
+	    case bag(tuple(`tk,`tv)):
+		if (subtype(ti,tk)) {
 		    coerce(ti,tk,((Node)e).children.tail);
 		    return tv;
 		} else fail
 	    case list(`tp):
+		if (unify(ti,#<int>) != null)
+		    return tp;
+		else type_error(e,"List index must be an integer: "+print_query(e));
+	    case List(`tp):
 		if (unify(ti,#<int>) != null)
 		    return tp;
 		else type_error(e,"List index must be an integer: "+print_query(e));
@@ -2904,9 +2908,7 @@ class Translate {
 	   else fail
        case index(`x,`n):
 	   match type_inference2(x) {
-	   case `T(tuple(`kt,`vt)):
-	       if (!is_collection(T))
-		   fail;
+	   case bag(tuple(`kt,`vt)):
 	       if (type_inference2(n).equals(kt))
 		   return #<map_index(`(makePlan(x)),
 				      `(makePlan(n)))>;
@@ -3248,7 +3250,8 @@ class Translate {
 	if (!access_variable(e))
 	    return materialize(vars,e,d);
 	Domains nd = new Domains(d.domains,d.repeats);
-	if (d.domains.member(e) || !free_variables(e,vars).is_empty())
+	if ((d.domains.member(e) || !free_variables(e,vars).is_empty())
+	    && !d.repeats.member(e))
 	    nd.repeats = nd.repeats.cons(e);
 	nd.domains = nd.domains.cons(e);
 	return nd;

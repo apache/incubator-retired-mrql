@@ -406,6 +406,8 @@ final class Compiler extends Translate {
 	    return "((((MR_bool)"+compileE(c)+").get())?"+compileE(x)+":"+compileE(y)+")";
 	case synchronize(`b):
 	    return "SystemFunctions.synchronize((MR_bool)"+compileE(b)+")";
+	case distribute(`s):
+	    return "SystemFunctions.distribute((Bag)"+compileE(s)+")";
 	case mapReduce(`mx,`my,`s,_):
 	    return "MapReduceAlgebra.mapReduce("+compileF(mx)+","+compileF(my)+",(Bag)("+compileE(s)+"))";
 	case mapReduce2(`mx,`my,`r,`x,`y,_):
@@ -452,6 +454,8 @@ final class Compiler extends Translate {
 	    if (f.is_variable())
 		return "("+compileF(f)+").eval("+compileE(arg)+")";
 	    else return "(((Lambda)"+compileE(f)+").lambda().eval("+compileE(arg)+"))";
+	case Collect(`s):
+	    return "Plan.collect("+compileM(s)+")";
 	case trace(`x):
 	    return compileE(x);
 	case _:
@@ -495,16 +499,35 @@ final class Compiler extends Translate {
 	    return "new Bag(MapReduceAlgebra.aggregate("+compileF(acc)+","+compileE(zero)
 		   +","+compileM(#<CrossProduct(`mx,`my,`r,`x,`y)>)+"))";
 	case BinarySource(`n,`file,_):
-	    return "(Bag)MapReduceAlgebra.read_binary("+compileE(n)+","+file.stringValue()+")";
+	    if (Config.hadoop_mode)
+		return "Plan.binarySource("+compileE(n)+",((MR_string)"
+		       +compileE(file)+").get())";
+	    else return "(Bag)MapReduceAlgebra.read_binary("+compileE(n)+",((MR_string)"
+		        +compileE(file)+").get())";
+	case BinarySource(`file,_):
+	    if (Config.hadoop_mode)
+		return "Plan.binarySource(((MR_string)"+compileE(file)+").get())";
+	    else return "(Bag)MapReduceAlgebra.read_binary(((MR_string)"+compileE(file)+").get())";
 	case ParsedSource(`n,`parser,`file,...args):
 	    if (!(n instanceof LongLeaf))
 		fail;
-	    return "MapReduceAlgebra.parsedSource(((MR_int)"+compileE(n)+").get(),\""+parser
-		   +"\",((MR_string)"+compileE(file)+").get(),"+Translate.reify(args)+")";
-	case BinarySource(`file,_):
-	    return "(Bag)MapReduceAlgebra.read_binary("+file.stringValue()+")";
+	    if (!Config.hadoop_mode)
+		return "MapReduceAlgebra.parsedSource(((MR_int)"+compileE(n)+").get(),\""
+		       +parser+"\",((MR_string)"+compileE(file)+").get(),"
+		       +Translate.reify(args)+")";
+	    Class<? extends Parser> p = DataSource.parserDirectory.get(parser.toString());
+	    if (p == null)
+		throw new Error("Unknown parser: "+parser);
+	    return "Plan.parsedSource("+p+".class,((MR_string)"+compileE(file)+").get(),"
+		   +Translate.reify(args)+")";
 	case ParsedSource(`parser,`file,...args):
-	    return "MapReduceAlgebra.parsedSource(\""+parser+"\",((MR_string)"+compileE(file)+").get(),"
+	    if (!Config.hadoop_mode)
+		return "MapReduceAlgebra.parsedSource(\""+parser+"\",((MR_string)"
+		       +compileE(file)+").get(),"+Translate.reify(args)+")";
+	    Class<? extends Parser> p = DataSource.parserDirectory.get(parser.toString());
+	    if (p == null)
+		throw new Error("Unknown parser: "+parser);
+	    return "Plan.parsedSource("+p+".class,((MR_string)"+compileE(file)+").get(),"
 		   +Translate.reify(args)+")";
 	case Merge(`x,`y):
 	    return "((Bag)"+compileM(x)+").union((Bag)"+compileM(y)+")";

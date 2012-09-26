@@ -27,6 +27,7 @@ import Gen.*;
 
 class BSPTranslate extends Translate {
     final static int orM = ClassImporter.find_method_number("or",#[bool,bool]);
+    final static int andM = ClassImporter.find_method_number("and",#[bool,bool]);
     final static int notM = ClassImporter.find_method_number("not",#[bool]);
     final static int eqM = ClassImporter.find_method_number("eq",#[int,int]);
     final static int plusM = ClassImporter.find_method_number("plus",#[int,int]);
@@ -62,7 +63,7 @@ class BSPTranslate extends Translate {
 	return e;
     }
 
-    // return the source num of a BSP operation
+   // return the source num of a BSP operation
     private static int source_num ( Tree e ) {
 	match e {
 	case BSP(`i,...):
@@ -73,6 +74,21 @@ class BSPTranslate extends Translate {
 	    return (int)((LongLeaf)i).value();
 	};
 	return -1;
+    }
+
+   // return the source numbers of a BSP operation
+    private static Trees source_nums ( Tree e ) {
+	match e {
+	case BSP(`i,...):
+	    return #[`i];
+	case Merge(`x,`y):
+	    return source_nums(x).append(source_nums(y));
+	case `f(`i,...):
+	    if (!data_source_operations.member(#<`f>))
+		fail;
+	    return #[`i];
+	};
+	return #[];
     }
 
     // optimizations after BSP fusion
@@ -289,76 +305,150 @@ class BSPTranslate extends Translate {
 	case Repeat(lambda(`v,`b),`ds,`max):
 	    match bspSimplify(mr2bsp(b)) {
 	    case BSP(`n,`s,`k0,_,...as):
-		Tree extra_sources = #<bag()>;
-		// extra sources (in addition to the repeat target) must be materialized in memory
-		//  and carry through the repeat steps
+		// the initial value of the repeat variable (an input data source)
+		Tree ds_source = mr2bsp(ds);
+		// the initial values of all data sources
+		Trees sources = #[];
+		for ( Tree x: as )
+		    sources = sources.append((x.equals(v)) ? ds_source : x);
+		Trees sn = source_nums(ds_source);
+		// filter used in extracting the extra sources (the immutable data sources)
+		Tree ncond = #<callM(neq,`neqM,n,`(sn.head()))>;
+		for ( Tree i: sn.tail() )
+		    ncond = #<callM(and,`andM,`ncond,callM(neq,`neqM,n,`i))>;
+		return mkBSPL(#<lambda(tuple(ms,vs,tuple(k,steps,firstp,sources)),
+				       let(tuple(ts,bs,kk,b),
+					   apply(`s,tuple(ms,vs,k)),
+					   if(b,   // end of repeat step
+					      let(S,sources,   // materialize the extra sources in memory
+						  tuple(bag(),
+							callM(union,`unionM,
+							      map(lambda(tuple(z,tuple(x,bb)),tuple(z,x)),bs),
+							      S),
+							tuple(`k0,callM(add,`plusM,steps,1),
+							      false,
+							      if(firstp,
+								 // filter out the repeat var data
+								 cmap(lambda(tuple(n,x),
+									     if(`ncond,bag(tuple(n,x)),bag())),
+								      vs),
+								 S)),
+							if(callM(gt,`gtM,steps,`max),
+							   TRUE(),           // if # of steps <= limit, exit
+							   callM(not,`notM,  // ... else check the stopping condition
+								 aggregate(lambda(tuple(x,y),callM(or,`orM,x,y)),
+									   false,
+									   map(lambda(tuple(z,tuple(x,bb)),bb),bs)))))),
+					      tuple(ts,
+						    bs,
+						    tuple(kk,steps,false,
+							  if(firstp,
+							     // filter out the repeat var data
+							     cmap(lambda(tuple(n,x),
+									 if(`ncond,bag(tuple(n,x)),bag())),
+								  vs),
+							     sources)),
+						    FALSE()))))>,
+			      #<tuple(`k0,1,true,bag())>,
+			      #<false>,
+			      sources);
+	    case `x: throw new Error("Cannot compile the repeat function: "+x);
+	    }
+	// when the repeat variable is in memory
+	case repeat(lambda(`v,`b),`ds,`max):
+	    match bspSimplify(mr2bsp(b)) {
+	    case BSP(`n,`s,`k0,_,...as):
+		Trees ss = #[];
 		for ( Tree a: as )
 		    if (!a.equals(v))
-			extra_sources = #<callM(union,`unionM,`extra_sources,`a)>;
-		return mkBSP(#<lambda(tuple(ms,`v,tuple(k,firstp,steps,S)),
-				      let(tuple(ts,bs,kk,b),
-					  apply(`s,
-						tuple(ms,
-						      if(firstp,
-							 callM(union,`unionM,`v,S),
-							 `v),
-						      k)),
-					  if(b,
-					     tuple(bag(),
-						   callM(union,`unionM,
-							 map(lambda(tuple(z,tuple(x,bb)),tuple(z,x)),bs),
-							 S),
-						   tuple(`k0,false,callM(add,`plusM,steps,1),S),
-						   if(callM(gt,`gtM,steps,`max),
-						      TRUE(),       // if # of steps <= limit, exit
-						      callM(not,`notM,  // ... else check the stopping condition
-							    aggregate(lambda(tuple(x,y),callM(or,`orM,x,y)),
-								      false,
-								      map(lambda(tuple(z,tuple(x,bb)),bb),bs))))),
-							       
-					     tuple(ts,
-						   bs,
-						   tuple(kk,false,steps,S),
-						   FALSE()))))>,
-			     #<tuple(`k0,true,1,`extra_sources)>,
-			     #<false>,
-			     mr2bsp(ds));
+			ss = ss.append(a);
+		// contains all input sources except the repeat variable
+		Tree sources = #<bag()>;
+		if (!ss.is_empty()) {
+		    sources = ss.head();
+		    for ( Tree x: ss.tail() )
+			sources = #<Merge(`sources,`x)>;
+		};
+		Tree res = mkBSP(#<lambda(tuple(ms,vs,tuple(k,steps,S,firstp,sources)),
+				      let(`v,S,       // materialize the repeat variable in memory
+					  let(tuple(ts,bs,kk,b),
+					      apply(`s,tuple(ms,materialize(vs),k)),
+					      if(b,   // at the end of repeat step
+						 let(exit,if(callM(gt,`gtM,steps,`max),
+							     TRUE(),           // if # of steps <= limit, exit
+							     callM(not,`notM,  // ... else check the stopping condition
+								   aggregate(lambda(tuple(x,y),callM(or,`orM,x,y)),
+									     false,
+									     map(lambda(tuple(z,tuple(x,bb)),bb),bs)))),
+						     tuple(bag(),
+							   if(exit,
+							      map(lambda(tuple(z,tuple(x,bb)),tuple(z,x)),bs),
+							      sources),
+							   tuple(`k0,
+								 callM(add,`plusM,steps,1),
+								 // need to collect the repeat var value from all peers
+								 distribute(map(lambda(tuple(z,tuple(x,bb)),x),bs)),
+								 false,
+								 if(firstp,vs,sources)),
+							   exit)),
+						 tuple(ts,   // within the repeat step
+						       bs,
+						       tuple(kk,steps,`v,false,
+							     if(firstp,vs,sources)),
+						       FALSE())))))>,
+				 #<tuple(`k0,1,`(mr2bsp(ds)),true,bag())>,
+				 #<false>,
+				 sources);
+		return #<Collect(`res)>;   // must return a memory bag
 	    case `x: throw new Error("Cannot compile the repeat function: "+x);
 	    }
 	case Closure(lambda(`v,`b),`ds,`max):
 	    match bspSimplify(mr2bsp(b)) {
 	    case BSP(`n,`s,`k0,_,...as):
-		Tree extra_sources = #<bag()>;
-		// extra sources (in addition to the closure target) must be materialized in memory
-		//  and carry through the closure steps
-		for ( Tree a: as )
-		    if (!a.equals(v))
-			extra_sources = #<callM(union,`unionM,`extra_sources,`a)>;
-		return mkBSP(#<lambda(tuple(ms,`v,tuple(k,firstp,len,steps,S)),
-				      let(tuple(ts,bs,kk,b),
-					  apply(`s,
-						tuple(ms,
-						      if(firstp,
-							 callM(union,`unionM,`v,S),
-							 `v),
-						      k)),
-					  if(b,
-					     let(newS,bs,
-						 let(newLen,callM(count,`countM,newS),
-						     tuple(bag(),
-							   callM(union,`unionM,newS,S),
-							   tuple(`k0,false,newLen,callM(add,`plusM,steps,1),S),
-							   if(callM(gt,`gtM,steps,`max),
-							      TRUE(),       // if # of steps <= limit, exit
-							      // ... else check if the new size is the same as the old size
-							      callM(geq,`geqM,len,newLen))))),
-					     tuple(ts,
-						   bs,
-						   tuple(kk,false,len,steps,S),
-						   FALSE()))))>,
-			     #<tuple(`k0,true,callM(coerce,`coerceM,0,`(MRContainer.LONG)),1,`extra_sources)>,
-			     #<false>,
-			     mr2bsp(ds));
+		// the initial value of the repeat variable (an input data source)
+		Tree ds_source = mr2bsp(ds);
+		// the initial values of all data sources
+		Trees sources = #[];
+		for ( Tree x: as )
+		    sources = sources.append((x.equals(v)) ? ds_source : x);
+		Trees sn = source_nums(ds_source);
+		// filter used in extracting the extra sources (the immutable data sources)
+		Tree ncond = #<callM(neq,`neqM,n,`(sn.head()))>;
+		for ( Tree i: sn.tail() )
+		    ncond = #<callM(and,`andM,`ncond,callM(neq,`neqM,n,`i))>;
+		return mkBSPL(#<lambda(tuple(ms,vs,tuple(k,steps,firstp,len,sources)),
+				       let(tuple(ts,bs,kk,b),
+					   apply(`s,tuple(ms,vs,k)),
+					   if(b,   // end of repeat step
+					      let(S,sources,   // materialize the extra sources in memory
+						  let(newLen,callM(count,`countM,bs),
+						      tuple(bag(),
+							    callM(union,`unionM,bs,S),
+							    tuple(`k0,callM(add,`plusM,steps,1),
+								  false,
+								  if(firstp,
+								     // filter out the repeat var data
+								     cmap(lambda(tuple(n,x),
+										 if(`ncond,bag(tuple(n,x)),bag())),
+									  vs),
+								     newLen,S)),
+							    if(callM(gt,`gtM,steps,`max),
+							       TRUE(),           // if # of steps <= limit, exit
+							       // ... else check if the new size is the same as the old size
+							       callM(geq,`geqM,len,newLen))))),
+					      tuple(ts,
+						    bs,
+						    tuple(kk,steps,false,
+							  if(firstp,
+							     // filter out the repeat var data
+							     cmap(lambda(tuple(n,x),
+									 if(`ncond,bag(tuple(n,x)),bag())),
+								  vs),
+							     len,sources)),
+						    FALSE()))))>,
+			      #<tuple(`k0,1,true,bag())>,
+			      #<false>,
+			      sources);
 	    case `x: throw new Error("Cannot compile the closure function: "+x);
 	    }
 	case CrossProduct(`mx,`my,`r,`x,`y):

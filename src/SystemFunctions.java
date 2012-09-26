@@ -52,6 +52,10 @@ final public class SystemFunctions {
 	return Evaluator.synchronize(mr_exit);
     }
 
+    public static Bag distribute ( Bag s ) {
+	return Evaluator.distribute(s);
+    }
+
     public static MR_bool lt ( MR_short x, MR_short y ) { return (x.get() < y.get()) ? true_value : false_value; }
     public static MR_bool lt ( MR_int x, MR_int y ) { return (x.get() < y.get()) ? true_value : false_value; }
     public static MR_bool lt ( MR_long x, MR_long y ) { return (x.get() < y.get()) ? true_value : false_value; }

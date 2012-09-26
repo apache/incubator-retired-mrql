@@ -1,0 +1,29 @@
+type point = < X: double, Y: double, Z: double >;
+
+function distance ( x: point, y: point ): double {
+   sqrt(pow(x.X-y.X,2)+pow(x.Y-y.Y,2)+pow(x.Z-y.Z,2))
+};
+
+aggregation new_centroid (
+      \(p:(point,long),q:(point,long)):(point,long)
+                .( < X: p#0.X+q#0.X, Y: p#0.Y+q#0.Y, Z: p#0.Z+q#0.Z >,
+                   p#1+q#1),
+      ( < X: 0.0 as double, Y: 0.0 as double, Z: 0.0 as double >,
+        1 as long)
+    ) : (point,long);
+
+function centroid ( p: (point,long), default: point ): point {
+   if p#1 = 0
+      then default
+      else < X: p#0.X/p#1, Y: p#0.Y/p#1, Z: p#0.Z/p#1 >
+};
+
+repeat centroids = select < X: random(1000)/100.0 as double,
+       		   	    Y: random(1000)/100.0 as double,
+			    Z: random(1000)/100.0 as double >
+                     from x in 1..3
+  step select let nc = centroid(new_centroid(select (p,0 as long) from p in s),k)
+              in ( nc, true )
+         from s in source(line,"queries/q.txt",",",type(<X:double,Y:double,Z:double>))
+        group by k: (select c from c in centroids order by distance(c,s))[0]
+  limit 10;

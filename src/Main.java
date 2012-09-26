@@ -35,7 +35,7 @@ import jline.*;
 
 
 final class Config {
-    public final static String version = "0.8.2";
+    public final static String version = "0.8.4";
     public static boolean loaded = false;
 
     // true for Hadoop, false for plain Java

@@ -449,13 +449,17 @@ final public class MapReduceAlgebra {
 	}
     }
 
-    public static MRData read_binary ( String file ) throws IOException {
-	Tree type = get_type(file);
-	DataInputStream in = new DataInputStream(new FileInputStream(new File(file)));
-	return MRContainer.read(in);
+    public static MRData read_binary ( String file ) {
+	try {
+	    Tree type = get_type(file);
+	    DataInputStream in = new DataInputStream(new FileInputStream(new File(file)));
+	    return MRContainer.read(in);
+	} catch (Exception e) {
+	    return null;
+	} 
     }
 
-    public static Bag read_binary ( int source_num, String file ) throws IOException {
+    public static Bag read_binary ( int source_num, String file ) {
 	return add_source_num(source_num,(Bag)read_binary(file));
     }
 

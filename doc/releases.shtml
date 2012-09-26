@@ -7,6 +7,8 @@
 <H2>MRQL Releases</H2>
 </center>
 <ul>
+<li> <a href="/mrql-0.8.4.tgz">0.8.4</a> (09/24/2012):
+
 <li> <a href="/mrql-0.8.2.tgz">0.8.2</a> (08/26/2012):
 Fixed a bug in testing the stopping condition of the repeat/closure expression in BSP mode.
 Added support for LIMIT in repeat/closure expression in BSP mode.
