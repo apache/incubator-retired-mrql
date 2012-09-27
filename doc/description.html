@@ -893,7 +893,7 @@ repeat centroids = select &lt; X: random(1000)/100.0 as double,
        		   	    Y: random(1000)/100.0 as double,
 			    Z: random(1000)/100.0 as double &gt;
                      from x in 1..k
-  step select let nc = centroid( new_centroid(select (p,0 as long) from p in s), closest )
+  step select let nc = centroid( new_centroid(select (p,1 as long) from p in s), closest )
               in ( nc, distance(closest,nc) > 0.1 )
          from s in Points
         group by closest: (select c from c in centroids order by distance(c,s))[0]

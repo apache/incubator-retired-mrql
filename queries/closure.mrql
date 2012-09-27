@@ -1,0 +1,8 @@
+G = source(binary,"graph.bin");
+
+repeat s = G
+  step select distinct c
+         from s in (select { (i,k), (k,j), (i,j) }
+                      from (i,k) in s, (k,j) in s),
+              c in s
+limit 5;

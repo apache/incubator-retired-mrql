@@ -83,6 +83,7 @@ class BSPPlan extends Plan {
 	    }
 	}
 
+	// collect a bag from all peers by distributing the local copy s
 	public static Bag distribute ( Bag s ) {
 	    if (!Config.hadoop_mode)
 		return s;

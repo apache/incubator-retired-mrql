@@ -1605,6 +1605,11 @@ class Translate {
 		    coerce(ti,tk,((Node)e).children.tail);
 		    return tv;
 		} else fail
+	    case Bag(tuple(`tk,`tv)):
+		if (subtype(ti,tk)) {
+		    coerce(ti,tk,((Node)e).children.tail);
+		    return tv;
+		} else fail
 	    case list(`tp):
 		if (unify(ti,#<int>) != null)
 		    return tp;
@@ -2909,6 +2914,10 @@ class Translate {
        case index(`x,`n):
 	   match type_inference2(x) {
 	   case bag(tuple(`kt,`vt)):
+	       if (type_inference2(n).equals(kt))
+		   return #<map_index(`(makePlan(x)),
+				      `(makePlan(n)))>;
+	   case Bag(tuple(`kt,`vt)):
 	       if (type_inference2(n).equals(kt))
 		   return #<map_index(`(makePlan(x)),
 				      `(makePlan(n)))>;

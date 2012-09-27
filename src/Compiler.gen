@@ -56,7 +56,7 @@ final class Compiler extends Translate {
     static DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
     final static String tmp_dir = "/tmp/mrql_jar_"+System.getProperty("user.name");
     public static String jar_path;
-
+    static Trees in_memory_repeat_vars = #[];
     static int lambda_num = 0;
 
     static String new_lambda_name () {
@@ -99,11 +99,15 @@ final class Compiler extends Translate {
     }
 
     public static void clean () throws IOException {
+	in_memory_repeat_vars = #[];
 	remove(new File(tmp_dir));
     }
 
     final public static Tree compile ( Tree e, StringBuffer out ) throws Exception {
 	match e {
+	case repeat(lambda(`v,`body),`s,`n):
+	    in_memory_repeat_vars = in_memory_repeat_vars.cons(v);
+	    return #<repeat(lambda(`v,`body),`(compile(s,out)),`n)>;
 	case `f(...al):
 	    if (!Translate.plans_with_distributed_lambdas.member(#<`f>))
 		fail;
@@ -319,7 +323,9 @@ final class Compiler extends Translate {
 	else if (e.equals(#<null>))
 	    return "(new MR_byte(0))";
 	else if (e.is_variable())
-	    return e.toString();
+	    if (in_memory_repeat_vars.member(e))
+		return "Interpreter.variable_lookup(\""+e+"\",Interpreter.global_env)";
+	    else return e.toString();
 	else if (e.is_long())
 	    return "(new MR_int("+((LongLeaf)e).value()+"))";
 	else if (e.is_double())

@@ -421,32 +421,33 @@ class BSPTranslate extends Translate {
 					   apply(`s,tuple(ms,vs,k)),
 					   if(b,   // end of repeat step
 					      let(S,sources,   // materialize the extra sources in memory
-						  let(newLen,callM(count,`countM,bs),
-						      tuple(bag(),
-							    callM(union,`unionM,bs,S),
-							    tuple(`k0,callM(add,`plusM,steps,1),
-								  false,
-								  if(firstp,
-								     // filter out the repeat var data
-								     cmap(lambda(tuple(n,x),
-										 if(`ncond,bag(tuple(n,x)),bag())),
-									  vs),
-								     newLen,S)),
-							    if(callM(gt,`gtM,steps,`max),
-							       TRUE(),           // if # of steps <= limit, exit
-							       // ... else check if the new size is the same as the old size
-							       callM(geq,`geqM,len,newLen))))),
+						  let(mbs,bs,  // materialize bs in memory
+						      let(newLen,callM(count,`countM,mbs),
+							  tuple(bag(),
+								callM(union,`unionM,mbs,S),
+								tuple(`k0,callM(add,`plusM,steps,1),
+								      false,newLen,
+								      if(firstp,
+									 // filter out the repeat var data
+									 cmap(lambda(tuple(n,x),
+										     if(`ncond,bag(tuple(n,x)),bag())),
+									      vs),
+									 S)),
+								if(callM(gt,`gtM,steps,`max),
+								   TRUE(),           // if # of steps <= limit, exit
+								   // ... else check if the new size is the same as the old size
+								   callM(geq,`geqM,len,newLen)))))),
 					      tuple(ts,
 						    bs,
-						    tuple(kk,steps,false,
+						    tuple(kk,steps,false,len,
 							  if(firstp,
 							     // filter out the repeat var data
 							     cmap(lambda(tuple(n,x),
 									 if(`ncond,bag(tuple(n,x)),bag())),
 								  vs),
-							     len,sources)),
+							     sources)),
 						    FALSE()))))>,
-			      #<tuple(`k0,1,true,bag())>,
+			      #<tuple(`k0,1,true,callM(coerce,`coerceM,0,4),bag())>,
 			      #<false>,
 			      sources);
 	    case `x: throw new Error("Cannot compile the closure function: "+x);

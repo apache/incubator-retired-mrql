@@ -536,7 +536,9 @@ class Interpreter extends Translate {
 	    if (Config.hadoop_mode) {
 		Function loop_fnc = new Function () {
 			public MRData eval ( MRData s ) {
-			    return new MR_dataset(Evaluator.eval(body,new Environment(nm,s,env),nm));
+			    MRData val = new MR_dataset(Evaluator.eval(body,new Environment(nm,s,env),nm));
+			    global_binding(nm,val);
+			    return val;
 			}; };
 		return MapReduceAlgebra.repeat(loop_fnc,(Bag)evalE(s,env),((MR_int)evalE(n,env)).get());
 	    } else {
