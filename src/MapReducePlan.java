@@ -310,7 +310,8 @@ class MapReducePlan extends Plan {
 	                        throws Exception {
 	String newpath = new_path(conf);
 	conf.set("mrql.mapper",map_fnc.toString());
-	conf.set("mrql.combiner",combine_fnc.toString());
+	if (combine_fnc != null)
+	    conf.set("mrql.combiner",combine_fnc.toString());
 	conf.set("mrql.reducer",reduce_fnc.toString());
 	if (zero != null) {   // will use in-mapper combiner
 	    conf.set("mrql.accumulator",acc_fnc.toString());

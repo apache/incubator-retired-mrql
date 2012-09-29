@@ -2965,6 +2965,8 @@ class Translate {
 										       apply(`unit,nth(`na,1)))))>));
 		       zero = makePlan((f.equals(#<avg>)) ? zero : #<typed(`zero,`tp)>);
 		       match plan {
+		       case MapCombineReduce(`m,`c,`r,`s,_):
+			   plan = #<MapAggregateReduce(`m,`r,`acc,`zero,`s,false)>;
 		       case MapReduce(`m,`r,`s,_):
 			   plan = #<MapAggregateReduce(`m,`r,`acc,`zero,`s,false)>;
 		       case MapReduce2(`mx,`my,`r,`x,`y,_):
