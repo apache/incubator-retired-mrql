@@ -301,9 +301,10 @@ class BSPTranslate extends Translate {
 		// the initial value of the repeat variable (an input data source)
 		Tree ds_source = mr2bsp(ds);
 		// the initial values of all data sources
-		Trees sources = #[];
+		Trees sources = #[`ds_source];
 		for ( Tree x: as )
-		    sources = sources.append((x.equals(v)) ? ds_source : x);
+		    if (!x.equals(v))
+			sources = sources.append(x);
 		Trees sn = source_nums(ds_source);
 		// filter used in extracting the extra sources (the immutable data sources)
 		Tree ncond = #<callM(neq,`neqM,n,`(sn.head()))>;
@@ -401,9 +402,10 @@ class BSPTranslate extends Translate {
 		// the initial value of the repeat variable (an input data source)
 		Tree ds_source = mr2bsp(ds);
 		// the initial values of all data sources
-		Trees sources = #[];
+		Trees sources = #[`ds_source];
 		for ( Tree x: as )
-		    sources = sources.append((x.equals(v)) ? ds_source : x);
+		    if (!x.equals(v))
+			sources = sources.append(x);
 		Trees sn = source_nums(ds_source);
 		// filter used in extracting the extra sources (the immutable data sources)
 		Tree ncond = #<callM(neq,`neqM,n,`(sn.head()))>;

@@ -1004,6 +1004,8 @@ class Interpreter extends Translate {
 	    repeat_variables = #[];
 	    Tree plan = makePlan(simplify_all(ne));
 	    if (Config.bsp_mode) {
+		if (Config.trace)
+		    System.out.println("Physical plan:\n"+plan.pretty(0));
 		plan = BSPTranslate.mr2bsp(BSPTranslate.preprocess(plan));
 		if (Config.trace)
 		    System.out.println("BSP plan:\n"+plan.pretty(0));
