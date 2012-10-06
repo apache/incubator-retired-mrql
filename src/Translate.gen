@@ -288,6 +288,8 @@ class Translate {
 	    if (pattern_variables(v).member(from_expr))
 		return expr;
 	    else fail
+	case bind(`a,`u):
+	    return #<bind(`a,`(subst(from_expr,to_expr,u)))>;
 	case `f(...al):
 	    return #<`f(...(subst_list(from_expr,to_expr,al)))>;
 	};
@@ -769,6 +771,8 @@ class Translate {
 	    return rename(ret);
 	case project(`u,`a):
 	    return #<project(`(rename(u)),`a)>;
+	case bind(`a,`u):
+	    return #<bind(`a,`(rename(u)))>;
 	case `f(...al):
 	    Trees bl = rename_list(al);
 	    return #<`f(...bl)>;
