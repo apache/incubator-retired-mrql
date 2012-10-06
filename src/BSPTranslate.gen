@@ -301,9 +301,10 @@ class BSPTranslate extends Translate {
 		// the initial value of the repeat variable (an input data source)
 		Tree ds_source = mr2bsp(ds);
 		// the initial values of all data sources
-		Trees sources = #[];
+		Trees sources = #[`ds_source];
 		for ( Tree x: as )
-		    sources = sources.append((x.equals(v)) ? ds_source : x);
+		    if (!x.equals(v))
+			sources = sources.append(x);
 		Trees sn = source_nums(ds_source);
 		// filter used in extracting the extra sources (the immutable data sources)
 		Tree ncond = #<callM(neq,`neqM,n,`(sn.head()))>;
@@ -351,18 +352,12 @@ class BSPTranslate extends Translate {
 	case repeat(lambda(`v,`b),`ds,`max):
 	    match bspSimplify(mr2bsp(b)) {
 	    case BSP(`n,`s,`k0,_,...as):
-		Trees ss = #[];
+		// contains all input sources except the repeat variable
+		Trees sources = #[];
 		for ( Tree a: as )
 		    if (!a.equals(v))
-			ss = ss.append(a);
-		// contains all input sources except the repeat variable
-		Tree sources = #<bag()>;
-		if (!ss.is_empty()) {
-		    sources = ss.head();
-		    for ( Tree x: ss.tail() )
-			sources = #<Merge(`sources,`x)>;
-		};
-		Tree res = mkBSP(#<lambda(tuple(ms,vs,tuple(k,steps,S,firstp,sources)),
+			sources = sources.append(a);
+		Tree res = mkBSPL(#<lambda(tuple(ms,vs,tuple(k,steps,S,firstp,sources)),
 				      let(`v,S,       // materialize the repeat variable in memory
 					  let(tuple(ts,bs,kk,b),
 					      apply(`s,tuple(ms,materialize(vs),k)),
@@ -401,9 +396,10 @@ class BSPTranslate extends Translate {
 		// the initial value of the repeat variable (an input data source)
 		Tree ds_source = mr2bsp(ds);
 		// the initial values of all data sources
-		Trees sources = #[];
+		Trees sources = #[`ds_source];
 		for ( Tree x: as )
-		    sources = sources.append((x.equals(v)) ? ds_source : x);
+		    if (!x.equals(v))
+			sources = sources.append(x);
 		Trees sn = source_nums(ds_source);
 		// filter used in extracting the extra sources (the immutable data sources)
 		Tree ncond = #<callM(neq,`neqM,n,`(sn.head()))>;
@@ -446,9 +442,42 @@ class BSPTranslate extends Translate {
 	    case `x: throw new Error("Cannot compile the closure function: "+x);
 	    }
 	case CrossProduct(`mx,`my,`r,`x,`y):
-	    throw new Error("BSP mode does not support cross products: "+e);
+	    return mkBSP(#<lambda(tuple(ms,xs,ys),
+				  tuple(BAG(),
+					cmap(lambda(tuple(kx,x),
+						    cmap(lambda(xx,
+								cmap(lambda(y,
+									    cmap(lambda(yy,
+											cmap(lambda(z,bag(tuple(i_,z))),
+											     apply(`r,tuple(xx,yy)))),
+										 apply(`my,y))),
+								     ys)),
+							 apply(`mx,x))),
+					     xs),
+					tuple(),
+					TRUE()))>,
+			 #<Collect(`(mr2bsp(y)))>,
+			 #<false>,
+			 mr2bsp(x));
 	case CrossAggregateProduct(`mx,`my,`r,`acc,`zero,`x,`y):
-	    throw new Error("BSP mode does not support cross products: "+e);
+	    return mkBSP(#<lambda(tuple(ms,xs,ys),
+				  tuple(BAG(),
+					aggregate(`acc,`zero,
+					cmap(lambda(tuple(kx,x),
+						    cmap(lambda(xx,
+								cmap(lambda(y,
+									    cmap(lambda(yy,
+											cmap(lambda(z,bag(tuple(i_,z))),
+											     apply(`r,tuple(xx,yy)))),
+										 apply(`my,y))),
+								     ys)),
+							 apply(`mx,x)))),
+					     xs),
+					tuple(),
+					TRUE()))>,
+			 #<Collect(`(mr2bsp(y)))>,
+			 #<false>,
+			 mr2bsp(x));
 	case `f(...as):
 	    Trees bs = #[];
 	    for ( Tree a: as )

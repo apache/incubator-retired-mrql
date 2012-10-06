@@ -142,17 +142,15 @@ final class Config {
 	interactive = true;
 	Main.parser.scanner = null;
 	while (i < args.length) {
-	    if (args[i].equals("-hadoop")) {
-		hadoop_mode = true;
-		i++;
-	    } else if (args[i].equals("-bsp")) {
-		bsp_mode = true;
-		i++;
-	    } else if (args[i].equals("-local")) {
+	    if (args[i].equals("-local")) {
+		if (i != 0)
+		    throw new Error("-local must be the first argument");
 		hadoop_mode = true;
 		local_hadoop_mode = true;
 		i++;
 	    } else if (args[i].equals("-dist")) {
+		if (i != 0)
+		    throw new Error("-dist must be the first argument");
 		hadoop_mode = true;
 		local_hadoop_mode = false;
 		i++;
@@ -353,9 +351,7 @@ public class Main extends Configured implements Tool {
     }
 
     public static void main ( String[] args ) throws Exception {
-	boolean hadoop = false;
-	for ( String arg: args )
-	    hadoop |= arg.equals("-local") || arg.equals("-dist") || arg.equals("-hadoop");
+	boolean hadoop = args[0].equals("-local") || args[0].equals("-dist");
 	if (!hadoop)
 	    new Main().run(args);
 	else {

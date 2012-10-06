@@ -291,12 +291,10 @@ class Interpreter extends Translate {
 	    return "Choice 1: "+print_plan(x,n+10,pv)+"\n"
 		   +tab(n)+"Choice 2: "+print_plan(y,n+10,pv);
 	case `f(...as):
-	    if (true)
-		fail;
 	    String s = "";
 	    for (Tree a: as) {
 		String ps = print_plan(a,n,pv);
-		if (!ps.equals(""))
+		if (!ps.equals("") && !a.is_variable())
 		    s += ps+(ps.endsWith("\n")?"":"\n");
 	    };
 	    return s;

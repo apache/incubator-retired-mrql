@@ -479,11 +479,9 @@ final class SingleQueryPlan {
 
     static boolean contains ( Tree pattern, String var ) {
 	match pattern {
-	case `f(...):
+	case `f(...s):
 	    if (f.equals(var))
 		return true;
-	    else fail
-	case `f(...s):
 	    for (Tree x: s)
 		if (contains(x,var))
 		    return true;
@@ -731,7 +729,8 @@ final class SingleQueryPlan {
 	    else if (depth[i] < depth[j])
 		return no_neighbors(j,i,n);
 	    else return no_neighbors(i,j,n);
-	} else return false;
+	};
+	return false;
     }
 
     static Tree subst_header ( Tree var, Tree pat, Tree plan, Tree header ) {
