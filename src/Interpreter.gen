@@ -224,10 +224,10 @@ class Interpreter extends Translate {
 	case MapReduce2(`mx,`my,`r,`x,`y,_):
 	    return "MapReduce2:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
 		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
-	case MapAggregateReduce2(`mx,`my,`r,`a,null,`x,`y):
+	case MapAggregateReduce2(`mx,`my,`r,`a,null,`x,`y,...):
 	    return "MapReduce2:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
 		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
-	case MapAggregateReduce2(`mx,`my,`r,`a,`z,`x,`y):
+	case MapAggregateReduce2(`mx,`my,`r,`a,`z,`x,`y,...):
 	    return "MapAggregateReduce2:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
 		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
 	case MapJoin(`kx,`ky,`r,`x,`y):

@@ -3109,11 +3109,11 @@ class Translate {
 			     If(`cond2,
 				MapJoin(`my,`mx,`L2,`Y,`X),
 				If(`cond3,
-				   MapAggregateReduce2(`my,`mx,`L3,null,null,`Y,`X),
+				   MapAggregateReduce2(`my,`mx,`L3,null,null,`Y,`X,false),
 				   MapAggregateReduce2(`mx,`my,
 						       lambda(`v,cmap(lambda(`vx,cmap(lambda(`vy,`b),nth(`nx,1))),
 								      nth(`ny,0))),
-						       null,null,`X,`Y))))))>;
+						       null,null,`X,`Y,false))))))>;
 	case MapAggregateReduce2(`mx,`my,lambda(`v,`b),null,null,`x,`y,false):
 	    Tree X = new_var();
 	    Tree Y = new_var();
