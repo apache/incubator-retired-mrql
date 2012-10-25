@@ -179,17 +179,24 @@ class BSPTranslate extends Translate {
 			 #<true>,
 			 o,
 			 mr2bsp(S));
-	case MapAggregateReduce(`m,`r,`acc,`zero,`S,_):
-	    return mkBSP(#<lambda(tuple(ms,as,b),
-				  tuple(BAG(),
-					aggregate(`acc,`zero,
-						  cmap(`r,groupBy(cmap(lambda(tuple(k,c),apply(`m,c)),
-								       as)))),
-					false,
-					TRUE()))>,
-			 #<true>,
-			 #<false>,
-			 mr2bsp(S));
+        case MapAggregateReduce(`m,`r,`acc,`zero,`S,_):
+            return mkBSP(#<lambda(tuple(ms,as,b),
+                                  if(b,
+                                     tuple(cmap(lambda(tuple(k,c),
+                                                       bag(tuple(k,tuple(k,c)))),
+                                                cmap(lambda(tuple(k,c),apply(`m,c)),
+                                                     as)),
+                                           bag(),
+                                           false,
+                                           FALSE()),
+                                     tuple(BAG(),
+                                           aggregate(`acc,`zero,
+                                                     cmap(`r,groupBy(ms))),
+                                           false,
+                                           TRUE())))>,
+                         #<true>,
+                         #<false>,
+                         mr2bsp(S));
 	case MapCombineReduce(`m,`c,`r,`S,`o):
 	    return mkBSP(#<lambda(tuple(ms,as,b),
 				  if(b,
@@ -297,7 +304,27 @@ class BSPTranslate extends Translate {
 						`acc,`zero,`x,`y)>);
 	case Repeat(lambda(`v,`b),`ds,`max):
 	    match bspSimplify(mr2bsp(b)) {
-	    case BSP(`n,`s,`k0,_,...as):
+	    case BSP(`n,`s,`k0,_,`S):	   // no extra data sources
+		if (!S.equals(v))
+		    fail;
+		return mkBSP(#<lambda(tuple(ms,vs,tuple(k,steps)),
+				      let(tuple(ts,bs,kk,b),
+					  apply(`s,tuple(ms,vs,k)),
+					  if(b,   // end of repeat step
+					     tuple(bag(),
+						   map(lambda(tuple(z,tuple(x,bb)),tuple(z,x)),bs),
+						   tuple(`k0,callM(add,`plusM,steps,1)),
+						   if(callM(gt,`gtM,steps,`max),
+						      TRUE(),           // if # of steps <= limit, exit
+						      callM(not,`notM,  // ... else check the stopping condition
+							    aggregate(lambda(tuple(x,y),callM(or,`orM,x,y)),
+								      false,
+								      map(lambda(tuple(z,tuple(x,bb)),bb),bs))))),
+					     tuple(ts,bs,tuple(kk,steps),FALSE()))))>,
+			     #<tuple(`k0,1)>,
+			     #<false>,
+			     mr2bsp(ds));
+	    case BSP(`n,`s,`k0,_,...as):      // repeat loop uses extra data sources
 		// the initial value of the repeat variable (an input data source)
 		Tree ds_source = mr2bsp(ds);
 		// the initial values of all data sources

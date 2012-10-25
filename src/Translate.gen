@@ -2164,6 +2164,8 @@ class Translate {
 	match e {
 	case cmap(`f,cmap(lambda(`x,`g),`s)):
 	    return simplify(#<cmap(lambda(`x,cmap(`f,`g)),`s)>);
+	case map(`f,cmap(lambda(`x,`g),`s)):
+	    return simplify(#<cmap(lambda(`x,map(`f,`g)),`s)>);
 	case cmap(`g,join(`k1,`k2,lambda(`p,`f),`X,`Y)):
 	    return simplify(#<join(`k1,`k2,lambda(`p,cmap(`g,`f)),`X,`Y)>);
 	case cmap(lambda(`x,`S(`y)),`u):
