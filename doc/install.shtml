@@ -34,7 +34,7 @@ Most important change: change the JAVA_HOME in <tt>conf/hadoop-env.sh</tt>
 to point to your Java installation directory.
 <p>
 <h3>How to install MRQL </h3>
-Download the <a href="/mrql.tgz">latest release of MRQL</a> (currently, version 0.8.4) and extract the files.
+Download the <a href="/mrql.tgz">latest release of MRQL</a> (currently, version 0.8.6) and extract the files.
 The jar files <tt>mrql.jar</tt> and <tt>mrql-bsp.jar</tt> contain the code for MRQL map-reduce and BSP, respectively.
 They can be run using the scripts <tt>bin/mrql</tt> and <tt>bin/mrql.bsp</tt>.
 You can get the latest source code from <a href="https://github.com/fegaras/mrql">GitHub</a>.
@@ -48,7 +48,9 @@ and using <tt>bin/mrql -local queries/q1.mrql</tt>, which runs this query in Had
 <li> If the existing <tt>mrql.jar</tt> doesn't match your Hadoop distribution,
 you can recompile MRQL using <tt>make</tt>.
 </ul>
-For a real test, do the <a href="pagerank.html">PageRank example</a> on a small Hadoop MapReduce cluster.
+For a real test, run the <a href="pagerank.html">PageRank example</a> 
+or the <a href="kmeans.html">k-means clustering example</a>
+on a small Hadoop MapReduce cluster.
 </p>
 <p>
 <h3>Optional: How to run MRQL on a Hama cluster:</h3>
@@ -63,7 +65,8 @@ and using <tt>bin/mrql.bsp -local queries/q1.mrql</tt>, which runs this query in
 <li> If the existing <tt>mrql-bsp.jar</tt> doesn't match your Hadoop/Hama distributions,
 you can recompile MRQL using <tt>make bsp</tt>.
 </ul>
-For a real test, do the <a href="pagerank.html">PageRank example</a> on a Hama cluster.
+For a real test, run the <a href="pagerank.html">PageRank example</a> 
+or the <a href="kmeans.html">k-means clustering example</a> on a Hama cluster.
 <p>
 <h3><a href="releases.shtml">older releases</a></h3>
 <p>

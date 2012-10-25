@@ -35,7 +35,7 @@ import jline.*;
 
 
 final class Config {
-    public final static String version = "0.8.4";
+    public final static String version = "0.8.6";
     public static boolean loaded = false;
 
     // true for Hadoop, false for plain Java
@@ -351,7 +351,7 @@ public class Main extends Configured implements Tool {
     }
 
     public static void main ( String[] args ) throws Exception {
-	boolean hadoop = args[0].equals("-local") || args[0].equals("-dist");
+	boolean hadoop = args.length > 0 && (args[0].equals("-local") || args[0].equals("-dist"));
 	if (!hadoop)
 	    new Main().run(args);
 	else {
