@@ -607,6 +607,14 @@ class Interpreter extends Translate {
 	    return Evaluator.synchronize((MR_bool)evalE(b,env));
 	case distribute(`s):
 	    return Evaluator.distribute((Bag)evalE(s,env));
+	case getCache(`n):
+	    int loc = ((MR_int)evalE(n,env)).get();
+	    return (Config.hadoop_mode) ? Plan.getCache(loc) : MapReduceAlgebra.getCache(loc);
+	case setCache(`n,`v,`rv):
+	    int loc = ((MR_int)evalE(n,env)).get();
+	    return (Config.hadoop_mode)
+		   ? Plan.setCache(loc,evalE(v,env),evalE(rv,env))
+		   : MapReduceAlgebra.setCache(loc,evalE(v,env),evalE(rv,env));
 	case mapReduce(`m,`r,`s,_):
 	    return MapReduceAlgebra.mapReduce(evalF(m,env),
 					      evalF(r,env),
@@ -746,18 +754,7 @@ class Interpreter extends Translate {
     }
 
     final static Bag evalS ( final Tree e, final Environment env ) {
-	Bag b = evalM(e,env);
-	if (!Config.bsp_mode)
-	    return b;
-	final Iterator<MRData> iter = ((Bag)b).iterator();
-	return new Bag(new BagIterator() {
-		public boolean hasNext () {
-		    return iter.hasNext();
-		}
-		public MRData next () {
-		    return ((Tuple)iter.next()).get(1);
-		}
-	    });
+	return evalM(e,env);
     }
 
     // evaluate MRQL physical operators in memory (returns a Bag)
@@ -827,16 +824,17 @@ class Interpreter extends Translate {
 							  evalM(#<CrossProduct(`mx,`my,`r,`x,`y)>,env)));
 	    case BinarySource(`file,_):
 		return (Bag)MapReduceAlgebra.read_binary(file.stringValue());
-	    case BinarySource(`n,`file,_):
+	    case BSPSource(`n,BinarySource(`file,_)):
 		return (Bag)MapReduceAlgebra.read_binary((int)((LongLeaf)n).value(),
 							 file.stringValue());
-	    case ParsedSource(`n,`parser,`file,...args):
+	    case BSPSource(`n,ParsedSource(`parser,`file,...args)):
 		if (!(n instanceof LongLeaf))
 		    fail;
 		Parser p = DataSource.parserDirectory.get(parser.toString()).newInstance();
 		if (p == null)
 		    throw new Error("Unknown parser: "+parser);
-		return MapReduceAlgebra.parsedSource((int)(((LongLeaf)n).value()),p,((MR_string)evalE(file,env)).get(),args);
+		return MapReduceAlgebra.parsedSource((int)(((LongLeaf)n).value()),p,
+						     ((MR_string)evalE(file,env)).get(),args);
 	    case ParsedSource(`parser,`file,...args):
 		Parser p = DataSource.parserDirectory.get(parser.toString()).newInstance();
 		if (p == null)
@@ -865,17 +863,18 @@ class Interpreter extends Translate {
 	    case Generator(`min,`max,`size):
 		return MapReduceAlgebra.generator(((MR_long)evalE(min,env)).get(),
 						  ((MR_long)evalE(max,env)).get());
-	    case Generator(`n,`min,`max,`size):
+	    case BSPSource(`n,Generator(`min,`max,`size)):
 		return MapReduceAlgebra.generator((int)((LongLeaf)n).value(),
 						  ((MR_long)evalE(min,env)).get(),
 						  ((MR_long)evalE(max,env)).get());
-	    case BSP(`n,`superstep,`state,_,...as):
+	    case BSP(`n,`superstep,`state,`o,...as):
 		Bag[] ds = new Bag[as.length()];
 		for ( int i = 0; i < ds.length; i++ )
 		    ds[i] = evalM(as.nth(i),env);
 		return MapReduceAlgebra.BSP((int)((LongLeaf)n).value(),
 					    evalF(superstep,env),
 					    evalE(state,env),
+					    o.equals(#<true>),
 					    ds);
 	    case Dump(`s):
 		Bag bs = (Bag)evalE(s,env);
@@ -900,6 +899,18 @@ class Interpreter extends Translate {
 		if (!(t instanceof Tuple))
 		    throw new Error("Expected a tuple in function application: "+t);
 		return (Bag)((Lambda)fnc).lambda().eval(t);
+	    case BSPSource(`n,`s):
+		final MR_int i = new MR_int((int)((LongLeaf)n).value());
+		Bag bs = (Bag)evalE(s,env);
+		final Iterator<MRData> iter = bs.iterator();
+		return new Bag(new BagIterator() {
+			public boolean hasNext () {
+			    return iter.hasNext();
+			}
+			public MRData next () {
+			    return new Tuple(i,iter.next());
+			}
+		    });
 	    case `v:
 		if (!v.is_variable())
 		    fail;
@@ -1002,6 +1013,7 @@ class Interpreter extends Translate {
 	    repeat_variables = #[];
 	    Tree plan = makePlan(simplify_all(ne));
 	    if (Config.bsp_mode) {
+		BSPTranslate.reset();
 		if (Config.trace)
 		    System.out.println("Physical plan:\n"+plan.pretty(0));
 		plan = BSPTranslate.mr2bsp(BSPTranslate.preprocess(plan));
@@ -1041,6 +1053,14 @@ class Interpreter extends Translate {
 	}
     }
 
+    static boolean memory_parsed_source ( Tree e ) {
+	match e {
+	case ParsedSource(...): return true;
+	case Merge(`x,`y): return memory_parsed_source(x) && memory_parsed_source(y);
+	};
+	return false;
+    }
+
     /* translate and evaluate an MRQL expression e into MRData */
     static MRData expression ( Tree e, boolean print ) {
 	try {
@@ -1051,7 +1071,9 @@ class Interpreter extends Translate {
 		return null;
 	    MRData res = evalE(plan,null);
 	    if (print)
-		System.out.println("Result:\n"+print(res,query_type));
+		if (!Config.hadoop_mode && Config.bsp_mode && memory_parsed_source(plan))
+		    System.out.println("Result:\n"+print(((Tuple)((Bag)res).get(0)).second(),query_type));
+		else System.out.println("Result:\n"+print(res,query_type));
 	    return res;
 	} catch (Exception x) {
 	    if (x.getMessage() != null)

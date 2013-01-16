@@ -95,7 +95,7 @@ tmp/JSONParser.java: src/JSON.cup
 
 tgz:	clean
 	cd ..; tar cfz q.tgz mrql/mrql.jar mrql/mrql-bsp.jar mrql/gen.jar mrql/jline-1.0.jar mrql/Makefile \
-	mrql/COPYRIGHT mrql/src mrql/queries mrql/doc mrql/classes mrql/tmp mrql/bin mrql/tmp mrql/conf \
+	mrql/COPYRIGHT mrql/src mrql/queries mrql/doc mrql/classes mrql/tmp mrql/bin mrql/conf \
 	mrql/conf-hama mrql/README; cd mrql
 
 tgz-all: clean

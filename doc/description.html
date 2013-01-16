@@ -933,17 +933,24 @@ methods of a class, use the MRQL command:
 To selectively import a list of methods from a class, use: 
 </P>
 <PRE STYLE="margin-bottom: 0.2in"><B>import</B> m<SUB>1</SUB>, ..., m<SUB>n</SUB> <B>from</B> &quot;class-path&quot;;</PRE><P>
-For example, you may define your functions in a file: 
+For example, you can define your functions in a file <tt>MyFunctions.java</tt> in the <tt>mrql</tt> directory: 
 </P>
-<PRE>package hadoop.mrql;
-class MyFunctions {
+<PRE>package myPackage;
+import hadoop.mrql.*;
+public class MyFunctions {
     public static MR_string substring ( MR_string s, MR_int i ) {
         return new MR_string(s.get().substring(i.get()));
     }
 }</PRE><P>
+You can compile it using:
+<pre>
+javac -cp mrql.jar MyFunctions.java -d classes
+make
+</pre>
+which creates a new <tt>mrql.jar</tt> file that includes MyFunctions.
 Then, you may import the method <TT>substring</TT> using: 
 </P>
-<PRE STYLE="margin-bottom: 0.2in"><B>import</B> &quot;hadoop.mrql.MyFunctions&quot;;</PRE><P>
+<PRE STYLE="margin-bottom: 0.2in"><B>import</B> &quot;myPackage.MyFunctions&quot;;</PRE><P>
 Note that <B>imported functions must be pure</B>, that is, they
 should not cause side effects and they should always return the same
 value for the same input values. If a query calls an imported

@@ -171,7 +171,9 @@ public class Bag implements MRData, Iterable<MRData> {
 	    path = null;
 	    mode = Modes.MATERIALIZED;
 	    content = new ArrayList<MRData>(100);
-	} else throw new Error("Cannot clear a non-materialized sequence");
+	};
+	mode = Modes.MATERIALIZED;
+	content = new ArrayList<MRData>();
     }
 
     // materialize when is absolutely necessary
@@ -236,6 +238,7 @@ public class Bag implements MRData, Iterable<MRData> {
 					      MRContainer.class,NullWritable.class,Plan.conf);
 		String out_path = new_path(fs);
 		System.err.println("*** Using external sorting on a spilled bag "+path+" -> "+out_path);
+		sorter.setMemory(64*1024*1024);
 		sorter.sort(new Path(path),new Path(out_path));
 		path = out_path;
 		writer = null;
@@ -404,8 +407,6 @@ public class Bag implements MRData, Iterable<MRData> {
 
     public int compareTo ( MRData x ) {
 	Bag xt = (Bag)x;
-	//materialize();
-	//xt.materialize();
 	Iterator<MRData> xi = xt.iterator();
 	Iterator<MRData> yi = iterator();
 	while ( xi.hasNext() && yi.hasNext() ) {

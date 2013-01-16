@@ -474,12 +474,33 @@ final class MethodInfo implements Comparable<MethodInfo> {
     public String name;
     public Trees signature;
     public Method method;
-    MethodInfo ( String n, Trees s, Method m ) { name=n; signature=s; method=m; }
-    public int compareTo ( MethodInfo x )  {
-	return name.compareTo(x.name);
+
+    MethodInfo ( String n, Trees s, Method m ) {
+	name = n;
+	signature = s;
+	method = m;
     }
+
+    public int compareTo ( MethodInfo x )  {
+	int c = name.compareTo(x.name);
+	if (c != 0)
+	    return c;
+	if (signature.length() < x.signature.length())
+	    return -1;
+	if (signature.length() > x.signature.length())
+	    return 1;
+	// handles overloading: more specific method signatures first
+	for ( int i = 1; i < signature.length(); i++ ) {
+	    int ct = Translate.compare_types(signature.nth(i),x.signature.nth(i));
+	    if (ct != 0)
+		return ct;
+	};
+	return Translate.compare_types(signature.nth(0),x.signature.nth(0));
+    }
+
     public boolean equals ( Object x ) {
-	return name.equals(((MethodInfo)x).name);
+	return name.equals(((MethodInfo)x).name)
+	       && signature.equals(((MethodInfo)x).signature);
     }
 }
 
@@ -556,16 +577,16 @@ final class ClassImporter {
 			MethodInfo m = new MethodInfo(ms[i].getName(),sig,ms[i]);
 			mv.add(m);
 			methods.add(m);
-			if (Translate.functions == null)
-			    Translate.functions = Trees.nil;
-			Translate.functions = Translate.functions.append(new Node(ms[i].getName(),sig));
 		    } catch ( Exception e ) {
-
 			System.out.println("Warning: method "+ms[i].getName()+" cannot be imported");
 			System.out.println(e);
 			throw new Error("");
 		    };
 	    Collections.sort(methods);
+	    if (Translate.functions == null)
+		Translate.functions = Trees.nil;
+	    for ( MethodInfo m: methods )
+		Translate.functions = Translate.functions.append(new Node(m.name,m.signature));
 	    if (trace_imported_methods) {
 		System.out.print("Importing methods: ");
 		for (int i = 0; i < mv.size(); i++ )

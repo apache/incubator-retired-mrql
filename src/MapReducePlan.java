@@ -171,8 +171,10 @@ class MapReducePlan extends Plan {
 	    while (en.hasMoreElements()) {
 		MRData key = en.nextElement();
 		ckey.set(key);
-		cvalue.set(hashTable.get(key));
-		context.write(ckey,cvalue);
+		MRData value = hashTable.get(key);
+		cvalue.set(value);
+		if (value != null)
+		    context.write(ckey,cvalue);
 	    };
 	    index = 0;
 	    hashTable.clear();
@@ -202,10 +204,10 @@ class MapReducePlan extends Plan {
 
 	@Override
 	protected void cleanup ( Context context ) throws IOException,InterruptedException {
-	    super.cleanup(context);
 	    if (hashTable != null)
 		flush_table(context);
 	    hashTable = null; // garbage-collect it
+	    super.cleanup(context);
 	}
     }
 
@@ -473,6 +475,11 @@ class MapReducePlan extends Plan {
 		throw new Error("Cannot retrieve the left mapper plan");
 	    }
 	}
+
+	@Override
+	protected void cleanup ( Context context ) throws IOException,InterruptedException {
+	    super.cleanup(context);
+	}
     }
 
     // The right mapper for MapReduce2
@@ -507,6 +514,11 @@ class MapReducePlan extends Plan {
 	    } catch (Exception e) {
 		throw new Error("Cannot retrieve the right mapper plan");
 	    }
+	}
+
+	@Override
+	protected void cleanup ( Context context ) throws IOException,InterruptedException {
+	    super.cleanup(context);
 	}
     }
 

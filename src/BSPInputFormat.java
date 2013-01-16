@@ -39,7 +39,8 @@ abstract class MRQLFileInputFormat extends FileInputFormat<MRContainer,MRContain
     abstract public RecordReader<MRContainer,MRContainer>
 	getRecordReader ( InputSplit split, BSPJob job ) throws IOException;
 
-    public final static Bag collect ( final DataSet x ) throws Exception {
+    // materialize the entire dataset into a Bag
+    public final static Bag collect ( final DataSet x, boolean strip ) throws Exception {
 	Bag res = new Bag();
 	for ( DataSource s: x.source )
 	    if (s.to_be_merged)
@@ -54,23 +55,27 @@ abstract class MRQLFileInputFormat extends FileInputFormat<MRContainer,MRContain
 					    return !path.getName().startsWith("_");
 					}
 				    });
+		Bag b = new Bag();
 		for ( FileStatus st: ds )
-		    res = res.union(s.inputFormat.newInstance().materialize(st.getPath()));
-		final Iterator iter = res.iterator();
-		return new Bag(new BagIterator() {
-			public boolean hasNext () {
-			    return iter.hasNext();
-			}
-			public MRData next () {
-			    // remove source_num
-			    return ((Tuple)iter.next()).get(1);
-			}
-		    });
+		    b = b.union(s.inputFormat.newInstance().materialize(st.getPath()));
+		if (strip) {
+		    // remove source_num
+		    final Iterator iter = b.iterator();
+		    b = new Bag(new BagIterator() {
+			    public boolean hasNext () {
+				return iter.hasNext();
+			    }
+			    public MRData next () {
+				return ((Tuple)iter.next()).get(1);
+			    }
+			});
+		};
+		res = res.union(b);
 	    };
 	return res;
     }
 
-    private Bag materialize ( final Path file ) throws Exception {
+    public Bag materialize ( final Path file ) throws Exception {
 	final BSPJob job = new BSPJob((HamaConfiguration)Plan.conf,MRQLFileInputFormat.class);
 	job.setInputPath(file);
 	final InputSplit[] splits = getSplits(job,1);
@@ -112,7 +117,7 @@ final class BinaryInputFormat extends MRQLFileInputFormat {
 	public BinaryInputRecordReader ( FileSplit split,
 					 BSPJob job,
 					 int source_number ) throws IOException {
-	    super(job.getConf(),split);
+	    super(BSPPlan.getConfiguration(job),split);
 	    this.source_number = source_number;
 	    source_num_data = new MR_int(source_number);
 	}
@@ -128,7 +133,7 @@ final class BinaryInputFormat extends MRQLFileInputFormat {
     public RecordReader<MRContainer,MRContainer>
 	      getRecordReader ( InputSplit split,
 				BSPJob job ) throws IOException {
-	Configuration conf = job.getConf();
+	Configuration conf = BSPPlan.getConfiguration(job);
 	String path = ((FileSplit)split).getPath().toString();
 	BinaryDataSource ds = (BinaryDataSource)DataSource.get(path,conf);
 	return new BinaryInputRecordReader((FileSplit)split,job,ds.source_num);
@@ -151,7 +156,7 @@ final class ParsedInputFormat extends MRQLFileInputFormat {
 				    Class<? extends Parser> parser_class,
 				    int source_number,
 				    Trees args ) throws IOException {
-	    Configuration conf = job.getConf();
+	    Configuration conf = BSPPlan.getConfiguration(job);
 	    start = split.getStart();
 	    end = start + split.getLength();
 	    Path file = split.getPath();
@@ -203,7 +208,7 @@ final class ParsedInputFormat extends MRQLFileInputFormat {
     public RecordReader<MRContainer,MRContainer>
 	      getRecordReader ( InputSplit split,
 				BSPJob job ) throws IOException {
-	Configuration conf = job.getConf();
+	Configuration conf = BSPPlan.getConfiguration(job);
 	String path = ((FileSplit)split).getPath().toString();
 	ParsedDataSource ds = (ParsedDataSource)DataSource.get(path,conf);
 	return new ParsedRecordReader((FileSplit)split,job,ds.parser,ds.source_num,(Trees)ds.args);
@@ -223,7 +228,7 @@ final class GeneratorInputFormat extends MRQLFileInputFormat {
 	public GeneratorRecordReader ( FileSplit split,
 				       int source_number,
 				       BSPJob job ) throws IOException {
-	    Configuration conf = job.getConf();
+	    Configuration conf = BSPPlan.getConfiguration(job);
 	    Path path = split.getPath();
 	    FileSystem fs = path.getFileSystem(conf);
 	    reader = new SequenceFile.Reader(path.getFileSystem(conf),path,conf);
@@ -265,7 +270,7 @@ final class GeneratorInputFormat extends MRQLFileInputFormat {
 
     public RecordReader<MRContainer,MRContainer>
 	        getRecordReader ( InputSplit split, BSPJob job ) throws IOException {
-	Configuration conf = job.getConf();
+	Configuration conf = BSPPlan.getConfiguration(job);
 	String path = ((FileSplit)split).getPath().toString();
 	GeneratorDataSource ds = (GeneratorDataSource)DataSource.get(path,conf);
 	return new GeneratorRecordReader((FileSplit)split,ds.source_num,job);
@@ -277,7 +282,7 @@ class MultipleBSPInput extends MRQLFileInputFormat {
     public RecordReader<MRContainer,MRContainer>
 	      getRecordReader ( InputSplit split, BSPJob job ) throws IOException {
 	String path = ((FileSplit)split).getPath().toString();
-	Configuration conf = job.getConf();
+	Configuration conf = BSPPlan.getConfiguration(job);
 	DataSource ds = DataSource.get(path,conf);
 	Plan.conf = conf;
 	if (ds instanceof ParsedDataSource)

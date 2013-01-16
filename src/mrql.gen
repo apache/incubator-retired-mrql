@@ -140,6 +140,8 @@ item		::= expr:e      			{: RESULT = #<expression(`e)>; :}
 		|   FUNCTION var:f LP
 		    fnc_params:p RP COLON type:tp
 		    LSB expr:e RSB			{: RESULT = #<functiondef(`f,params(...p),`tp,`e)>; :}
+		|   FUNCTION var:f LP RP COLON type:tp
+		    LSB expr:e RSB			{: RESULT = #<functiondef(`f,params(),`tp,`e)>; :}
 		|   IMPORT fnl:l FROM String:c		{: RESULT = #<import(`c,...l)>; :}
 		|   IMPORT String:c   			{: RESULT = #<import(`c)>; :}
                 |   PARSER var:c EQ String:p		{: RESULT = #<parser(`c,`p)>; :}
@@ -339,9 +341,12 @@ xpath		::= DOT					{: RESULT = #<dot>; :}
 		|   xname:n				{: RESULT = #<child(`n,dot)>; :}
 		;
 xname		::= var:v				{: RESULT = v; :}
+		|   Variable:n COLON Variable:v		{: RESULT = new VariableLeaf(n+":"+v); :}
 		|   TIMES      	     			{: RESULT = new VariableLeaf("*"); :}
 		|   ATSYM Variable:v			{: RESULT = new VariableLeaf("@"+v); :}
+		|   ATSYM Variable:n COLON Variable:v	{: RESULT = new VariableLeaf("@"+n+":"+v); :}
 		|   ATSYM TIMES	     	   		{: RESULT = new VariableLeaf("@*"); :}
+		|   ATSYM Variable:n COLON TIMES	{: RESULT = new VariableLeaf("@"+n+":*"); :}
 		;
 xpred		::= xpath:x EQ const:c			{: RESULT = #<eq(`x,`c)>; :}
 		|   xpath:x    				{: RESULT = x; :}

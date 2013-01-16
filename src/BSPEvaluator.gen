@@ -37,7 +37,7 @@ class Evaluator extends Interpreter {
 	    conf.set("bsp.master.address","local");
 	    conf.set("mapred.job.tracker","local");
 	    conf.set("hama.zookeeper.quorum","localhost");
-	    conf.set("bsp.local.tasks.maximum","1");
+	    conf.set("bsp.local.tasks.maximum","2");
 	    conf.set("fs.default.name","file:///");
 	}
     }
@@ -63,7 +63,8 @@ class Evaluator extends Interpreter {
 	    DataSet ds = eval(S.head(),env,"-");
 	    for ( Tree s: S.tail() )
 		ds.merge(eval(s,env,"-"));
-	    return BSPPlan.BSPaggregate(closure(superstep,env),
+	    return BSPPlan.BSPaggregate((int)((LongLeaf)n).value(),
+					closure(superstep,env),
 					init_state,
 					closure(acc_fnc,env),
 					zero,
@@ -88,7 +89,7 @@ class Evaluator extends Interpreter {
 	if (Config.trace_execution) 
 	    try {
 		System.out.println(tabs(tab_count)
-				   +"-> "+Plan.collect(res));
+				   +"-> "+Plan.collect(res,false));
 		tab_count -= 3;
 	    } catch (Exception ex) {
 		throw new Error("Cannot collect the operator output: "+e);
@@ -109,15 +110,15 @@ class Evaluator extends Interpreter {
 				   init_state,
 				   o.equals(#<true>),
 				   ds);
-	    case BinarySource(`n,`file,_):
+	    case BSPSource(`n,BinarySource(`file,_)):
 		return Plan.binarySource((int)((LongLeaf)n).value(),file.stringValue());
-	    case ParsedSource(`n,`parser,`file,...args):
+	    case BSPSource(`n,ParsedSource(`parser,`file,...args)):
 		Class<? extends Parser> p = DataSource.parserDirectory.get(parser.toString());
 		if (p == null)
 		    throw new Error("Unknown parser: "+parser);
 		return Plan.parsedSource((int)((LongLeaf)n).value(),
 					 p,((MR_string)evalE(file,env)).get(),args);
-	    case Generator(`n,`min,`max,`size):
+	    case BSPSource(`n,Generator(`min,`max,`size)):
 		return Plan.generator((int)((LongLeaf)n).value(),
 				      ((MR_long)evalE(min,env)).get(),
 				      ((MR_long)evalE(max,env)).get(),

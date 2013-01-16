@@ -31,10 +31,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.SequenceFile.Sorter;
 
 
-class Plan {
+public class Plan {
     public static Configuration conf;
     static List<String> temporary_paths = new ArrayList<String>();
     private static Random random_generator = new Random();
+
+    final static int max_input_files = 100;
+    // the cache that holds all local data in memory
+    static Tuple cache;
 
     // generate a new path name in HDFS to store intermediate results
     public static String new_path ( Configuration conf ) throws IOException {
@@ -67,6 +71,17 @@ class Plan {
     // return the data set size in bytes
     public final static long size ( DataSet s ) {
 	return s.size(conf);
+    }
+
+    public static synchronized MRData getCache ( int loc ) {
+	return cache.get(loc);
+    }
+
+    public static synchronized MRData setCache ( int loc, MRData value, MRData ret ) {
+	if (value instanceof Bag)
+	    ((Bag)value).materialize();
+	cache.set(loc,value);
+	return ret;
     }
 
     // put the jar file that contains the compiled MR functional parameters into the TaskTracker classpath
@@ -276,8 +291,12 @@ class Plan {
     }
 
     // The collect physical operator
+    public final static Bag collect ( final DataSet x, boolean strip ) throws Exception {
+	return MRQLFileInputFormat.collect(x,strip);
+    }
+
     public final static Bag collect ( final DataSet x ) throws Exception {
-	return MRQLFileInputFormat.collect(x);
+	return MRQLFileInputFormat.collect(x,true);
     }
 
     // the DataSet union physical operator

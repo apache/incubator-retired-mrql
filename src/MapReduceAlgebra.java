@@ -116,7 +116,7 @@ final public class MapReduceAlgebra {
 	    group.trim();
 	    res.add(new Tuple(last,group));
 	};
-	res.trim();
+	//res.trim();
 	return res;
     }
 
@@ -382,17 +382,8 @@ final public class MapReduceAlgebra {
 	}
     }
 
-    private static Bag add_source_num ( final int source_num, Bag input ) {
-	final Iterator<MRData> iter = input.iterator();
-	final MRData sn = new MR_int(source_num);
-	return new Bag(new BagIterator() {
-		public boolean hasNext () {
-		    return iter.hasNext();
-		}
-		public MRData next () {
-		    return new Tuple(sn,(MRData)iter.next());
-		}
-	    });
+    private static Bag add_source_num ( int source_num, Bag input ) {
+	return new Bag(new Tuple(new MR_int(source_num),input));
     }
 
     public static Bag parsedSource ( int source_num,
@@ -481,23 +472,45 @@ final public class MapReduceAlgebra {
 	return add_source_num(source_num,generator(min,max));
     }
 
+    // the cache that holds all local data in memory
+    private static Tuple cache;
+
+    public static void cleanCache () {
+	cache = new Tuple(100);
+	for ( int i = 0; i < 100; i++ )
+	    cache.set(i,new Bag());
+    }
+
+    public static MRData getCache ( int loc ) {
+	return cache.get(loc);
+    }
+
+    public static MRData setCache ( int loc, MRData value, MRData ret ) {
+	if (value instanceof Bag)
+	    materialize((Bag)value);
+	cache.set(loc,value);
+	return ret;
+    }
+
     // The BSP operator
     public static Bag BSP ( final int source,
 			    final Function superstep,
 			    final MRData init_state,
+			    boolean order,
 			    final Bag[] inputs ) {
-	Bag input = inputs[0];
-	for ( int i = 1; i < inputs.length; i++ )
-	    input = input.union(inputs[i]);
-	input.materialize();
 	Bag msgs = new Bag();
-	MRData snapshot = input;
 	MRData state = init_state;
 	Tuple result;
 	boolean exit;
 	boolean skip = false;
 	String tabs = "";
 	int step = 0;
+	cleanCache();
+	for ( Bag x: inputs ) {
+	    Tuple p = (Tuple)(x.get(0));
+	    cache.set(((MR_int)p.first()).get(),
+		      materialize(p.second()));
+	};
 	do {
 	    if (!skip)
 		step++;
@@ -505,14 +518,15 @@ final public class MapReduceAlgebra {
 		tabs = Interpreter.tabs(Interpreter.tab_count);
 		System.out.println(tabs+"  Superstep "+step+":");
 		System.out.println(tabs+"      messages: "+msgs);
-		System.out.println(tabs+"      snapshot: "+snapshot);
 		System.out.println(tabs+"      state: "+state);
+		for ( int i = 0; i < cache.size(); i++)
+		    if (cache.get(i) instanceof Bag && ((Bag)cache.get(i)).size() > 0)
+			System.out.println(tabs+"      cache "+i+": "+cache.get(i));
 	    };
-	    result = (Tuple)superstep.eval(new Tuple(msgs,snapshot,state));
+	    result = (Tuple)superstep.eval(new Tuple(msgs,state));
 	    Bag new_msgs = (Bag)result.get(0);
-	    snapshot = result.get(1);
-	    state = result.get(2);
-	    exit = ((MR_bool)result.get(3)).get();
+	    state = result.get(1);
+	    exit = ((MR_bool)result.get(2)).get();
 	    skip = new_msgs == SystemFunctions.bsp_empty_bag;
 	    if ((!skip || exit) && Config.trace_execution)
 		System.out.println(tabs+"      result: "+result);
@@ -526,8 +540,19 @@ final public class MapReduceAlgebra {
 		    }
 		});
 	} while (!exit);
-	if (snapshot instanceof Bag)
-	    return (Bag)snapshot;
-	else return new Bag(snapshot);
+	MRData data = getCache(source);
+	if (data instanceof Bag)
+	    if (order) {
+		final Iterator<MRData> iter = ((Bag)data).iterator();
+		return new Bag(new BagIterator() {
+			public boolean hasNext () {
+			    return iter.hasNext();
+			}
+			public MRData next () {
+			    return ((Tuple)iter.next()).get(0);
+			}
+		    });
+	    } else return (Bag)data;
+	else return new Bag(data);
     }
 }

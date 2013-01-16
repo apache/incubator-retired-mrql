@@ -7,6 +7,8 @@
 <H2>MRQL Releases</H2>
 </center>
 <ul>
+<li> <a href="/mrql-0.8.8.tgz">0.8.8</a> (01/16/2013):
+Fixed BSP mode to work on multiple input files (eg, 3-way joins). Ported on JDK 7.
 <li> <a href="/mrql-0.8.6.tgz">0.8.6</a> (10/25/2012):
 Fixed MapAggregateReduce for total aggregation in BSP.
 <li> <a href="/mrql-0.8.4.tgz">0.8.4</a> (09/27/2012):

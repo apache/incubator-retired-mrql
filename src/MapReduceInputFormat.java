@@ -50,7 +50,7 @@ abstract class MRQLFileInputFormat extends FileInputFormat<MRContainer,MRContain
     abstract Bag materialize ( final Path path ) throws IOException;
 
     // materialize the entire dataset into a Bag
-    public final static Bag collect ( final DataSet x ) throws Exception {
+    public final static Bag collect ( final DataSet x, boolean strip ) throws Exception {
 	Bag res = new Bag();
 	for ( DataSource s: x.source )
 	    if (s.to_be_merged)

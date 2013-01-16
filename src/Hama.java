@@ -34,6 +34,10 @@ import org.apache.hadoop.conf.Configuration;
 
 
 class BSPPlan extends Plan {
+    final static Configuration getConfiguration ( BSPJob job ) {
+	return job.getConf();   // use job.getConfiguration() for Hama 0.6.0
+    }
+
     final static class BSPop extends BSP<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> {
 	static BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> this_peer;
 	final static MRContainer null_key = new MRContainer(new MR_byte(0));
@@ -41,6 +45,7 @@ class BSPPlan extends Plan {
 	final static MRData more_to_come = new MR_sync();
 	final static MRData more_supersteps = new MR_more_bsp_steps();
 
+	private int source_num;
 	private Function superstep_fnc;      // superstep function
 	private MRData state;                // BSP state
 	private boolean orderp;              // will output be ordered?
@@ -52,7 +57,10 @@ class BSPPlan extends Plan {
 	private String masterTask;
 	// buffer for received messages -- regularly in a vector, but can be spilled in a local file
 	Bag msg_cache;
-	int sc = 1;
+	// the cache that holds all local data in memory
+	Tuple local_cache;
+	// syncronization point for local_cache
+	final static Integer cache_sync = new Integer(0);
 
 	private static String shuffle ( MRData key ) {
 	    return all_peers[Math.abs(key.hashCode()) % all_peers.length];
@@ -95,7 +103,8 @@ class BSPPlan extends Plan {
 		MRContainer msg;
 		Bag res = new Bag();
 		while ((msg = this_peer.getCurrentMessage()) != null)
-		    res.add(msg.data());
+		    if (!res.contains(msg.data()))
+			res.add(msg.data());
 		this_peer.clear();
 		return res;
 	    } catch (Exception ex) {
@@ -103,39 +112,31 @@ class BSPPlan extends Plan {
 	    }
 	}
 
-	private Bag readLocalSnapshot ( final BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer ) {
-	    return new Bag(new BagIterator() {
-		    final MRContainer key = new MRContainer();
-		    final MRContainer value = new MRContainer();
-		    public boolean hasNext () {
-			try {
-			    return peer.readNext(key,value);
-			} catch (IOException e) {
-			    throw new Error(e);
-			}
-		    }
-		    public MRData next () {
-			return value.data();
-		    }
-		});
+	private void readLocalSources ( BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer )
+	        throws IOException {
+	    MRContainer key = new MRContainer();
+	    MRContainer value = new MRContainer();
+	    while (peer.readNext(key,value)) {
+		Tuple p = (Tuple)(value.data());
+		((Bag)local_cache.get(((MR_int)p.first()).get())).add(p.second());
+	    }
 	}
 
-	private void writeLocalSnapshot ( Bag snapshot,
-					  BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer )
+	private void writeLocalResult ( Bag result,
+					BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer )
 	        throws IOException {
-	    final MRContainer key = new MRContainer();
-	    final MRContainer value = new MRContainer();
-	    for ( MRData v: snapshot ) {
-		Tuple t = (Tuple)v;
+	    MRContainer key = new MRContainer();
+	    MRContainer value = new MRContainer();
+	    for ( MRData v: result )
 		if (orderp) {       // prepare for sorting
-		    key.set(t.get(2));
-		    value.set(t.get(1));
+		    Tuple t = (Tuple)v;
+		    key.set(t.get(1));
+		    value.set(t.get(0));
 		    peer.write(key,value);
 		} else {
-		    value.set(t.get(1));
+		    value.set(v);
 		    peer.write(null_key,value);
 		}
-	    }
 	}
 
 	// receive messages from other peers
@@ -189,13 +190,13 @@ class BSPPlan extends Plan {
 	@Override
 	public void bsp ( BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer )
 	       throws IOException, SyncException, InterruptedException {
-	    final Tuple triple = new Tuple(3);
-	    MRData snapshot = readLocalSnapshot(peer);
+	    final Tuple pair = new Tuple(2);
 	    Tuple result;
 	    boolean skip = false;
 	    String tabs = "";
 	    int step = 0;
 	    boolean exit;
+	    readLocalSources(peer);
 	    do {
 		if (!skip)
 		    step++;
@@ -203,27 +204,30 @@ class BSPPlan extends Plan {
 		    tabs = Interpreter.tabs(Interpreter.tab_count);
 		    System.err.println(tabs+"  Superstep "+step+" ["+peer.getPeerName()+"]:");
 		    System.err.println(tabs+"      messages ["+peer.getPeerName()+"]: "+msg_cache);
-		    System.err.println(tabs+"      snapshot ["+peer.getPeerName()+"]: "+snapshot);
 		    System.err.println(tabs+"      state ["+peer.getPeerName()+"]: "+state);
+		    for ( int i = 0; i < local_cache.size(); i++)
+			if (local_cache.get(i) instanceof Bag && ((Bag)local_cache.get(i)).size() > 0)
+			    System.out.println(tabs+"      cache "+i+": "+local_cache.get(i));
 		};
-		triple.set(0,msg_cache);
-		triple.set(1,snapshot);
-		triple.set(2,state);
-		this_peer = peer;
-		// evaluate one superstep
-		result = (Tuple)superstep_fnc.eval(triple);
+		pair.set(0,msg_cache);
+		pair.set(1,state);
+		synchronized (cache_sync) {
+		    this_peer = peer;
+		    cache = local_cache;
+		    // evaluate one superstep
+		    result = (Tuple)superstep_fnc.eval(pair);
+		};
 		Bag msgs = (Bag)result.get(0);
-		snapshot = result.get(1);
-		exit = ((MR_bool)result.get(3)).get();
-		state = result.get(2);
+		exit = ((MR_bool)result.get(2)).get();
+		state = result.get(1);
 		// shortcuts: if we know for sure that all peers want to exit/continue
-		if (result.get(3) == SystemFunctions.bsp_true_value) {  // must be ==, not equals
+		if (result.get(2) == SystemFunctions.bsp_true_value) {  // must be ==, not equals
 		    peer.sync();
 		    if (Config.trace_execution)
 			System.err.println(tabs+"      result ["+peer.getPeerName()+"]: "+result);
 		    break;
 		};
-		if (result.get(3) == SystemFunctions.bsp_false_value) {
+		if (result.get(2) == SystemFunctions.bsp_false_value) {
 		    if (Config.trace_execution)
 			System.err.println(tabs+"      result ["+peer.getPeerName()+"]: "+result);
 		    send_messages(msgs,peer);
@@ -236,16 +240,16 @@ class BSPPlan extends Plan {
 		    continue;
 		if (Config.trace_execution)
 		    System.err.println(tabs+"      result ["+peer.getPeerName()+"]: "+result);
-		exit = synchronize((MR_bool)result.get(3)).get();
+		exit = synchronize((MR_bool)result.get(2)).get();
 		send_messages(msgs,peer);
 	    } while (!exit);
 	    if (acc_result == null) {
 		// the BSP result is a bag that needs to be dumped to the HDFS
-		writeLocalSnapshot((Bag)snapshot,peer);
+		writeLocalResult((Bag)(local_cache.get(source_num)),peer);
 	    } else {
 		// the BSP result is an aggregation:
 		//     send the partial results to the master peer
-		peer.send(masterTask,new MRContainer(snapshot));
+		peer.send(masterTask,new MRContainer(local_cache.get(source_num)));
 		peer.sync();
 		if (peer.getPeerName().equals(masterTask)) {
 		    // only the master peer collects the partial aggregations
@@ -269,6 +273,7 @@ class BSPPlan extends Plan {
 		this_peer = peer;
 		all_peers = peer.getAllPeerNames();
 		Arrays.sort(all_peers);  // is this necessary?
+		source_num = conf.getInt("mrql.output.tag",0);
 		Tree code = Tree.parse(conf.get("mrql.superstep"));
 		superstep_fnc = functional_argument(conf,code);
 		code = Tree.parse(conf.get("mrql.initial.state"));
@@ -282,10 +287,21 @@ class BSPPlan extends Plan {
 		orderp = conf.getBoolean("mrql.orderp",false);
 		masterTask = all_peers[peer.getNumPeers()/2];
 		msg_cache = new Bag(1000);
+		local_cache = new Tuple(max_input_files);
+		for ( int i = 0; i < max_input_files; i++ )
+		    local_cache.set(i,new Bag());
 	    } catch (Exception e) {
 		e.printStackTrace();
 		throw new Error("Cannot setup the Hama BSP job: "+e);
 	    }
+	}
+
+	@Override
+	public void cleanup ( BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer ) throws IOException {
+	    if (!Config.local_hadoop_mode)
+		clean();
+	    local_cache = null;
+	    super.cleanup(peer);
 	}
     }
 
@@ -325,11 +341,12 @@ class BSPPlan extends Plan {
 	conf.set("mrql.superstep",superstep.toString());
 	conf.set("mrql.initial.state",init_state.toString());
 	conf.set("mrql.zero","");
+	conf.setInt("mrql.output.tag",source_num);
 	conf.setBoolean("mrql.orderp",orderp);
 	BSPJob job = new BSPJob((HamaConfiguration)conf,BSPop.class);
 	setupSplits(job,source);
 	job.setJobName(newpath);
-	distribute_compiled_arguments(job.getConf());
+	distribute_compiled_arguments(getConfiguration(job));
 	job.setBspClass(BSPop.class);
 	Path outpath = new Path(newpath);
 	job.setOutputPath(outpath);
@@ -344,7 +361,8 @@ class BSPPlan extends Plan {
 	return new DataSet(s,0,3);
     }
 
-    public final static MRData BSPaggregate ( Tree superstep,   // superstep function
+    public final static MRData BSPaggregate ( int source_num,   // output tag
+					      Tree superstep,   // superstep function
 					      Tree init_state,  // initial state
 					      Tree acc_fnc,     // accumulator function
 					      Tree zero,        // zero value for the accumulator
@@ -355,11 +373,12 @@ class BSPPlan extends Plan {
 	conf.set("mrql.initial.state",init_state.toString());
 	conf.set("mrql.accumulator",acc_fnc.toString());
 	conf.set("mrql.zero",zero.toString());
+	conf.setInt("mrql.output.tag",source_num);
 	conf.setBoolean("mrql.orderp",false);
 	BSPJob job = new BSPJob((HamaConfiguration)conf,BSPop.class);
 	setupSplits(job,source);
 	job.setJobName(newpath);
-	distribute_compiled_arguments(job.getConf());
+	distribute_compiled_arguments(getConfiguration(job));
 	job.setBspClass(BSPop.class);
 	Path outpath = new Path(newpath);
 	job.setOutputPath(outpath);

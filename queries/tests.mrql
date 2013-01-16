@@ -100,7 +100,7 @@ aggr2(select e.dno from e in E);
 select (k,aggr2(e.dno)) from e in E group by k: e.dno;
 
 select (e,x) from e in E, x in 1..10 where e.dno = x;
-
+/*
 function g ( s: !bag(<name:string,dno:int,address:string>) ): !bag(<A:string,B:int>) {
    select <A:x.name,B:x.dno> from x in s
 };
@@ -109,7 +109,7 @@ select (e,d)
 from e in g(select x from x in E where x.name="A"),
      d in D
 where e.B=d.dno;
-
+*/
 /*****************************************************************************/
 
 C = source(line,"/home/fegaras/tpch/data2/customer.tbl","|",type(<CUSTKEY:int,NAME:string,ADDRESS:string>));
