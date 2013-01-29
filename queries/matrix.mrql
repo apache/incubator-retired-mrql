@@ -8,7 +8,7 @@ store "Y"
 
 // matrix multiplication
 
-select (sum(select a*b from a in x, b in y),ii,jj)
+select (sum(select p.x*p.y from p in partition),i,j)
 from (x,i,k) in source(binary,"X"),
      (y,k,j) in source(binary,"Y")
-group by (ii,jj): (i,j);
+group by (i,j);

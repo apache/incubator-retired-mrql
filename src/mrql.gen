@@ -112,7 +112,7 @@ non terminal Trees	expl, name_binds, pat_list, pat_binds,
                         data_binds, cases, fnl, template, template_pat, fnc_params;
 
 precedence nonassoc	LDOT, ASSIGN, LIMIT;
-precedence nonassoc	ELSE;
+precedence nonassoc	ELSE, COLON;
 precedence nonassoc	ORDER, GROUP, HAVING, WHERE;
 precedence left         INTERSECT, UNION, EXCEPT, IN;
 precedence nonassoc	ASCENDING, DESCENDING;
@@ -304,9 +304,8 @@ opt_groupby     ::= GROUP BY groupby_binds:gl
                     opt_having:h			{: RESULT = #<groupby(`h,...gl)>; :}
                 |   					{: RESULT = #<groupby()>; :}
                 ;
-groupby_binds   ::= groupby_binds:nl
-                    COMMA pattern:p COLON expr:e	{: RESULT = nl.append(#<bind(`p,`e)>); :}
-                |   pattern:p COLON expr:e    	  	{: RESULT = #[bind(`p,`e)]; :}
+groupby_binds   ::= pattern:p COLON expr:e	        {: RESULT = #[bind(`p,`e)]; :}
+                |   pattern:p	                        {: RESULT = #[bind(`p,`p)]; :}
                 ;
 opt_having      ::= HAVING expr:e			{: RESULT = e; :}
                 |   	   				{: RESULT = #<true>; :}

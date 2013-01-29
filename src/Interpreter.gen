@@ -984,9 +984,12 @@ class Interpreter extends Translate {
 	    Tree qt = type_inference(e);
 	    System.out.println("Query type: "+print_type(qt));
 	    query_type = qt;
-	    Tree ne = rename(remove_groupby(e));
+	    Tree ne = remove_groupby(e);
 	    if (Config.trace)
 		System.out.println("After removing group-by:\n"+ne.pretty(0));
+	    ne = rename(ne);
+	    if (Config.trace)
+		System.out.println("After renaming variables:\n"+ne.pretty(0));
 	    ne = rename(normalize_all(ne));
 	    if (Config.trace)
 		System.out.println("Normalized query:\n"+ne.pretty(0));

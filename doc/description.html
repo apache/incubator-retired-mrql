@@ -518,6 +518,7 @@ ignores the others. Without patterns, this query is equivalent to:
 This is a dependent join because the domain of the second query
 variable <TT>c</TT> depends on <TT>e</TT>. 
 </P>
+<H3 CLASS="western">Group-By</H3>
 <P>The group-by syntax of an MRQL query takes the form <TT><B>group
 by</B></TT><TT> p': e'</TT>. It partitions the query results into
 groups so that the members of each group have the same <TT>e'</TT>
@@ -526,7 +527,8 @@ is unique for each group and is common across the group members. As a
 result, the group-by operation lifts all the other pattern variables
 defined in the from-part of the query from some type <TT>T</TT> to a
 bag of <TT>T</TT>, indicating that each such variable must contain
-multiple values, one for each group member. For example, the query 
+multiple values, one for each group member.
+</P><P>For example, the query 
 </P>
 <PRE>select ( d, c, sum(s) )
 from &lt;dno:dn,salary:s&gt; in Employees
@@ -557,6 +559,30 @@ variables. The variable <TT>p</TT>, on the other hand, is lifted to a
 bag of XML elements. Thus, <TT>count(p)</TT> counts all persons whose
 interests include <TT>cat</TT> and watch <TT>os</TT> open auctions. 
 </P>
+<P>If the group-by values are variables, the group-by syntax
+can take the form  <TT><B>group by</B></TT><TT> p</TT> for a pattern <tt>p</tt>,
+which is equivalent to <TT><B>group by</B></TT><TT> p: p</TT>.
+For example, the sparse matrix <tt>X</tt> of type <tt>{(double,int,int)}</tt>
+is converted to a vector by summing up the columns of each row:
+<PRE>select (sum(x),i)
+from (x,i,j) in X
+group by i</PRE>
+which is equivalent to:
+<PRE>select (sum(x),ii)
+from (x,i,j) in X
+group by ii: i</PRE></P>
+<P>Complex group-by queries may use the special variable <tt>partition</tt>,
+which is a bag of records that contains the entire group (the non-group-by variables).
+For example, the matrix multiplication of two sparse matrices
+<tt>X</tt> and <tt>Y</tt> of type <tt>{(double,int,int)}</tt> is:
+<pre>
+select ( sum(select p.x*p.y from p in partition), i, j )
+from (x,i,k) in X, (y,k,j) in Y
+group by (i,j)</pre>
+Here, the <tt>partition</tt> has type <tt>{&lt;x:double,i:int,k:int,y:double,j:int&gt;}</tt>
+and contains the group associated with <tt>i</tt> and <tt>j</tt>.
+</P>
+<H3 CLASS="western">Order-By</H3>
 <P>The <TT><B>order by</B></TT><TT> e</TT><TT><SUB>0</SUB></TT>
 syntax orders the result of a query (after the optional group-by) by
 the <TT>e</TT><TT><SUB>0</SUB></TT> values. It is assumed that there
@@ -578,7 +604,7 @@ from p in XMark,
      i in p.profile.interest,
      c in XMark
 where c.@id = i.@category
-group by cat: text(c.name);</PRE><P>
+group by cat: text(c.name)</PRE><P>
 which uses an XML source that retrieves both persons and categories: 
 </P>
 <PRE STYLE="margin-bottom: 0.2in">XMark = source(xml,&quot;xmark.xml&quot;,{&quot;person&quot;,&quot;category&quot;},xpath(.));</PRE><P>
@@ -620,7 +646,7 @@ example,
 </P>
 <PRE>select p.name
 from p in Employee
-where all c in p.children: c.age &gt; 18;</PRE><P>
+where all c in p.children: c.age &gt; 18</PRE><P>
 returns the name of an employee if all her children are older than
 18. 
 </P>
@@ -646,23 +672,23 @@ map function <tt>m</tt> and an arbitrary reduce function <tt>r</tt>
 can be expressed in MRQL as:
 <pre>
 select w
-  from z in (select r(key,y)
+  from z in (select r(k,y)
                from x in S,
                     (k,y) in m(x)
-             group by key: k),
-       w in z;
+             group by k),
+       w in z
 </pre>
 For example, it is very hard to express scientific computations directly in SQL,
 such as matrix "smoothing", where each element M[i,j] of a sparse matrix M becomes
 the average of the 3*3 neighboring elements M[i-1,j-1], ..., M[i+1,j+1].
 In MRQL, this is simply:
 <pre>
-select (i,j,avg(v))
-from s in (select {(i-1,j-1,v),(i-1,j,v),(i-1,j+1,v),(i,j-1,v),
-                   (i,j,v),(i,j+1,v),(i+1,j-1,v),(i+1,j,v),(i+1,j+1,v)}
-             from (i,j,v) in M),
-     (ii,jj,v) in s
-group by (i,j):(ii,jj);
+select (avg(v),i,j)
+from s in (select {(v,i-1,j-1),(v,i-1,j),(v,i-1,j+1),(v,i,j-1),
+                   (v,i,j),(v,i,j+1),(v,i+1,j-1),(v,i+1,j),(v,i+1,j+1)}
+             from (v,i,j) in M),
+     (v,i,j) in s
+group by (i,j)
 </pre>
 which is translated into a single map-reduce job.
 </P>
@@ -708,7 +734,7 @@ repeat s = G
   step select distinct c
          from s in (select { (i,k), (k,j), (i,j) }
                       from (i,k) in s, (k,j) in s),
-              c in s;
+              c in s
 </pre>
 Every repetition step requires two map-reduce jobs: one for the self-join over <tt>s</tt>, and one to
 remove duplicates.

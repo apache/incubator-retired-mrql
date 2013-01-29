@@ -624,21 +624,31 @@ class Translate {
 		case bind(`p,`d):
 		    pl = pl.append(p);
 		};
+	    Trees pvs = #[];
 	    for ( Tree g: gl )
 		match g {
 		case bind(`p,`d):
 		    ql = ql.append(p);
 		    ul = ul.append(d);
+		    pvs = pvs.append(pattern_variables(p));
 		};
 	    Tree tql = make_tuple(ql);
 	    Tree tul = make_tuple(ul);
 	    Tree tpl = make_tuple(pl);
 	    Trees xl = #[];
+	    Trees partl = #[];
 	    for ( Tree x: pattern_variables(#<tuple(...pl)>) )
-		match rename(#<select(`x,from(bind(`tpl,group)),where(true))>) {
-		case select(`hd,`binds,...):
-		    xl = xl.append(#<bind(`x,bag(select(`hd,`binds,where(true))))>);
+		if (!pvs.member(x)) {
+		    partl = partl.append(#<bind(`x,`x)>);
+		    match rename(#<select(`x,from(bind(`tpl,group)),where(true))>) {
+		    case select(`hd,`binds,...):
+			xl = xl.append(#<bind(`x,bag(select(`hd,`binds,where(true))))>);
+		    }
 		};
+	    match rename(#<select(record(...partl),from(bind(`tpl,group)),where(true))>) {
+	    case select(`hd,`binds,...):
+		xl = xl.cons(#<bind(partition,bag(select(`hd,`binds,where(true))))>);
+	    }
 	    tpl = subst(#<any>,#<0>,tpl);
 	    ret = #<select(`u,from(bind(tuple(`tql,group),
 					groupBy(select(tuple(`tul,`tpl),from(...bl),where(`c)))),
@@ -1346,15 +1356,23 @@ class Translate {
 			   +" must be a boolean (found "+print_type(ctp)+")");
 	    match #<groupby(...gs)> {
 	    case groupby(`h,...gl):
+		Trees pvs = #[];
 		for ( Tree g: gl )
 		    match g {
 		    case bind(`gp,`gd):
 			bind_pattern_type(gp,type_inference2(gd));
+			pvs = pvs.append(pattern_variables(gp));
 		    };
+		// find the type of the partition variable
+		Trees partl = #[];
+		for ( Tree dv: pattern_variables(#<tuple(...dvs)>) )
+		    partl = partl.append(#<bind(`dv,`(type_env.lookup(dv.toString())))>);
+		type_env.insert("partition",#<bag(record(...partl))>);
 		// lift domain variables to bags
 		for ( Tree dv: dvs )
-		    type_env.insert(dv.toString(),
-				    #<bag(`(type_env.lookup(dv.toString())))>);
+		    if (!pvs.member(dv))
+			type_env.insert(dv.toString(),
+					#<bag(`(type_env.lookup(dv.toString())))>);
 		Tree htp = type_inference2(h);
 		if (unify(htp,#<bool>) == null)
 		    type_error(e,"The group-by predicate "+print_query(h)+" in "+print_query(e)
