@@ -579,7 +579,7 @@ For example, the matrix multiplication of two sparse matrices
 select ( sum(select p.x*p.y from p in partition), i, j )
 from (x,i,k) in X, (y,k,j) in Y
 group by (i,j)</pre>
-Here, the <tt>partition</tt> has type <tt>{&lt;x:double,i:int,k:int,y:double,j:int&gt;}</tt>
+Here, the <tt>partition</tt> has type <tt>{ &lt; x:double, k:int, y:double &gt; }</tt>
 and contains the group associated with <tt>i</tt> and <tt>j</tt>.
 </P>
 <H3 CLASS="western">Order-By</H3>
@@ -596,6 +596,7 @@ to <TT>≥</TT>. For example,
 orders people by major order <TT>count(p.watches.@open_auctions)</TT>
 (descending) and minor order <TT>p.name</TT> (ascending). 
 </P>
+<H3 CLASS="western">Examples</H3>
 <P>A more complex query, which is similar to the query Q10 of the
 XMark benchmark, is 
 </P>
