@@ -1,5 +1,5 @@
 /********************************************************************************
-   Copyright 2011-2012 Leonidas Fegaras, University of Texas at Arlington
+   Copyright 2011-2013 Leonidas Fegaras, University of Texas at Arlington
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
    File: Interpreter.gen
    The MRQL interpreter
    Programmer: Leonidas Fegaras, UTA
-   Date: 10/14/10 - 08/20/12
+   Date: 10/14/10 - 02/10/13
 
 ********************************************************************************/
 
@@ -268,13 +268,25 @@ class Interpreter extends Translate {
 	case BSP(_,_,_,_,...ds):
 	    String ret = "BSP:\n";
 	    for ( Tree d: ds )
-		ret += tab(n+3)+"input: "+print_plan(d,n+10,true)+"\n";
+		ret += tab(n+3)+"input: "+print_plan(d,n+10,true);
+	    return ret;
+	case Loop(lambda(tuple(...vs),tuple(...bs)),tuple(...ss),...):
+	    String ret = "Loop ("+vs+"):\n"+tab(n+3)+"init: "
+		+vs.head()+" = "+print_plan(ss.head(),n+vs.head().toString().length()+12,true)+"\n";
+	    ss = ss.tail();
+	    for ( Trees s = vs.tail(); !s.is_empty() && !ss.is_empty(); s = s.tail(), ss = ss.tail() )
+		ret += tab(n+9)+s.head()+" = "+print_plan(ss.head(),n+s.head().toString().length()+12,true)+"\n";
+	    ret += tab(n+3)+"step: "
+		+vs.head()+" = "+print_plan(bs.head(),n+vs.head().toString().length()+12,true)+"\n";
+	    bs = bs.tail();
+	    for ( Trees s = vs.tail(); !s.is_empty() && !bs.is_empty(); s = s.tail(), bs = bs.tail() )
+		ret += tab(n+9)+s.head()+" = "+print_plan(bs.head(),n+s.head().toString().length()+12,true)+"\n";
 	    return ret;
 	case `f(lambda(`v,`b),`s,...):
 	    if (! #[Repeat,repeat,Closure,closure].member(#<`f>))
 		fail;
 	    return f+" ("+v+"):\n"+tab(n+3)+"init: "+print_plan(s,n+9,true)+"\n"
-		   +tab(n+3)+"loop: "+print_plan(b,n+9,true);
+		   +tab(n+3)+"step: "+print_plan(b,n+9,true);
 	case Let(`v,`u,`body):
 	    return "let "+v+" = "+print_plan(u,n+10+v.toString().length(),pv)+"\n"
 		   +tab(n)+print_plan(body,n,pv);
@@ -688,6 +700,37 @@ class Interpreter extends Translate {
 	    if (Config.hadoop_mode)
 		return Evaluator.aggregate(closure(acc,env),zero,s,env);
 	    else return MapReduceAlgebra.aggregate(evalF(acc,env),evalE(zero,env),evalM(s,env));
+	case Loop(lambda(tuple(...vs),tuple(...bs)),tuple(...ss),`num):
+	    if (Config.hadoop_mode)
+		return Evaluator.loop(e,env);
+	    int limit = ((MR_int)evalE(num,env)).get();
+	    Bag[] s = new Bag[vs.length()];
+	    for ( int i = 0; i < vs.length(); i++ )
+		s[i] = evalM(ss.nth(i),env);
+	    for ( int n = 0; n < limit; n++ ) {
+		Environment nenv = env;
+		for ( int i = 0; i < vs.length(); i ++ ) {
+		    s[i].materialize();
+		    nenv = new Environment(vs.nth(i).toString(),s[i],nenv);
+		};
+		for ( int i = 0; i < vs.length(); i ++ )
+		    s[i] = (Bag)evalM(bs.nth(i),nenv);
+	    };
+	    return new Tuple(s);
+	case extract_loop_vars(`b,...vs):     // used by BSP Loop
+	    Bag s = (Config.hadoop_mode)
+		? Plan.collect(Evaluator.eval(b,env,"-"))
+		: evalS(b,env);
+	    s.materialize();
+	    Bag[] t = new Bag[vs.length()];
+	    for ( int i = 0; i < vs.length(); i++ ) {
+		final int tag = i;
+		t[i] = MapReduceAlgebra.cmap(new Function() {
+			final public MRData eval ( final MRData x ) {
+			    return ((Tuple)x).get(tag);
+			} },s);
+	    };
+	    return new Tuple(t);
 	case function(tuple(...params),`tp,`body):
 	    String[] as = new String[params.length()];
 	    int i = 0;
@@ -930,7 +973,8 @@ class Interpreter extends Translate {
 	    msg.printStackTrace();
 	    throw new Error("Evaluation error in: "+print_query(e));
 	} catch (Exception ex) {
-	    System.err.println(ex.getMessage());
+	    if (Config.trace)
+		ex.printStackTrace();
 	    throw new Error("Evaluation error in: "+print_query(e));
 	}
     }
@@ -1163,6 +1207,7 @@ class Interpreter extends Translate {
     final static void dump ( String file, Tree e ) {
 	MRData res = expression(e,false);
 	try {
+	    query_type = make_persistent_type(query_type);
 	    if (Config.hadoop_mode && res != null) 
 		Plan.dump(file,query_type,res);
 	    else MapReduceAlgebra.dump(file,query_type,res);
@@ -1235,6 +1280,8 @@ class Interpreter extends Translate {
 	case datadef(`v,`t): datadef(v.toString(),t);
 	case functiondef(`f,params(...p),`tp,`e):
 	    functiondef(f.toString(),p,tp,e);
+	case macrodef(`name,params(...p),`e):
+	    Translate.global_macros.insert(name.toString(),#<macro(params(...p),`e)>);
 	case aggregation(`aggr,`type,`plus,`zero,`unit):
 	    aggregation(aggr.toString(),type,plus,zero,unit);
 	case import(`c):

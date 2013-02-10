@@ -34,7 +34,7 @@ Most important change: change the JAVA_HOME in <tt>conf/hadoop-env.sh</tt>
 to point to your Java installation directory.
 <p>
 <h3>How to install MRQL </h3>
-Download the <a href="/mrql.tgz">latest release of MRQL</a> (currently, version 0.8.8) and extract the files.
+Download the <a href="/mrql.tgz">latest release of MRQL</a> (currently, version 0.8.10) and extract the files.
 The jar files <tt>mrql.jar</tt> and <tt>mrql-bsp.jar</tt> contain the code for MRQL map-reduce and BSP, respectively.
 They can be run using the scripts <tt>bin/mrql</tt> and <tt>bin/mrql.bsp</tt>.
 You can get the latest source code from <a href="https://github.com/fegaras/mrql">GitHub</a>.

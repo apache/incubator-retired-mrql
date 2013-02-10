@@ -1,5 +1,5 @@
 /********************************************************************************
-   Copyright 2011-2012 Leonidas Fegaras, University of Texas at Arlington
+   Copyright 2011-2013 Leonidas Fegaras, University of Texas at Arlington
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
    File: BSPEvaluator.gen
    The MRQL BSP plan evaluator on Hama
    Programmer: Leonidas Fegaras, UTA
-   Date: 10/14/10 - 08/15/12
+   Date: 10/14/10 - 02/10/13
 
 ********************************************************************************/
 
@@ -37,7 +37,7 @@ class Evaluator extends Interpreter {
 	    conf.set("bsp.master.address","local");
 	    conf.set("mapred.job.tracker","local");
 	    conf.set("hama.zookeeper.quorum","localhost");
-	    conf.set("bsp.local.tasks.maximum","2");
+	    conf.set("bsp.local.tasks.maximum","2");     // BSP local mode uses a max of 2 cores
 	    conf.set("fs.default.name","file:///");
 	}
     }
@@ -71,6 +71,10 @@ class Evaluator extends Interpreter {
 					ds);
 	}
 	throw new Error("Cannot perform the aggregation: "+plan);
+    }
+
+    final static Tuple loop ( Tree e, Environment env ) {
+	throw new Error("The BSP Loop was supposed to be translated to a BSP task");
     }
 
     final static DataSet eval ( final Tree e,

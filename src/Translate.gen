@@ -53,6 +53,9 @@ class Translate {
     /* binds a UDF name to its plan */
     static SymbolTable global_functions = new SymbolTable();
 
+    /* binds a macro name to its body */
+    static SymbolTable global_macros = new SymbolTable();
+
     /* used in typedefs */
     static SymbolTable type_names = new SymbolTable();
 
@@ -669,6 +672,19 @@ class Translate {
 	case call(avg,`s):
 	    return remove_groupby(#<call(avg_value,call(avg_aggr,`s))>);
 	case call(`f,...al):
+	    Tree macro = global_macros.lookup(f.toString());
+	    if (macro == null)
+		fail;
+	    match macro {
+	    case macro(params(...pl),`body):
+		Tree b = rename(remove_groupby(body));
+		if (pl.length() != al.length())
+		    fail;
+		for ( ; !pl.is_empty(); pl = pl.tail(), al = al.tail() )
+		    b = subst(pl.head(),remove_groupby(al.head()),b);
+		return b;
+	    }
+	case call(`f,...al):
 	    if (#[cmap,join,mapReduce,mapReduce2,groupBy,orderBy,tuple,bag,list,set].member(f))
 		return remove_groupby(#<`(f.toString())(...al)>);
 	    else fail
@@ -783,6 +799,8 @@ class Translate {
 	    return #<project(`(rename(u)),`a)>;
 	case bind(`a,`u):
 	    return #<bind(`a,`(rename(u)))>;
+	case loop(lambda(tuple(...vs),`b),`s,`n):
+	    return #<loop(lambda(tuple(...vs),`(rename(b))),`(rename(s)),`n)>;
 	case `f(...al):
 	    Trees bl = rename_list(al);
 	    return #<`f(...bl)>;
@@ -915,6 +933,18 @@ class Translate {
 	case `T(`t1): return is_collection(T);
         };
 	return false;
+    }
+
+    static Tree make_persistent_type ( Tree tp ) {
+	match tp {
+	case `f(...al):
+	    Trees bs = #[];
+	    for ( Tree a: al )
+		bs = bs.append(make_persistent_type(a));
+	    String g = persistent_collection(f);
+	    return #<`g(...bs)>;
+	};
+	return tp;
     }
 
     static String max_collection ( String x, String y ) {
@@ -1916,20 +1946,21 @@ class Translate {
 		return ztp;
 	    };
 	    type_error(e,"Aggregation input is not a collection: "+print_query(e));
-	case repeat(lambda(`v,`b),`s,...ns):
+	case repeat(lambda(`p,`b),`s,...ns):
 	    if (!ns.is_empty() && unify(type_inference2(ns.head()),#<int>) == null)
 		type_error(e,"The maximum number of steps in repeat must be an integer: "
 			   +print_query(ns.head()));
-	    match type_inference2(s) {
+	    Tree tp = type_inference2(s);
+	    bind_pattern_type(p,tp);
+	    match tp {
 	    case `T(`a):
 		if (!is_collection(T))
 		    fail;
-		type_env.insert(v.toString(),#<`T(`a)>);
 		match type_inference2(b) {
-		case `S(`tp):                         // transitive closure
+		case `S(`c):                         // transitive closure
 		    if (!is_collection(S))
 			fail;
-		    if (unify(a,tp) == null)
+		    if (unify(a,c) == null)
 			fail;
 		    ((Node)e).name = #<closure>.toString();       // destructive
 		    return #<`T(`a)>;
@@ -1941,9 +1972,9 @@ class Translate {
 		    if (unify(a,w) == null)
 			fail;
 		    return #<`T(`a)>;
-		case `tp: type_error(e,"The repeat body must return a collection of type "
-				     +print_type(#<`T(`a)>)+" or "+print_type(#<`T(tuple(`a,bool))>)
-				     +" (Found type: "+print_type(tp)+")");
+		case `t: type_error(e,"The repeat body must return a collection of type "
+				    +print_type(tp)+" or "+print_type(#<`T(tuple(`a,bool))>)
+				    +" (Found type: "+print_type(t)+")");
 		}
 	    };
 	    type_error(e,"The repeat source must return a bag: "+print_query(e));
@@ -1969,6 +2000,16 @@ class Translate {
 		}
 	    };
 	    type_error(e,"The closure source must return a bag: "+print_query(e));
+	case loop(lambda(`p,`b),`s,`n):
+	    if (unify(type_inference2(n),#<int>) == null)
+		type_error(e,"The number of steps in loop must be an integer: "+print_query(n));
+	    Tree tp = type_inference2(s);
+	    bind_pattern_type(p,tp);
+	    Tree btp = type_inference2(b);
+	    if (unify(tp,btp) == null)
+		type_error(e,"The type of the repeat body ("+print_type(btp)
+			   + ") and the type of the initial value ("+print_type(tp)+") do not match");
+	    return tp;
 	case step(`x):  // used in QueryPlan for repeat
 	    match type_inference(x) {
 	    case `T(`tp): return #<`T(tuple(`tp,bool))>;
@@ -2076,6 +2117,20 @@ class Translate {
 	    Tree tp = type_inference(b);
 	    type_env.end_scope();
 	    return tp;
+	case call(`f,...al):
+	    Tree macro = global_macros.lookup(f.toString());
+	    if (macro == null)
+		fail;
+	    match macro {
+	    case macro(params(...pl),`body):
+		Tree b = body;
+		if (pl.length() != al.length())
+		    fail;
+		for ( ; !pl.is_empty(); pl = pl.tail(), al = al.tail() )
+		    b = subst(pl.head(),al.head(),b);
+		return type_inference2(b);
+	    };
+	    fail
 	case call(`f,...el):
 	    if (!f.is_variable() || global_vars.lookup(f.toString()) != null)
 		fail;
@@ -2334,6 +2389,9 @@ class Translate {
 	case closure(lambda(`v,`b),`s,...l):
 	    repeat_variables = repeat_variables.cons(v);
 	    return #<closure(lambda(`v,`(simplify(b))),`(simplify(s)),...l)>;
+	case loop(lambda(tuple(...vs),`b),`s,`n):
+	    repeat_variables = repeat_variables.append(vs);
+	    return #<loop(lambda(tuple(...vs),`(simplify(b))),`(simplify(s)),`n)>;
 	case aggregate(`acc,`zero,`T()):
 	    if (is_collection(T))
 		return zero;
@@ -2887,6 +2945,9 @@ class Translate {
 	       fail;
 	   repeat_variables = repeat_variables.cons(v);
 	   return #<Closure(lambda(`v,`(makePlan(b))),`(makePlan(s)),`(Integer.MAX_VALUE))>;
+       case loop(lambda(tuple(...vs),`b),`s,`n):
+	   repeat_variables = repeat_variables.append(vs);
+	   return #<Loop(lambda(tuple(...vs),`(makePlan(b))),`(makePlan(s)),`(makePlan(n)))>;
        case record(...bl):
 	   Trees el = #[];
 	   for ( Tree b: bl )
@@ -3114,7 +3175,7 @@ class Translate {
 	= #[mapReduce,mapReduce2,cmap,join,groupBy,orderBy,aggregate,map,filter];
 
     static Trees plan_names = plans_with_distributed_lambdas.append(algebraic_operators)
-	                        .append(#[Aggregate,Repeat,Closure,Generator,Let,If]);
+	                           .append(#[Aggregate,Repeat,Closure,Generator,Let,If]);
 
     static Tree physical_plan ( Tree plan ) {
 	match plan {

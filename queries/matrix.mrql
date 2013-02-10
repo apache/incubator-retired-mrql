@@ -1,14 +1,102 @@
-store "X"
-  from select (random(1000)/1000.0,i,j)
-         from i in 1...100, j in 1..200;
+// vectors with random data:
 
-store "Y"
-  from select (random(1000)/1000.0,i,j)
-         from i in 1...200, j in 1..50;
+store "V"
+  from select (random(1000)/1000.0,i)
+         from i in 1...20;
 
-// matrix multiplication
+store "W"
+  from select (random(1000)/1000.0,i)
+         from i in 1...20;
+
+// matrices with random data:
+
+macro Mrandom ( m, n ) {
+  select (random(1000)/1000.0 as double,i,j) from i in 1...m, j in 1..n
+};
+
+store "X" from Mrandom(10,20);
+
+store "Y" from Mrandom(20,50);
+
+// inner product:
+
+sum(select v*w
+      from (v,i) in source(binary,"V"),
+           (w,i) in source(binary,"W"));
+
+// matrix addition:
+
+select ( x+y, i, j )
+  from (x,i,j) in source(binary,"X"),
+       (y,i,j) in source(binary,"Y");
+
+// matrix transpose:
+
+macro transpose ( X ) {
+  select (x,j,i)
+    from (x,i,j) in X
+};
+
+transpose(source(binary,"X"));
+
+// map to a vector:
+
+select (sum(x),i)
+  from (x,i,j) in source(binary,"X")
+ group by i;
+
+// matrix multiplication #1:
+
+macro multiply ( X, Y ) {
+  select (sum(z),i,j)
+    from (x,i,k) in X, (y,k,j) in Y, z = x*y
+   group by (i,j)
+};
+
+multiply(source(binary,"X"),transpose(source(binary,"Y")));
+
+// matrix multiplication #2:
 
 select (sum(select p.x*p.y from p in partition),i,j)
-from (x,i,k) in source(binary,"X"),
-     (y,k,j) in source(binary,"Y")
-group by (i,j);
+  from (x,i,k) in source(binary,"X"),
+       (y,k,j) in source(binary,"Y")
+ group by (i,j);
+
+// matrix-vector product:
+
+macro MVprod ( M, V ) {
+  select ( sum(z), i )
+    from (m,i,j) in M, (v,j) in V, z = m*v
+   group by i
+};
+
+MVprod(source(binary,"X"),source(binary,"V"));
+
+// cell-wise multiplication:
+
+macro Cmult ( X, Y ) {
+  select ( x*y, i, j )
+    from (x,i,j) in X, (y,i,j) in Y
+};
+
+// cell-wise division:
+
+macro Cdiv ( X, Y ) {
+  select ( x/y, i, j )
+    from (x,i,j) in X, (y,i,j) in Y
+};
+
+// Gaussian non-negative matrix factorization (from SystemML paper)
+
+store "M" from Mrandom(30,20);
+store "H" from Mrandom(100,30);
+store "W" from Mrandom(20,100);
+
+macro factorize ( V, Hinit, Winit ) {
+  repeat (H,W) = (Hinit,Winit)
+    step ( Cmult(H,Cdiv(multiply(transpose(W),V),multiply(transpose(W),multiply(W,H)))),
+           Cmult(W,Cdiv(multiply(V,transpose(H)),multiply(W,multiply(H,transpose(H))))) )
+   limit 3
+};
+
+factorize(source(binary,"M"),source(binary,"H"),source(binary,"W"));

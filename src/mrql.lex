@@ -145,6 +145,7 @@ DOUBLE = [0-9]+([\.][0-9]+)?([eE][+-]?[0-9]+)?
 <YYINITIAL> "asc"		{ return symbol(sym.ASCENDING); }
 <YYINITIAL> "desc"	        { return symbol(sym.DESCENDING); }
 <YYINITIAL> "function"		{ return symbol(sym.FUNCTION); }
+<YYINITIAL> "macro"		{ return symbol(sym.MACRO); }
 <YYINITIAL> "distinct"		{ return symbol(sym.DISTINCT); }
 <YYINITIAL> "as"		{ return symbol(sym.AS); }
 <YYINITIAL> "some"		{ return symbol(sym.SOME); }

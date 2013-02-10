@@ -1,5 +1,5 @@
 /********************************************************************************
-   Copyright 2011-2012 Leonidas Fegaras, University of Texas at Arlington
+   Copyright 2011-2013 Leonidas Fegaras, University of Texas at Arlington
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
    File: MapReduceEvaluator.gen
    The MRQL plan evaluator on Hadoop
    Programmer: Leonidas Fegaras, UTA
-   Date: 10/14/10 - 08/15/12
+   Date: 10/14/10 - 02/10/13
 
 ********************************************************************************/
 
@@ -61,6 +61,25 @@ class Evaluator extends Interpreter {
 				    Tree plan,
 				    Environment env ) throws Exception {
 	return MapReducePlan.aggregate(acc_fnc,zero,eval(plan,env,"-"));
+    }
+
+    final static Tuple loop ( Tree e, Environment env ) throws Exception {
+	match e {
+	case Loop(lambda(tuple(...vs),tuple(...bs)),tuple(...ss),`num):
+	    int limit = ((MR_int)evalE(num,env)).get();
+	    MR_dataset[] s = new MR_dataset[vs.length()];
+	    for ( int i = 0; i < vs.length(); i++ )
+		s[i] = new MR_dataset(eval(ss.nth(i),env,"-"));
+	    for ( int n = 0; n < limit; n++ ) {
+		Environment nenv = env;
+		for ( int i = 0; i < vs.length(); i ++ )
+		    nenv = new Environment(vs.nth(i).toString(),s[i],nenv);
+		for ( int i = 0; i < vs.length(); i ++ )
+		    s[i] = new MR_dataset(eval(bs.nth(i),nenv,"-"));
+	    };
+	    return new Tuple(s);
+	};
+	throw new Error("Wrong Loop format");
     }
 
     // evaluate MRQL physical operators using Hadoop (returns a DataSet)

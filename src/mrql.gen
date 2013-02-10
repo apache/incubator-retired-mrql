@@ -92,7 +92,7 @@ terminal IF, THEN, ELSE, SELECT, FROM, HAVING, LB, RB, LP, RP, LSB, RSB, LDOT, S
 	 UNION, INTERSECT, EXCEPT, EXISTS, IN, COMMA, DOT, COLON, ASSIGN, SEMI, WHERE,
 	 ORDER, GROUP, BY, ASCENDING, DESCENDING, UMINUS, FUNCTION, DISTINCT, BSLASH,
 	 SOME, ALL, GTR, SEP, STORE, TYPE, DATA, CASE, ATSYM, XPATH, REPEAT, STEP, LIMIT,
-         LET, IMPORT, PARSER, AGGREGATION, INCLUDE, EXCLAMATION;
+         LET, IMPORT, PARSER, AGGREGATION, INCLUDE, EXCLAMATION, MACRO;
 
 terminal String   	Variable;
 terminal Long		Integer;
@@ -109,7 +109,7 @@ non terminal Tree	item, expr, var, const, mrql, pattern, opt_where, opt_orderby,
 			xpred, opt_limit, unit;
 non terminal Trees	expl, name_binds, pat_list, pat_binds,
     	     		binds, order_binds, groupby_binds, typel, type_binds,
-                        data_binds, cases, fnl, template, template_pat, fnc_params;
+                        data_binds, cases, fnl, template, template_pat, fnc_params, var_list;
 
 precedence nonassoc	LDOT, ASSIGN, LIMIT;
 precedence nonassoc	ELSE, COLON;
@@ -142,6 +142,8 @@ item		::= expr:e      			{: RESULT = #<expression(`e)>; :}
 		    LSB expr:e RSB			{: RESULT = #<functiondef(`f,params(...p),`tp,`e)>; :}
 		|   FUNCTION var:f LP RP COLON type:tp
 		    LSB expr:e RSB			{: RESULT = #<functiondef(`f,params(),`tp,`e)>; :}
+		|   MACRO var:f LP var_list:vl RP
+		    LSB expr:e RSB			{: RESULT = #<macrodef(`f,params(...vl),`e)>; :}
 		|   IMPORT fnl:l FROM String:c		{: RESULT = #<import(`c,...l)>; :}
 		|   IMPORT String:c   			{: RESULT = #<import(`c)>; :}
                 |   PARSER var:c EQ String:p		{: RESULT = #<parser(`c,`p)>; :}
@@ -163,6 +165,9 @@ fnc_params      ::= fnc_params:nl
                 |   var:v COLON type:e 	    	  	{: RESULT = #[bind(`v,`e)]; :}
                 ;
 var		::= Variable:v                          {: RESULT = #<`v>; :}
+		;
+var_list	::= var:v				{: RESULT = #[`v]; :}
+		|   var_list:el COMMA var:v		{: RESULT = el.append(v); :}
 		;
 const		::= String:s				{: RESULT = new StringLeaf(s); :}
 		|   Integer:n				{: RESULT = new LongLeaf(n.longValue()); :}
@@ -218,9 +223,12 @@ expr		::= mrql:e				{: RESULT = e; :}
 		|   expr:i DOT DOT DOT expr:j		{: RESULT = #<gen(`i,`j,-1)>; :}
 		|   XPATH LP xpath:x RP	   	  	{: RESULT = #<xpath(`x)>; :}
 		|   TYPE LP type:tp RP	   	  	{: RESULT = #<type(`tp)>; :}
-		|   REPEAT var:v EQ expr:s STEP expr:b	{: RESULT = #<repeat(lambda(`v,`b),`s)>; :}
-		|   REPEAT var:v EQ expr:s STEP expr:b LIMIT expr:n
+		|   REPEAT Variable:v EQ expr:s STEP expr:b
+		    	   	     	       	    	{: RESULT = #<repeat(lambda(`v,`b),`s)>; :}
+		|   REPEAT Variable:v EQ expr:s STEP expr:b LIMIT expr:n
 		    	   	    	   		{: RESULT = #<repeat(lambda(`v,`b),`s,`n)>; :}
+		|   REPEAT LP var_list:vl RP EQ expr:s STEP expr:b LIMIT expr:n
+		    	   	    	   		{: RESULT = #<loop(lambda(tuple(...vl),`b),`s,`n)>; :}
                 |   START_TEMPLATE:s template:t END_TEMPLATE:e
 							{: RESULT = Translate.template(#<template(`(s.substring(1,s.length()-1)),...t,text(`e))>); :}
                 |   START_TEMPLATE:s END_TEMPLATE:e	{: RESULT = Translate.template(#<template(`(s.substring(1,s.length()-1)),text(`e))>); :}
@@ -282,7 +290,9 @@ opt_distinct	::= DISTINCT				{: RESULT = #<distinct>; :}
 		|   					{: RESULT = #<none>; :}
 		;
 binds           ::= binds:bl COMMA pattern:p IN expr:e	{: RESULT = bl.append(#<bind(`p,`e)>); :}
+		|   binds:bl COMMA pattern:p EQ expr:e	{: RESULT = bl.append(#<bind(`p,bag(`e))>); :}
                 |   pattern:p IN expr:e			{: RESULT = #[bind(`p,`e)]; :}
+                |   pattern:p EQ expr:e			{: RESULT = #[bind(`p,bag(`e))]; :}
                 ;
 opt_where 	::= WHERE expr:e			{: RESULT = #<where(`e)>; :}
 		|					{: RESULT = #<where(true)>; :}

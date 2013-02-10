@@ -180,10 +180,19 @@ are their types, <TT>t</TT> is the return type, and <TT>e</TT> is the
 function body (an MRQL expression). For example: 
 </P>
 <PRE STYLE="margin-bottom: 0.2in">function fact ( n: int ): int { if n &lt;= 0 then 1 else n*fact(n-1) };</PRE><P>
-To include an MRQL source file <TT>f.mrql</TT>, use: 
+<P>Macros are inlined functions that can be declared using the syntax:
 </P>
-<PRE STYLE="margin-bottom: 0.2in">include &quot;f.mrql&quot;;</PRE><H2 CLASS="western">
-The MRQL Data Model</H2>
+<PRE STYLE="margin-bottom: 0.2in"><B>macro</B> f ( v<SUB>1</SUB>, ..., v<SUB>n</SUB> ) { e };</PRE><P>
+where <TT>v</TT><TT><SUB>1</SUB></TT><TT>,...,v</TT><TT><SUB>n</SUB></TT>
+are the parameter names and <TT>e</TT> is the
+macro body (an MRQL expression). Macros cannot be recursive. A macro call is replaced
+with the macro body at compile-time, after substituting the macro parameters with the call arguments.
+</P>
+<p>
+To include an MRQL source file <tt>f.mrql</tt>, use:
+<PRE STYLE="margin-bottom: 0.2in">include &quot;f.mrql&quot;;</PRE>
+</p>
+<H2 CLASS="western">The MRQL Data Model</H2>
 <P>MRQL supports the following types: 
 </P>
 <UL>
@@ -500,7 +509,9 @@ to the corresponding values in the element. In other words, this
 query binding specifies an iteration over the collection <TT>e</TT>,
 one element at a time, causing the pattern <TT>p</TT> to be matched
 with the current collection element. If the element value doesn't
-match the pattern, it is ignored.</P>
+match the pattern, it is ignored.
+The shorthand <tt>p = e</tt> is equivalent to <TT>p </TT><TT><B>in</B></TT><TT> {e}</TT>,
+that is, the pattern <tt>p</tt> must be matched to the single element <tt>e</tt>.</P>
 <P>For example, the following query: 
 </P>
 <PRE>select (n,cn)
@@ -581,6 +592,11 @@ from (x,i,k) in X, (y,k,j) in Y
 group by (i,j)</pre>
 Here, the <tt>partition</tt> has type <tt>{ &lt; x:double, k:int, y:double &gt; }</tt>
 and contains the group associated with <tt>i</tt> and <tt>j</tt>.
+This query can also be written as:
+<pre>
+select ( sum(z), i, j )
+from (x,i,k) in X, (y,k,j) in Y, z = x*y
+group by (i,j)</pre>
 </P>
 <H3 CLASS="western">Order-By</H3>
 <P>The <TT><B>order by</B></TT><TT> e</TT><TT><SUB>0</SUB></TT>
@@ -694,7 +710,7 @@ group by (i,j)
 which is translated into a single map-reduce job.
 </P>
 <H3 CLASS="western">Repetition</H3>
-<P>There are two repetition forms that have the same syntax but different types and semantics.
+<P>There are three repetition forms that have similar syntax but different types and semantics.
 The repetition syntax is:
 </P>
 <PRE STYLE="margin-bottom: 0.2in"><B>repeat</B> v = e <B>step</B> body [ <B>limit</B> n ]</PRE>
@@ -798,6 +814,39 @@ graph (available at <A HREF="http://web-graph.org/">ErdÅ‘s
 WebGraph</A>), which has 500K nodes and 14M links, the pagerank
 required 8 iterations (a total of 9 map-reduce jobs). 
 </P>
+<p>
+The third repetition form has the syntax:
+<PRE STYLE="margin-bottom: 0.2in"><B>repeat</B> (v<SUB>1</SUB>, ..., v<SUB>n</SUB>) = e <B>step</B> body <B>limit</B> n</PRE>
+For example, the following macro, <tt>factorize</tt>,
+performs a Gaussian non-negative matrix factorization
+over the matrix <tt>V</tt> into the matrices <tt>H</tt> and <tt>W</tt>:
+<pre>
+macro transpose ( X ) {
+  select (x,j,i)
+    from (x,i,j) in X
+};
+macro multiply ( X, Y ) {
+  select (sum(z),i,j)
+    from (x,i,k) in X, (y,k,j) in Y, z = x*y
+   group by (i,j)
+};
+macro Cmult ( X, Y ) {
+  select ( x*y, i, j )
+    from (x,i,j) in X, (y,i,j) in Y
+};
+macro Cdiv ( X, Y ) {
+  select ( x/y, i, j )
+    from (x,i,j) in X, (y,i,j) in Y
+};
+macro factorize ( V, Hinit, Winit ) {
+  repeat (H,W) = (Hinit,Winit)
+    step ( Cmult(H,Cdiv(multiply(transpose(W),V),multiply(transpose(W),multiply(W,H)))),
+           Cmult(W,Cdiv(multiply(V,transpose(H)),multiply(W,multiply(H,transpose(H))))) )
+   limit 10
+};
+</pre>
+where <tt>Hinit</tt> and <tt>Winit</tt> are the initial values of <tt>H</tt> and <tt>W</tt>.
+</p>
 <H3 CLASS="western">Templates</H3>
 <P>The parser of an input format can also be used for syntax-directed
 construction/deconstruction of data. A template takes the form: 

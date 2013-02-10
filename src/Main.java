@@ -1,5 +1,5 @@
 /********************************************************************************
-   Copyright 2011-2012 Leonidas Fegaras, University of Texas at Arlington
+   Copyright 2011-2013 Leonidas Fegaras, University of Texas at Arlington
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
    File: Main.java
    The MRQL main program
    Programmer: Leonidas Fegaras, UTA
-   Date: 10/14/10 - 08/25/12
+   Date: 10/14/10 - 02/10/13
 
 ********************************************************************************/
 
@@ -35,7 +35,7 @@ import jline.*;
 
 
 final class Config {
-    public final static String version = "0.8.8";
+    public final static String version = "0.8.10";
     public static boolean loaded = false;
 
     // true for Hadoop, false for plain Java
