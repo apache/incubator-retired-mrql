@@ -246,6 +246,31 @@ class BSPPlan extends Plan {
 	    if (acc_result == null) {
 		// the BSP result is a bag that needs to be dumped to the HDFS
 		writeLocalResult((Bag)(local_cache.get(source_num)),peer);
+		// if there more results, dump them to HDFS
+		final MR_long key = new MR_long(0);
+		final MRContainer key_container = new MRContainer(key);
+		final MRContainer data_container = new MRContainer(new MR_int(0));
+		int loc = 0;
+		while ( peer.getPeerName().equals(all_peers[loc]) )
+		    loc++;
+		Configuration conf = peer.getConfiguration();
+		String[] out_paths = conf.get("mrql.output.paths").split(",");
+		for ( int i = 1; i < out_paths.length; i++ ) {
+		    String[] s = out_paths[i].split(":");
+		    int out_num = Integer.parseInt(s[0]);
+		    Path path = new Path(s[1]+"/peer"+loc);
+		    FileSystem fs = path.getFileSystem(conf);
+		    SequenceFile.Writer writer
+			= new SequenceFile.Writer(fs,conf,path,
+						  MRContainer.class,MRContainer.class);
+		    long count = 0;
+		    for ( MRData e: (Bag)(local_cache.get(out_num)) ) {
+			key.set(count++);
+			data_container.set(e);
+			writer.append(key_container,data_container);
+		    };
+		    writer.close();
+		};
 	    } else {
 		// the BSP result is an aggregation:
 		//     send the partial results to the master peer
@@ -331,24 +356,33 @@ class BSPPlan extends Plan {
 	job.set("bsp.min.split.size",Long.toString(split_size));
     }
 
-    public final static DataSet BSP ( int source_num,   // output tag
-				      Tree superstep,   // superstep function
-				      Tree init_state,  // initial state
-				      boolean orderp,   // do we need to order the result?
-				      DataSet source    // input dataset
-				      ) throws Exception {
-	String newpath = new_path(conf);
+    public final static MRData BSP ( int[] source_nums, // output tags
+				     Tree superstep,    // superstep function
+				     Tree init_state,   // initial state
+				     boolean orderp,    // do we need to order the result?
+				     DataSet source     // input dataset
+				     ) throws Exception {
+	String[] newpaths = new String[source_nums.length];
+	newpaths[0] = new_path(conf);
+	conf.set("mrql.output.paths",source_nums[0]+":"+newpaths[0]);
+	for ( int i = 1; i < source_nums.length; i++ ) {
+	    newpaths[i] = new_path(conf);
+	    Path path = new Path(newpaths[1]);
+	    FileSystem fs = path.getFileSystem(conf);
+	    fs.mkdirs(path);
+	    conf.set("mrql.output.paths",conf.get("mrql.output.paths")+","+source_nums[i]+":"+newpaths[i]);
+	};
 	conf.set("mrql.superstep",superstep.toString());
 	conf.set("mrql.initial.state",init_state.toString());
 	conf.set("mrql.zero","");
-	conf.setInt("mrql.output.tag",source_num);
+	conf.setInt("mrql.output.tag",source_nums[0]);
 	conf.setBoolean("mrql.orderp",orderp);
 	BSPJob job = new BSPJob((HamaConfiguration)conf,BSPop.class);
 	setupSplits(job,source);
-	job.setJobName(newpath);
+	job.setJobName(newpaths[0]);
 	distribute_compiled_arguments(getConfiguration(job));
 	job.setBspClass(BSPop.class);
-	Path outpath = new Path(newpath);
+	Path outpath = new Path(newpaths[0]);
 	job.setOutputPath(outpath);
 	job.setOutputKeyClass(MRContainer.class);
 	job.setOutputValueClass(MRContainer.class);
@@ -356,9 +390,19 @@ class BSPPlan extends Plan {
 	job.setInputFormat(MultipleBSPInput.class);
 	FileInputFormat.setInputPaths(job,source.merge());
 	job.waitForCompletion(true);
-	DataSource s = new BinaryDataSource(source_num,newpath,conf);
-	s.to_be_merged = orderp;
-	return new DataSet(s,0,3);
+	if (source_nums.length == 1) {
+	    BinaryDataSource ds = new BinaryDataSource(source_nums[0],newpaths[0],conf);
+	    ds.to_be_merged = orderp;
+	    return new MR_dataset(new DataSet(ds,0,3));
+	} else {
+	    MRData[] s = new MRData[source_nums.length];
+	    for ( int i = 0; i < source_nums.length; i++ ) {
+		BinaryDataSource ds = new BinaryDataSource(source_nums[i],newpaths[i],conf);
+		ds.to_be_merged = orderp;
+		s[i] = new MR_dataset(new DataSet(ds,0,3));
+	    };
+	    return new Tuple(s);
+	}
     }
 
     public final static MRData BSPaggregate ( int source_num,   // output tag

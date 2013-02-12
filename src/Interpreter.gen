@@ -148,7 +148,8 @@ class Interpreter extends Translate {
 		if (!bi.hasNext())
 		    return "{}";
 		String s = "{ "+print(bi.next(),tp);
-		for ( int i = 1; bi.hasNext() && i < Config.max_bag_size_print; i++ )
+		for ( long i = 1; bi.hasNext() && (Config.max_bag_size_print < 0
+						   || i < Config.max_bag_size_print); i++ )
 		    s += ", "+print(bi.next(),tp);
 		if (bi.hasNext())
 		    return s+", ... }";
@@ -159,7 +160,8 @@ class Interpreter extends Translate {
 		if (!bi.hasNext())
 		    return "[]";
 		String s = "[ "+print(bi.next(),tp);
-		for ( int i = 1; bi.hasNext() && i < Config.max_bag_size_print; i++ )
+		for ( long i = 1; bi.hasNext() && (Config.max_bag_size_print < 0
+						   || i < Config.max_bag_size_print); i++ )
 		    s += ", "+print(bi.next(),tp);
 		if (bi.hasNext())
 		    return s+", ... ]";
@@ -700,6 +702,10 @@ class Interpreter extends Translate {
 	    if (Config.hadoop_mode)
 		return Evaluator.aggregate(closure(acc,env),zero,s,env);
 	    else return MapReduceAlgebra.aggregate(evalF(acc,env),evalE(zero,env),evalM(s,env));
+	case BSP(...):
+	    if (Config.hadoop_mode)
+		return Evaluator.bsp(e,env);
+	    else fail
 	case Loop(lambda(tuple(...vs),tuple(...bs)),tuple(...ss),`num):
 	    if (Config.hadoop_mode)
 		return Evaluator.loop(e,env);
@@ -717,20 +723,6 @@ class Interpreter extends Translate {
 		    s[i] = (Bag)evalM(bs.nth(i),nenv);
 	    };
 	    return new Tuple(s);
-	case extract_loop_vars(`b,...vs):     // used by BSP Loop
-	    Bag s = (Config.hadoop_mode)
-		? Plan.collect(Evaluator.eval(b,env,"-"))
-		: evalS(b,env);
-	    s.materialize();
-	    Bag[] t = new Bag[vs.length()];
-	    for ( int i = 0; i < vs.length(); i++ ) {
-		final int tag = i;
-		t[i] = MapReduceAlgebra.cmap(new Function() {
-			final public MRData eval ( final MRData x ) {
-			    return ((Tuple)x).get(tag);
-			} },s);
-	    };
-	    return new Tuple(t);
 	case function(tuple(...params),`tp,`body):
 	    String[] as = new String[params.length()];
 	    int i = 0;
@@ -910,6 +902,15 @@ class Interpreter extends Translate {
 		return MapReduceAlgebra.generator((int)((LongLeaf)n).value(),
 						  ((MR_long)evalE(min,env)).get(),
 						  ((MR_long)evalE(max,env)).get());
+	    case BSP(tuple(`n,...),`superstep,`state,`o,...as):
+		Bag[] ds = new Bag[as.length()];
+		for ( int i = 0; i < ds.length; i++ )
+		    ds[i] = evalM(as.nth(i),env);
+		return MapReduceAlgebra.BSP((int)((LongLeaf)n).value(),
+					    evalF(superstep,env),
+					    evalE(state,env),
+					    o.equals(#<true>),
+					    ds);
 	    case BSP(`n,`superstep,`state,`o,...as):
 		Bag[] ds = new Bag[as.length()];
 		for ( int i = 0; i < ds.length; i++ )
@@ -1216,6 +1217,38 @@ class Interpreter extends Translate {
 	}
     }
 
+    final static void dump_text ( String file, Tree e ) {
+	MRData res = expression(e,false);
+	if (res != null)
+	    try {
+		PrintStream out = (Config.hadoop_mode)
+		                   ? Plan.print_stream(file)
+		                   : new PrintStream(file);
+		if (res instanceof MR_dataset)
+		    res = Plan.collect(((MR_dataset)res).dataset());
+		int ps = Config.max_bag_size_print;
+		Config.max_bag_size_print = -1;
+		match query_type {
+		case `T(tuple(...ts)):
+		    for ( MRData x: (Bag)res ) {
+			Tuple t = (Tuple)x;
+			out.print(print(t.get((short)0),ts.nth(0)));
+			for ( short i = 1; i < t.size(); i++ )
+			    out.print(","+print(t.get(i),ts.nth(i)));
+			out.println();
+		    }
+		case `T(`tp):
+		    for ( MRData x: (Bag)res )
+			out.println(print(x,tp));
+		case _: out.println(print(res,query_type));
+		};
+		Config.max_bag_size_print = ps;
+		out.close();
+	    } catch (Exception x) {
+		throw new Error(x);
+	    }
+    }
+
     final static void typedef ( String name, Tree type ) {
 	type_names.insert(name,normalize_type(type));
     }
@@ -1275,6 +1308,10 @@ class Interpreter extends Translate {
 	case dump(`s,`e):
 	    long t = System.currentTimeMillis();
 	    dump(s.stringValue(),e);
+	    System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
+	case dump_text(`s,`e):
+	    long t = System.currentTimeMillis();
+	    dump_text(s.stringValue(),e);
 	    System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
 	case typedef(`v,`t): typedef(v.toString(),t);
 	case datadef(`v,`t): datadef(v.toString(),t);

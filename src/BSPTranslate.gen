@@ -227,6 +227,14 @@ class BSPTranslate extends Translate {
 	return #<BSP(`rn,`superstep,`state,`orderp,...input)>;
     }
 
+    private static Tree mkBSPL ( int[] ns, Tree superstep, Tree state, Tree orderp, Trees input ) {
+	superstep = processBSP(subst(#<o_>,#<`(ns[0])>,getCache(#<i_>,input,superstep)));
+	Trees s = #[];
+	for ( int n: ns )
+	    s = s.append(#<`n>);
+	return #<BSP(tuple(...s),`superstep,`state,`orderp,...input)>;
+    }
+
     private static Tree mkBSPL ( int n, Tree superstep, Tree state, Tree orderp, Trees input ) {
 	superstep = processBSP(subst(#<o_>,#<`n>,getCache(#<i_>,input,superstep)));
 	return #<BSP(`n,`superstep,`state,`orderp,...input)>;
@@ -577,18 +585,15 @@ class BSPTranslate extends Translate {
 				     : #<tuple(bag(),
 					       tuple(`(k[0]),0,callM(plus,`plusM,steps,1)),
 					       if(callM(gt,`gtM,steps,`max),      // if # of steps > limit, exit
-						  setCache(`(cache_num[0]),
-							   bag(tuple(...all_cache)),   // put all results in a tuple
-							   TRUE()),
+						  TRUE(),
 						  FALSE()))>),
 				   tuple(ts,tuple(kk,i,steps),FALSE()))),
 			    `code)>;
-	    Tree res = mkBSPL(cache_num[0],
-			      #<lambda(tuple(ms,tuple(k,i,steps)),`code)>,
-			      #<tuple(`(k[0]),0,2)>,
-			      #<false>,
-			      sources);
-	    return #<extract_loop_vars(`res,...vs)>;
+	    return mkBSPL(cache_num,
+			  #<lambda(tuple(ms,tuple(k,i,steps)),`code)>,
+			  #<tuple(`(k[0]),0,2)>,
+			  #<false>,
+			  sources);
 	case `f(...as):
 	    Trees bs = #[];
 	    for ( Tree a: as )

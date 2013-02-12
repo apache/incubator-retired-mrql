@@ -3,9 +3,9 @@
 <HEAD>
 	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
 	<TITLE>MRQL description</TITLE>
-	<META NAME="GENERATOR" CONTENT="LibreOffice 3.4  (Linux)">
+	<META NAME="GENERATOR" CONTENT="LibreOffice 3.5  (Linux)">
 	<META NAME="CREATED" CONTENT="0;0">
-	<META NAME="CHANGED" CONTENT="20120502;15030200">
+	<META NAME="CHANGED" CONTENT="20130212;16300900">
 	<STYLE TYPE="text/css">
 	<!--
 		PRE { background: #eeeeee; font-family: "Monaco", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Lucida Console", monospace }
@@ -19,117 +19,107 @@
 </HEAD>
 <BODY LANG="en-US" DIR="LTR">
 <H1 ALIGN=CENTER>MRQL: A Map-Reduce Query Language</H1>
-<P>
-MRQL is an SQL-like query language for large-scale data analysis on a computer cluster.  The
-MRQL system can execute MRQL queries in two modes: using the Map-Reduce framework on
-Apache Hadoop or using the Bulk Synchronous Parallel (BSP) framework on Apache Hama.
-The MRQL query language is powerful enough to express most common data
+<P>MRQL is an SQL-like query language for large-scale data analysis
+on a computer cluster. The MRQL system can execute MRQL queries in
+two modes: using the Map-Reduce framework on Apache Hadoop or using
+the Bulk Synchronous Parallel (BSP) framework on Apache Hama. The
+MRQL query language is powerful enough to express most common data
 analysis tasks over many forms of raw data, such as XML and JSON
 documents, binary files, and line-oriented text documents with
 comma-separated values. In contrast to SQL, MRQL supports a richer
 data model (including nested collections), arbitrary query nesting,
-and user-defined types and functions.
+and user-defined types and functions. 
 </P>
-<P>To evaluate MRQL queries in map-reduce mode, you run the
-script <TT>bin/mrql</TT> in the <TT>mrql</TT> installation directory. To evaluate
-MRQL queries in BSP mode, you run the
-script <TT>bin/mrql.bsp</TT>. First, you need to change the first
-lines of <TT>bin/mrql</TT> and <TT>bin/mrql.bsp</TT> to point to your
-directories and configuration files. The directory <TT>queries</TT>
-contains some MRQL example queries over various data sets.
-</p>
-<h2>Evaluating MRQL Queries Using Map-Reduce</h2>
-<P>
-Before deploying your MRQL queries on a Hadoop cluster, you can run
-these queries in memory on a small amount of data using
-the command:
+<P>To evaluate MRQL queries in map-reduce mode, you run the script
+<TT>bin/mrql</TT> in the <TT>mrql</TT> installation directory. To
+evaluate MRQL queries in BSP mode, you run the script <TT>bin/mrql.bsp</TT>.
+First, you need to change the first lines of <TT>bin/mrql</TT> and
+<TT>bin/mrql.bsp</TT> to point to your directories and configuration
+files. The directory <TT>queries</TT> contains some MRQL example
+queries over various data sets. 
 </P>
-<PRE STYLE="margin-bottom: 0.2in">mrql</PRE>
-<P>
-which evaluates MRQL top-level commands and queries from the input until you
-type <TT>quit</TT>. To run MRQL in Hadoop's standalone mode (single
-node on local files), use:
+<H2 CLASS="western">Evaluating MRQL Queries Using Map-Reduce</H2>
+<P>Before deploying your MRQL queries on a Hadoop cluster, you can
+run these queries in memory on a small amount of data using the
+command: 
+</P>
+<PRE STYLE="margin-bottom: 0.2in">mrql</PRE><P>
+which evaluates MRQL top-level commands and queries from the input
+until you type <TT>quit</TT>. To run MRQL in Hadoop's standalone mode
+(single node on local files), use: 
 </P>
 <PRE STYLE="margin-bottom: 0.2in">mrql -local</PRE><P>
 To run MRQL in Hadoop's fully distributed mode (cluster mode), use: 
 </P>
 <PRE STYLE="margin-bottom: 0.2in">mrql -dist</PRE><P>
-To evaluate a file that contains MRQL queries in any of these three modes, put the file
-name in the command. For example: 
+To evaluate a file that contains MRQL queries in any of these three
+modes, put the file name in the command. For example: 
 </P>
-<PRE STYLE="margin-bottom: 0.2in">mrql -local queries/q1.mrql</PRE>
-<P>
-</p>
-<h2>Evaluating MRQL Queries Using BSP</h2>
-<P>
-Before deploying your MRQL queries on a Hama cluster, you can
-run them in memory on a small amount of data using
-the command:
+<PRE STYLE="margin-bottom: 0.2in">mrql -local queries/q1.mrql</PRE><H2 CLASS="western">
+Evaluating MRQL Queries Using BSP</H2>
+<P>Before deploying your MRQL queries on a Hama cluster, you can run
+them in memory on a small amount of data using the command: 
 </P>
-<PRE STYLE="margin-bottom: 0.2in">mrql.bsp</PRE>
-<P>
-To run MRQL in
-Hama's standalone mode (single node on local files), use: 
+<PRE STYLE="margin-bottom: 0.2in">mrql.bsp</PRE><P>
+To run MRQL in Hama's standalone mode (single node on local files),
+use: 
 </P>
 <PRE STYLE="margin-bottom: 0.2in">mrql.bsp -local</PRE><P>
 To run MRQL in Hama's fully distributed mode (cluster mode), use: 
 </P>
 <PRE STYLE="margin-bottom: 0.2in">mrql.bsp -dist</PRE><P>
-To evaluate a file that contains MRQL queries in any of these three modes, put the file
-name in the command. For example: 
+To evaluate a file that contains MRQL queries in any of these three
+modes, put the file name in the command. For example: 
 </P>
-<PRE STYLE="margin-bottom: 0.2in">mrql.bsp -local queries/q1.mrql</PRE>
-<P>
-</p>
-<h2>The MRQL Command Parameters</h2>
-<P>
-Other parameters to <TT>mrql</TT> and <TT>mrql.bsp</TT> commands: 
+<PRE STYLE="margin-bottom: 0.2in">mrql.bsp -local queries/q1.mrql</PRE><H2 CLASS="western">
+The MRQL Command Parameters</H2>
+<P>Other parameters to <TT>mrql</TT> and <TT>mrql.bsp</TT> commands: 
 </P>
 <UL>
-	<LI><P STYLE="margin-bottom: 0in"><TT>-C</TT>: compile the
-	functional arguments to Java bytecode at run-time. It speeds up execution but slows down setup time.
+	<LI><P STYLE="margin-bottom: 0in"><TT>-C</TT>:  compile the
+	functional arguments to Java bytecode at run-time. It speeds up
+	execution but slows down setup time. 
 	</P>
-	<LI><P STYLE="margin-bottom: 0in"><TT>-reducers n</TT>: specify the
+	<LI><P STYLE="margin-bottom: 0in"><TT>-reducers n</TT>:  specify the
 	max number of Hadoop reducers (default is Hadoop's
 	<TT>mapred.reduce.tasks</TT>). 
 	</P>
-	<LI><P STYLE="margin-bottom: 0in"><TT>-mapjoin_size n</TT>: max
+	<LI><P STYLE="margin-bottom: 0in"><TT>-mapjoin_size n</TT>:  max
 	distributed cache size for fragment-replicate join in MBs (default
 	is 50). Equi-joins with both input sizes larger than <TT>n</TT> MBs
 	are evaluated with a reduce-side join. 
 	</P>
-	<LI><P STYLE="margin-bottom: 0in"><TT>-cache_size n</TT>: max number
-	of cached entries in a mapper before they are flushed out (default
-	is 100000). Used by the in-mapper combiner in MapCombineReduce and
-	by the map-side CrossProduct. 
+	<LI><P STYLE="margin-bottom: 0in"><TT>-cache_size n</TT>:  max
+	number of cached entries in a mapper before they are flushed out
+	(default is 100000). Used by the in-mapper combiner in
+	MapCombineReduce and by the map-side CrossProduct. 
 	</P>
-	<LI><P STYLE="margin-bottom: 0in"><TT>-trace</TT>: print detailed
+	<LI><P STYLE="margin-bottom: 0in"><TT>-trace</TT>:  print detailed
 	information about the query optimization steps. 
 	</P>
-	<LI><P STYLE="margin-bottom: 0in"><TT>-bag_size n</TT>: the maximum
+	<LI><P STYLE="margin-bottom: 0in"><TT>-bag_size n</TT>:  the maximum
 	number of bag elements before we spill the bag to a local file
 	(default is 500000). 
 	</P>
-	<LI><P STYLE="margin-bottom: 0in"><TT>-bsp_tasks n</TT>: the maximum total
-	number of BSP tasks that can run simultaneously on the Hama cluster
-	(default is 2). 
+	<LI><P STYLE="margin-bottom: 0in"><TT>-bsp_tasks n</TT>:  the
+	maximum total number of BSP tasks that can run simultaneously on the
+	Hama cluster (default is 2). 
 	</P>
-	<LI><P STYLE="margin-bottom: 0in"><TT>-bsp_msg_size n</TT>: the maximum
-	number of BSP messages before a subsync
-	(default is 100000). 
+	<LI><P STYLE="margin-bottom: 0in"><TT>-bsp_msg_size n</TT>:  the
+	maximum number of BSP messages before a subsync (default is 100000).
+		</P>
+	<LI><P STYLE="margin-bottom: 0in"><TT>-bag_print n</TT>:  the
+	maximum number of collection elements to print (default is 20). 
 	</P>
-	<LI><P STYLE="margin-bottom: 0in"><TT>-bag_print n</TT>: the maximum
-	number of collection elements to print (default is 20). 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><TT>-split_size</TT>: the number
+	<LI><P STYLE="margin-bottom: 0in"><TT>-split_size</TT>:  the number
 	of elements per mapper to process the range min...max (default is
 	100000). 
 	</P>
-	<LI><P STYLE="margin-bottom: 0in"><TT>-methods</TT>: print the names
-	and types of the imported Java methods. 
+	<LI><P STYLE="margin-bottom: 0in"><TT>-methods</TT>:  print the
+	names and types of the imported Java methods. 
 	</P>
-	<LI><P><TT>-P</TT>: trace the plan execution (print the input and
-	output of each map-reduce operator). 
+	<LI><P><TT>-P</TT>:  trace the plan execution (print the input and
+	output of each map-reduce/BSP operator). 
 	</P>
 </UL>
 <P>The extra parameters that do not start with a <TT>-</TT> are
@@ -149,8 +139,7 @@ the data file paths in the query file must start with <TT>s3n://xxx/</TT>.
 After completed, you can see the job output with Debug (on stdout). 
 </P>
 <H2 CLASS="western">The MRQL Top-Level Commands</H2>
-<P>
-To evaluate an expression (query) <TT>e</TT> in MRQL, simply write
+<P>To evaluate an expression (query) <TT>e</TT> in MRQL, simply write
 the expression followed by semicolon (you may break the expression
 into multiple lines): 
 </P>
@@ -171,6 +160,12 @@ path name, <TT>fname</TT> (a string) using:
 The file can then be read using the MRQL expression
 <TT><B>source</B></TT><TT>(</TT><TT><B>binary</B></TT><TT>,fname)</TT>.
 </P>
+<P>The value of <TT>e</TT> can be dumped to a text file with path
+name, <TT>fname</TT> (a string) using: 
+</P>
+<PRE STYLE="margin-bottom: 0.2in"><B>dump</B> fname <B>from</B> e;</PRE><P>
+If  <TT>e</TT> is a bag of tuples, the tuples will be written in CVS
+form.</P>
 <P>Functions can be declared using the syntax: 
 </P>
 <PRE STYLE="margin-bottom: 0.2in"><B>function</B> f ( v<SUB>1</SUB>: t<SUB>1</SUB>, ..., v<SUB>n</SUB>: t<SUB>n</SUB> ) : t { e };</PRE><P>
@@ -180,19 +175,19 @@ are their types, <TT>t</TT> is the return type, and <TT>e</TT> is the
 function body (an MRQL expression). For example: 
 </P>
 <PRE STYLE="margin-bottom: 0.2in">function fact ( n: int ): int { if n &lt;= 0 then 1 else n*fact(n-1) };</PRE><P>
-<P>Macros are inlined functions that can be declared using the syntax:
+Macros are inlined functions that can be declared using the syntax: 
 </P>
 <PRE STYLE="margin-bottom: 0.2in"><B>macro</B> f ( v<SUB>1</SUB>, ..., v<SUB>n</SUB> ) { e };</PRE><P>
 where <TT>v</TT><TT><SUB>1</SUB></TT><TT>,...,v</TT><TT><SUB>n</SUB></TT>
-are the parameter names and <TT>e</TT> is the
-macro body (an MRQL expression). Macros cannot be recursive. A macro call is replaced
-with the macro body at compile-time, after substituting the macro parameters with the call arguments.
+are the parameter names and <TT>e</TT> is the macro body (an MRQL
+expression). Macros cannot be recursive. A macro call is replaced
+with the macro body at compile-time, after substituting the macro
+parameters with the call arguments. 
 </P>
-<p>
-To include an MRQL source file <tt>f.mrql</tt>, use:
-<PRE STYLE="margin-bottom: 0.2in">include &quot;f.mrql&quot;;</PRE>
-</p>
-<H2 CLASS="western">The MRQL Data Model</H2>
+<P>To include an MRQL source file <TT>f.mrql</TT>, use: 
+</P>
+<PRE STYLE="margin-bottom: 0.2in"><B>include </B>&quot;f.mrql&quot;;</PRE><H2 CLASS="western">
+The MRQL Data Model</H2>
 <P>MRQL supports the following types: 
 </P>
 <UL>
@@ -216,7 +211,8 @@ To include an MRQL source file <tt>f.mrql</tt>, use:
 	</P>
 	<LI><P STYLE="margin-bottom: 0in">a data type <TT>T</TT> 
 	</P>
-	<LI><P>a persistent collection <TT>!list(t)</TT>, <TT>![t]</TT>, <TT>!bag(t)</TT>, or <TT>!{t}</TT>
+	<LI><P>a persistent collection <TT>!list(t)</TT>, <TT>![t]</TT>,
+	<TT>!bag(t)</TT>, or <TT>!{t}</TT> 
 	</P>
 </UL>
 <P>where <TT>t</TT>, <TT>t</TT><TT><SUB>1</SUB></TT><TT>,...,t</TT><TT><SUB>n</SUB></TT>
@@ -254,12 +250,12 @@ can be queried using the <B>select</B>-query syntax and can be
 combined using <TT><B>union</B></TT>, <TT><B>intersect</B></TT>, and
 <TT><B>except</B></TT>. Any value <TT>x</TT> of type <TT>bag( (k,v) )</TT>
 (ie, a bag of pairs), where <TT>k</TT> and <TT>v</TT> are arbitrary
-types, is also a <EM>map, </EM><EM><SPAN STYLE="font-style: normal">which
-binds keys to values</SPAN></EM>. In addition to bag operations, a
-map also supports key indexing <TT>x[key]</TT>, for a key value <TT>key</TT>
-of type <TT>k</TT>, to return the value of type <TT>v</TT> associated
-with <TT>key</TT>, if exists (a run-time error otherwise). For
-example, <TT>{(&quot;a&quot;,1),(&quot;b&quot;,2)}[&quot;a&quot;]</TT>
+types, is also a <EM>map, </EM><EM><SPAN STYLE="font-variant: normal"><SPAN STYLE="font-style: normal">which
+binds keys to values</SPAN></SPAN></EM>. In addition to bag
+operations, a map also supports key indexing <TT>x[key]</TT>, for a
+key value <TT>key</TT> of type <TT>k</TT>, to return the value of
+type <TT>v</TT> associated with <TT>key</TT>, if exists (a run-time
+error otherwise). For example, <TT>{(&quot;a&quot;,1),(&quot;b&quot;,2)}[&quot;a&quot;]</TT>
 returns <TT>1</TT>. For a string key <TT>&quot;a&quot;</TT> (a name),
 one may also write <TT>x.a</TT> for <TT>x[&quot;a&quot;]</TT>. 
 </P>
@@ -306,28 +302,30 @@ For example, the JSON object <TT>{ &quot;a&quot;: 1 }</TT> is
 constructed using <TT>Jobject({(&quot;a&quot;,Jlong(1 as long))})</TT>.
 </P>
 <P>A persistent collection type <TT>!t</TT> is a collection of type <TT>t</TT>
-that is consumed or produced by a map-reduce job (and consequently stored in HDFS).
-Normally, the MRQL type system infers these
-types at compile-time.
-For example, in the following MRQL query that computes DFT (the Discrete Fourier Transform)
-over the sparse vector <TT>M</TT> of type <TT>!list( ( int, double ) )</TT> and length <TT>N</TT>:
+that is consumed or produced by a map-reduce job (and consequently
+stored in HDFS). Normally, the MRQL type system infers these types at
+compile-time. For example, in the following MRQL query that computes
+DFT (the Discrete Fourier Transform) over the sparse vector <TT>M</TT>
+of type <TT>!list( ( int, double ) )</TT> and length <TT>N</TT>: 
+</P>
 <PRE>select ( k, sum(select v*cos(2*PI*k*i/N) from (i,v) in m) )
 from m in M, j in 1..N
-group by k: j;</PRE>
-the range expression <TT>1..N</TT> computes a non-persistent list of type <TT>list(int)</TT>.
-The MRQL optimizer will evaluate the query using a single map-reduce job over <TT>M</TT>,
-since this is the only persistent type, while <TT>1..N</TT> is generated and used during the map.
-Without these annotations, the evaluation would have stored <TT>1..N</TT> in HDFS and
-would have performed an expensive cross product between <TT>M</TT> and <TT>1..N</TT>.
-Although these annotations are inferred for most MRQL expressions,
-they must be explicitly specified in UDFs (by annotating the UDF types) to help the MRQL compiler choose
-which computations are to be executed as Hadoop jobs and which to be
+group by k: j;</PRE><P>
+the range expression <TT>1..N</TT> computes a non-persistent list of
+type <TT>list(int)</TT>. The MRQL optimizer will evaluate the query
+using a single map-reduce job over <TT>M</TT>, since this is the only
+persistent type, while <TT>1..N</TT> is generated and used during the
+map. Without these annotations, the evaluation would have stored <TT>1..N</TT>
+in HDFS and would have performed an expensive cross product between <TT>M</TT>
+and <TT>1..N</TT>. Although these annotations are inferred for most
+MRQL expressions, they must be explicitly specified in UDFs (by
+annotating the UDF types) to help the MRQL compiler choose which
+computations are to be executed as Hadoop jobs and which to be
 executed in memory. 
-</p>
-<p>
-<b>Subtyping rules:</b> <tt>short&sub;int&sub;long&sub;float&sub;double</tt>
-and <tt>!list(&alpha;<sub>1</sub>)&sub;list(&alpha;<sub>2</sub>)&sub;!set(&alpha;<sub>3</sub>)&sub;set(&alpha;<sub>4</sub>)</tt>
-for <tt>&alpha;<sub>1</sub>&sube;&alpha;<sub>2</sub>&sube;&alpha;<sub>3</sub>&sube;&alpha;<sub>4</sub></tt>.
+</P>
+<P><B>Subtyping rules:</B> <TT>short⊂int⊂long⊂float⊂double</TT>
+and <TT>!list(α</TT><TT><SUB>1</SUB></TT><TT>)⊂list(α</TT><TT><SUB>2</SUB></TT><TT>)⊂!set(α</TT><TT><SUB>3</SUB></TT><TT>)⊂set(α</TT><TT><SUB>4</SUB></TT><TT>)</TT>
+for <TT>α</TT><TT><SUB>1</SUB></TT><TT>⊆α</TT><TT><SUB>2</SUB></TT><TT>⊆α</TT><TT><SUB>3</SUB></TT><TT>⊆α</TT><TT><SUB>4</SUB></TT>.
 </P>
 <H2 CLASS="western">Patterns</H2>
 <P>Patterns are used in select-queries and case statements. They are
@@ -409,9 +407,10 @@ supported parsers: <TT>line</TT>, <TT>xml</TT>, <TT>json</TT>, and
 that contain basic values separated by a user-defined delimiter (a
 string): 
 </P>
-<PRE STYLE="margin-bottom: 0.2in"><B>source</B>( <B>line</B>, path, c, <B>type</B>( &lt; A<SUB>1</SUB>: t<SUB>1</SUB>, ..., A<SUB>n</SUB>: t<SUB>n</SUB> &gt; ) )</PRE>
-or
-<PRE STYLE="margin-bottom: 0.2in"><B>source</B>( <B>line</B>, path, c, <B>type</B>( ( t<SUB>1</SUB>, ..., t<SUB>n</SUB>  ) ) )</PRE>
+<PRE STYLE="margin-bottom: 0.2in"><B>source</B>( <B>line</B>, path, c, <B>type</B>( &lt; A<SUB>1</SUB>: t<SUB>1</SUB>, ..., A<SUB>n</SUB>: t<SUB>n</SUB> &gt; ) )</PRE><P>
+or 
+</P>
+<PRE STYLE="margin-bottom: 0.2in"><B>source</B>( <B>line</B>, path, c, <B>type</B>( ( t<SUB>1</SUB>, ..., t<SUB>n</SUB>  ) ) )</PRE><P>
 where <TT>t</TT><TT><SUB>i</SUB></TT> is a basic type or <TT>any</TT>,
 and <TT>c</TT> is the delimiter. If <TT>t</TT><TT><SUB>i</SUB></TT>
 is <TT>any</TT>, the data value is skipped and the record component
@@ -419,11 +418,12 @@ is ignored. This expression reads the files in <TT>path</TT> one line
 at a time, it uses the delimiter to split each line into components,
 and constructs a record from these components. It skips the
 components of type <TT>any</TT> and those after the last component
-<TT>A</TT><TT><SUB>n</SUB></TT>. The first form returns a persistent bag of type <TT>!bag(&lt;
-A</TT><TT><SUB>1</SUB></TT><TT>: t</TT><TT><SUB>1</SUB></TT><TT>,
+<TT>A</TT><TT><SUB>n</SUB></TT>. The first form returns a persistent
+bag of type <TT>!bag(&lt; A</TT><TT><SUB>1</SUB></TT><TT>: t</TT><TT><SUB>1</SUB></TT><TT>,
 ..., A</TT><TT><SUB>n</SUB></TT><TT>: t</TT><TT><SUB>n</SUB></TT><TT>
-&gt;)</TT> while the latter returns  <TT>!bag( (t<SUB>1</SUB>,..., t<SUB>n</SUB> ) )</TT>,
-that contain only those components whose type is not <TT>any</TT>.
+&gt;)</TT> while the latter returns <TT>!bag( (t</TT><TT><SUB>1</SUB></TT><TT>,...,
+t</TT><TT><SUB>n</SUB></TT><TT> ) )</TT>, that contain only those
+components whose type is not <TT>any</TT>. 
 </P>
 <P>For example, the expression 
 </P>
@@ -509,9 +509,9 @@ to the corresponding values in the element. In other words, this
 query binding specifies an iteration over the collection <TT>e</TT>,
 one element at a time, causing the pattern <TT>p</TT> to be matched
 with the current collection element. If the element value doesn't
-match the pattern, it is ignored.
-The shorthand <tt>p = e</tt> is equivalent to <TT>p </TT><TT><B>in</B></TT><TT> {e}</TT>,
-that is, the pattern <tt>p</tt> must be matched to the single element <tt>e</tt>.</P>
+match the pattern, it is ignored. The shorthand <TT>p = e</TT> is
+equivalent to <TT>p </TT><TT><B>in</B></TT><TT> {e}</TT>, that is,
+the pattern <TT>p</TT> must be matched to the single element <TT>e</TT>.</P>
 <P>For example, the following query: 
 </P>
 <PRE>select (n,cn)
@@ -538,8 +538,9 @@ is unique for each group and is common across the group members. As a
 result, the group-by operation lifts all the other pattern variables
 defined in the from-part of the query from some type <TT>T</TT> to a
 bag of <TT>T</TT>, indicating that each such variable must contain
-multiple values, one for each group member.
-</P><P>For example, the query 
+multiple values, one for each group member. 
+</P>
+<P>For example, the query 
 </P>
 <PRE>select ( d, c, sum(s) )
 from &lt;dno:dn,salary:s&gt; in Employees
@@ -570,35 +571,37 @@ variables. The variable <TT>p</TT>, on the other hand, is lifted to a
 bag of XML elements. Thus, <TT>count(p)</TT> counts all persons whose
 interests include <TT>cat</TT> and watch <TT>os</TT> open auctions. 
 </P>
-<P>If the group-by values are variables, the group-by syntax
-can take the form  <TT><B>group by</B></TT><TT> p</TT> for a pattern <tt>p</tt>,
-which is equivalent to <TT><B>group by</B></TT><TT> p: p</TT>.
-For example, the sparse matrix <tt>X</tt> of type <tt>{(double,int,int)}</tt>
-is converted to a vector by summing up the columns of each row:
+<P>If the group-by values are variables, the group-by syntax can take
+the form <TT><B>group by</B></TT><TT> p</TT> for a pattern <TT>p</TT>,
+which is equivalent to <TT><B>group by</B></TT><TT> p: p</TT>. For
+example, the sparse matrix <TT>X</TT> of type <TT>{(double,int,int)}</TT>
+is converted to a vector by summing up the columns of each row: 
+</P>
 <PRE>select (sum(x),i)
 from (x,i,j) in X
-group by i</PRE>
-which is equivalent to:
+group by i</PRE><P>
+which is equivalent to: 
+</P>
 <PRE>select (sum(x),ii)
 from (x,i,j) in X
-group by ii: i</PRE></P>
-<P>Complex group-by queries may use the special variable <tt>partition</tt>,
-which is a bag of records that contains the entire group (the non-group-by variables).
-For example, the matrix multiplication of two sparse matrices
-<tt>X</tt> and <tt>Y</tt> of type <tt>{(double,int,int)}</tt> is:
-<pre>
-select ( sum(select p.x*p.y from p in partition), i, j )
-from (x,i,k) in X, (y,k,j) in Y
-group by (i,j)</pre>
-Here, the <tt>partition</tt> has type <tt>{ &lt; x:double, k:int, y:double &gt; }</tt>
-and contains the group associated with <tt>i</tt> and <tt>j</tt>.
-This query can also be written as:
-<pre>
-select ( sum(z), i, j )
-from (x,i,k) in X, (y,k,j) in Y, z = x*y
-group by (i,j)</pre>
+group by ii: i</PRE><P>
+Complex group-by queries may use the special variable <TT>partition</TT>,
+which is a bag of records that contains the entire group (the
+non-group-by variables). For example, the matrix multiplication of
+two sparse matrices <TT>X</TT> and <TT>Y</TT> of type
+<TT>{(double,int,int)}</TT> is: 
 </P>
-<H3 CLASS="western">Order-By</H3>
+<PRE>select ( sum(select p.x*p.y from p in partition), i, j )
+from (x,i,k) in X, (y,k,j) in Y
+group by (i,j)</PRE><P>
+Here, the <TT>partition</TT> has type <TT>{ &lt; x:double, k:int,
+y:double &gt; }</TT> and contains the group associated with <TT>i</TT>
+and <TT>j</TT>. This query can also be written as: 
+</P>
+<PRE>select ( sum(z), i, j )
+from (x,i,k) in X, (y,k,j) in Y, z = x*y
+group by (i,j)</PRE><H3 CLASS="western">
+Order-By</H3>
 <P>The <TT><B>order by</B></TT><TT> e</TT><TT><SUB>0</SUB></TT>
 syntax orders the result of a query (after the optional group-by) by
 the <TT>e</TT><TT><SUB>0</SUB></TT> values. It is assumed that there
@@ -668,70 +671,66 @@ returns the name of an employee if all her children are older than
 18. 
 </P>
 <H3 CLASS="western">Nested Queries</H3>
-<P>
-SQL-like map-reduce query languages (such as Hive) use
-outer-joins combined with group-bys to simulate nested queries. This
-is a very bad idea because these queries are hard to understand and
-they are inefficient, since they force the optimizer to use a
-suboptimal evaluation method. MRQL has banned outer-joins completely,
-as all modern query languages have (eg, OQL and XQuery).  SQL queries
-with outer-joins/group-bys can be more elegantly expressed using
-nested queries.  MRQL translates deeply nested queries, of any form
-and at any nesting level, into efficient generalized joins that nest
-the data during the join in such a way that the data nesting reflects
-the query nesting, thus making unnecessary the need for an explicit
-group-by.  This is often far better than using a flat outer-join followed by a group-by.
-Nested queries, along with dependent joins, make MRQL
-map-reduce-complete because any map-reduce computation
-can be coded directly and declaratively in MRQL.  More specifically,
-any map-reduce computation over a dataset <tt>S</tt> with an arbitrary
-map function <tt>m</tt> and an arbitrary reduce function <tt>r</tt>
-can be expressed in MRQL as:
-<pre>
-select w
+<P>SQL-like map-reduce query languages (such as Hive) use outer-joins
+combined with group-bys to simulate nested queries. This is a very
+bad idea because these queries are hard to understand and they are
+inefficient, since they force the optimizer to use a suboptimal
+evaluation method. MRQL has banned outer-joins completely, as all
+modern query languages have (eg, OQL and XQuery). SQL queries with
+outer-joins/group-bys can be more elegantly expressed using nested
+queries. MRQL translates deeply nested queries, of any form and at
+any nesting level, into efficient generalized joins that nest the
+data during the join in such a way that the data nesting reflects the
+query nesting, thus making unnecessary the need for an explicit
+group-by. This is often far better than using a flat outer-join
+followed by a group-by. Nested queries, along with dependent joins,
+make MRQL map-reduce-complete because any map-reduce computation can
+be coded directly and declaratively in MRQL. More specifically, any
+map-reduce computation over a dataset <TT>S</TT> with an arbitrary
+map function <TT>m</TT> and an arbitrary reduce function <TT>r</TT>
+can be expressed in MRQL as: 
+</P>
+<PRE>select w
   from z in (select r(k,y)
                from x in S,
                     (k,y) in m(x)
              group by k),
-       w in z
-</pre>
-For example, it is very hard to express scientific computations directly in SQL,
-such as matrix "smoothing", where each element M[i,j] of a sparse matrix M becomes
-the average of the 3*3 neighboring elements M[i-1,j-1], ..., M[i+1,j+1].
-In MRQL, this is simply:
-<pre>
-select (avg(v),i,j)
+       w in z</PRE><P>
+For example, it is very hard to express scientific computations
+directly in SQL, such as matrix &quot;smoothing&quot;, where each
+element M[i,j] of a sparse matrix M becomes the average of the 3*3
+neighboring elements M[i-1,j-1], ..., M[i+1,j+1]. In MRQL, this is
+simply: 
+</P>
+<PRE>select (avg(v),i,j)
 from s in (select {(v,i-1,j-1),(v,i-1,j),(v,i-1,j+1),(v,i,j-1),
                    (v,i,j),(v,i,j+1),(v,i+1,j-1),(v,i+1,j),(v,i+1,j+1)}
              from (v,i,j) in M),
      (v,i,j) in s
-group by (i,j)
-</pre>
-which is translated into a single map-reduce job.
+group by (i,j)</PRE><P>
+which is translated into a single map-reduce job. 
 </P>
 <H3 CLASS="western">Repetition</H3>
-<P>There are three repetition forms that have similar syntax but different types and semantics.
-The repetition syntax is:
+<P>There are three repetition forms that have similar syntax but
+different types and semantics. The repetition syntax is: 
 </P>
-<PRE STYLE="margin-bottom: 0.2in"><B>repeat</B> v = e <B>step</B> body [ <B>limit</B> n ]</PRE>
-<P>
-where <TT>v</TT> is the <i>repetition variable</i>.
-The type of the expressions <TT>e</TT> is a <TT>bag(T)</TT>, for some type <TT>T</TT>,
-and the type of the optional limit <TT>n</TT> is <TT>int</TT>.
-Then the type of <TT>v</TT> is also <TT>bag(T)</TT>.
+<PRE STYLE="margin-bottom: 0.2in"><B>repeat</B> v = e <B>step</B> body [ <B>limit</B> n ]</PRE><P>
+where <TT>v</TT> is the <I>repetition variable</I>. The type of the
+expressions <TT>e</TT> is a <TT>bag(T)</TT>, for some type <TT>T</TT>,
+and the type of the optional limit <TT>n</TT> is <TT>int</TT>. Then
+the type of <TT>v</TT> is also <TT>bag(T)</TT>. 
 </P>
-<P>
-The first repetition form is called a <i>closure</i>.
-The <TT>body</TT> of a closure has type <TT>bag(T)</TT>, which is the same as the types of <TT>v</TT> and <TT>e</TT>.
-This closure first binds <TT>v</TT>
-to the value of <TT>e</TT> and then it evaluates the <TT>body</TT>
-repeatedly and assigns its value to <TT>v</TT>.
-It stops if either the number
-of repetitions becomes <TT>n</TT> or the number of elements of the new value of <tt>v</tt> becomes less than or equal
-to the number of elements of the old value.
-That is, a closure evaluates as follows (in pseudo Java code):
-<pre>
-i = 0;
+<P>The first repetition form is called a <I>closure</I>. The <TT>body</TT>
+of a closure has type <TT>bag(T)</TT>, which is the same as the types
+of <TT>v</TT> and <TT>e</TT>. This closure first binds <TT>v</TT> to
+the value of <TT>e</TT> and then it evaluates the <TT>body</TT>
+repeatedly and assigns its value to <TT>v</TT>. It stops if either
+the number of repetitions becomes <TT>n</TT> or the number of
+elements of the new value of <TT>v</TT> becomes less than or equal to
+the number of elements of the old value. That is, a closure evaluates
+as follows (in pseudo Java code): 
+</P>
+<PRE>i = 0;
 new = 0;
 old = 0;
 v = e;
@@ -740,43 +739,37 @@ do {
    i++;
    old = new;
    new = size(v);
-} while (old < new && i < n);
-</pre>
-</p>
-<p>For example, the following query computes the connectivity graph of <tt>G</tt>,
-which has an edge <tt>i-j</tt> if there is
-a path in <tt>G</tt> from <tt>i</tt> to <tt>j</tt>:
-<pre>
-repeat s = G
+} while (old &lt; new &amp;&amp; i &lt; n);</PRE><P>
+For example, the following query computes the connectivity graph of
+<TT>G</TT>, which has an edge <TT>i-j</TT> if there is a path in <TT>G</TT>
+from <TT>i</TT> to <TT>j</TT>: 
+</P>
+<PRE>repeat s = G
   step select distinct c
          from s in (select { (i,k), (k,j), (i,j) }
                       from (i,k) in s, (k,j) in s),
-              c in s
-</pre>
-Every repetition step requires two map-reduce jobs: one for the self-join over <tt>s</tt>, and one to
-remove duplicates.
-</p>
-For the second repetition form,
-the type of <TT>body</TT> must be <TT>bag( (T,bool) )</TT>.
-This repetition form first binds <TT>v</TT>
+              c in s</PRE><P>
+Every repetition step requires two map-reduce jobs: one for the
+self-join over <TT>s</TT>, and one to remove duplicates. 
+</P>
+<P>For the second repetition form, the type of <TT>body</TT> must be
+<TT>bag( (T,bool) )</TT>. This repetition form first binds <TT>v</TT>
 to the value of <TT>e</TT> and then it evaluates the <TT>body</TT>
 repeatedly and assigns a new value to <TT>v</TT>, which is equal to
 <TT>select x from (x,*) in body</TT>. It stops if either the number
 of repetitions becomes <TT>n</TT> or when <TT>all (*,b) in body: not
 b</TT>, that is, when all the booleans returned by <TT>body</TT> are
-false.
-That is, this repetition form evaluates as follows (in pseudo Java code):
-<pre>
-i = 0;
+false. That is, this repetition form evaluates as follows (in pseudo
+Java code): 
+</P>
+<PRE>i = 0;
 v = e;
 do {
    s = body(v);
    i++;
    v = select x from (x,*) in s;
-} while ((some (*,b) in s: b) && i < n);
-</pre> 
-</P>
-<P>For example, a simplified PageRank algorithm is as follows: 
+} while ((some (*,b) in s: b) &amp;&amp; i &lt; n);</PRE><P>
+For example, a simplified PageRank algorithm is as follows: 
 </P>
 <PRE>// preprocessing: for each node, group its outgoing links into a bag
 graph = select (key,select x.to from x in n)
@@ -810,18 +803,18 @@ initial step and only one map-reduce job for the repeat body. The
 repetition itself does not require any additional map-reduce job to
 check the condition. It is simply done using a Hadoop Java counter to
 count the true values across all task trackers. For the Hungarian web
-graph (available at <A HREF="http://web-graph.org/">ErdÅ‘s
+graph (available at <A HREF="http://web-graph.org/">Erdo‘s
 WebGraph</A>), which has 500K nodes and 14M links, the pagerank
 required 8 iterations (a total of 9 map-reduce jobs). 
 </P>
-<p>
-The third repetition form has the syntax:
-<PRE STYLE="margin-bottom: 0.2in"><B>repeat</B> (v<SUB>1</SUB>, ..., v<SUB>n</SUB>) = e <B>step</B> body <B>limit</B> n</PRE>
-For example, the following macro, <tt>factorize</tt>,
-performs a Gaussian non-negative matrix factorization
-over the matrix <tt>V</tt> into the matrices <tt>H</tt> and <tt>W</tt>:
-<pre>
-macro transpose ( X ) {
+<P>The third repetition form has the syntax: 
+</P>
+<PRE STYLE="margin-bottom: 0.2in"><B>repeat</B> (v<SUB>1</SUB>, ..., v<SUB>n</SUB>) = e <B>step</B> body <B>limit</B> n</PRE><P>
+For example, the following macro, <TT>factorize</TT>, performs a
+Gaussian non-negative matrix factorization over the matrix <TT>V</TT>
+into the matrices <TT>H</TT> and <TT>W</TT>: 
+</P>
+<PRE>macro transpose ( X ) {
   select (x,j,i)
     from (x,i,j) in X
 };
@@ -843,10 +836,10 @@ macro factorize ( V, Hinit, Winit ) {
     step ( Cmult(H,Cdiv(multiply(transpose(W),V),multiply(transpose(W),multiply(W,H)))),
            Cmult(W,Cdiv(multiply(V,transpose(H)),multiply(W,multiply(H,transpose(H))))) )
    limit 10
-};
-</pre>
-where <tt>Hinit</tt> and <tt>Winit</tt> are the initial values of <tt>H</tt> and <tt>W</tt>.
-</p>
+};</PRE><P>
+where <TT>Hinit</TT> and <TT>Winit</TT> are the initial values of <TT>H</TT>
+and <TT>W</TT>. 
+</P>
 <H3 CLASS="western">Templates</H3>
 <P>The parser of an input format can also be used for syntax-directed
 construction/deconstruction of data. A template takes the form: 
@@ -891,36 +884,36 @@ removes the duplicates.
 <P>Functions can be declared using the following MRQL top-level
 syntax: 
 </P>
-<PRE STYLE="margin-bottom: 0.2in"><B>function</B> f ( v<SUB>1</SUB>: t<SUB>1</SUB>, ..., v<SUB>n</SUB>: t<SUB>n</SUB> ) : t { e };</PRE>
-<P>
+<PRE STYLE="margin-bottom: 0.2in"><B>function</B> f ( v<SUB>1</SUB>: t<SUB>1</SUB>, ..., v<SUB>n</SUB>: t<SUB>n</SUB> ) : t { e };</PRE><P>
 where <TT>v</TT><TT><SUB>1</SUB></TT><TT>,...,v</TT><TT><SUB>n</SUB></TT>
 are the parameter names, <TT>t</TT><TT><SUB>1</SUB></TT><TT>,...,t</TT><TT><SUB>n</SUB></TT>
 are their types, <TT>t</TT> is the return type, and <TT>e</TT> is the
-function body (an MRQL expression). 
-The body of a UDF may contain map-reduce computations. This is determined by the UDF type annotations.
-Anonymous functions are defined using the following syntax:
-</p>
-<PRE STYLE="margin-bottom: 0.2in"> \( v<SUB>1</SUB>: t<SUB>1</SUB>, ..., v<SUB>n</SUB>: t<SUB>n</SUB> ) : t . e</PRE>
-<p>
-Passing persistent collections to a UDF requires the special persistent annotation <tt>!t</tt>. For example, the UDF:
-<pre>
-function g ( s: !bag(&lt;name:string,dno:int,address:string&gt;) ): !bag(&lt;A:string,B:int&gt;) {
+function body (an MRQL expression). The body of a UDF may contain
+map-reduce computations. This is determined by the UDF type
+annotations. Anonymous functions are defined using the following
+syntax: 
+</P>
+<PRE STYLE="margin-bottom: 0.2in"> \( v<SUB>1</SUB>: t<SUB>1</SUB>, ..., v<SUB>n</SUB>: t<SUB>n</SUB> ) : t . e</PRE><P>
+Passing persistent collections to a UDF requires the special
+persistent annotation <TT>!t</TT>. For example, the UDF: 
+</P>
+<PRE>function g ( s: !bag(&lt;name:string,dno:int,address:string&gt;) ): !bag(&lt;A:string,B:int&gt;) {
    select &lt;A:x.name,B:x.dno&gt; from x in s
-};
-</pre>
-will execute the UDF body using one map-reduce job, since the parameter <tt>s</tt> is a persistent bag.
-Therefore, the query
-<pre>
-select (e,d)
-from e in g(select x from x in E where x.name="A"),
+};</PRE><P>
+will execute the UDF body using one map-reduce job, since the
+parameter <TT>s</TT> is a persistent bag. Therefore, the query 
+</P>
+<PRE>select (e,d)
+from e in g(select x from x in E where x.name=&quot;A&quot;),
      d in D
-where e.B=d.dno;
-</pre>
-where <tt>E</tt> and <tt>D</tt> are persistent bags, will execute a map job for the inner select, then
-will call g (which is one map-reduce job), and then will perform the join.
-If we had declared <tt>s</tt> in <tt>g</tt> with a non-persistent type, then the query would still
-be type-correct (since <tt>!bag&sub;bag</tt>), but the argument to <tt>g</tt> would have been materialized in memory
-and the body of <tt>g</tt> would have been executed in memory.
+where e.B=d.dno;</PRE><P>
+where <TT>E</TT> and <TT>D</TT> are persistent bags, will execute a
+map job for the inner select, then will call g (which is one
+map-reduce job), and then will perform the join. If we had declared <TT>s</TT>
+in <TT>g</TT> with a non-persistent type, then the query would still
+be type-correct (since <TT>!bag⊂bag</TT>), but the argument to <TT>g</TT>
+would have been materialized in memory and the body of <TT>g</TT>
+would have been executed in memory. 
 </P>
 <H2 CLASS="western">User-Defined Aggregations</H2>
 <P>There are some predefined aggregates: <TT>count</TT>, which counts
@@ -947,13 +940,11 @@ unpredictable results.<BR><BR>For example:</P>
 where f is the function:</P>
 <PRE STYLE="margin-bottom: 0.2in">function f (x:int,y:int):int { x+y };</PRE><P>
 Then <TT>aggr({1,2,3})</TT> will return 6.</P>
-<P>
-As another example,
-the following query calculates the
-k-means clustering algorithm (Lloyd's algorithm), by deriving k new
-centroids from the old:
-<pre>
-type point = &lt; X: double, Y: double, Z: double &gt;;
+<P>As another example, the following query calculates the k-means
+clustering algorithm (Lloyd's algorithm), by deriving k new centroids
+from the old: 
+</P>
+<PRE>type point = &lt; X: double, Y: double, Z: double &gt;;
 
 function distance ( x: point, y: point ): double {
    sqrt(pow(x.X-y.X,2)+pow(x.Y-y.Y,2)+pow(x.Z-y.Z,2))
@@ -966,35 +957,36 @@ function centroid ( p: (point,long), default: point ): point {
 };
 
 repeat centroids = select &lt; X: random(1000)/100.0 as double,
-       		   	    Y: random(1000)/100.0 as double,
-			    Z: random(1000)/100.0 as double &gt;
+                            Y: random(1000)/100.0 as double,
+                            Z: random(1000)/100.0 as double &gt;
                      from x in 1..k
   step select let nc = centroid( new_centroid(select (p,1 as long) from p in s), closest )
-              in ( nc, distance(closest,nc) > 0.1 )
+              in ( nc, distance(closest,nc) &gt; 0.1 )
          from s in Points
         group by closest: (select c from c in centroids order by distance(c,s))[0]
-  limit 10;
-</pre>
-where <tt>Points</tt> is the input data set (3D points) of
-type <tt>!bag(&lt;X:double,Y:double,Z:double&gt;)</tt>, <tt>centroids</tt> is
-the current set of centroids (k cluster centers), and <tt>distance</tt>
-calculates the distance between two points.  The query in the group-by
-assigns the closest centroid to a point <tt>s</tt>.  This query clusters the data
-points by their closest centroid, and, for each cluster, a new
-centroid is calculated from the mean values of its points.
-The new centroid is calculated by averaging over the X, Y, and Z axes using the user-defined aggregation:
-<pre>
-aggregation new_centroid (
+  limit 10;</PRE><P>
+where <TT>Points</TT> is the input data set (3D points) of type
+<TT>!bag(&lt;X:double,Y:double,Z:double&gt;)</TT>, <TT>centroids</TT>
+is the current set of centroids (k cluster centers), and <TT>distance</TT>
+calculates the distance between two points. The query in the group-by
+assigns the closest centroid to a point <TT>s</TT>. This query
+clusters the data points by their closest centroid, and, for each
+cluster, a new centroid is calculated from the mean values of its
+points. The new centroid is calculated by averaging over the X, Y,
+and Z axes using the user-defined aggregation: 
+</P>
+<PRE>aggregation new_centroid (
       \(p:(point,long),q:(point,long)):(point,long)
                 .( &lt; X: p#0.X+q#0.X, Y: p#0.Y+q#0.Y, Z: p#0.Z+q#0.Z &gt;,
                    p#1+q#1),
       ( &lt; X: 0.0 as double, Y: 0.0 as double, Z: 0.0 as double &gt;, 0 as long )
-    ) : (point,long);
-</pre>
-Without this aggregation, we would have to apply the avg aggregation 3 times (once for every dimension),
-which would require multiple passes over the data set. Using this aggregation, each repeat
-step is done with one map-reduce job over <tt>Points</tt> since the k centroid calculated
-at every step are stored in memory (they are not a persistent bag).
+    ) : (point,long);</PRE><P>
+Without this aggregation, we would have to apply the avg aggregation
+3 times (once for every dimension), which would require multiple
+passes over the data set. Using this aggregation, each repeat step is
+done with one map-reduce job over <TT>Points</TT> since the k
+centroid calculated at every step are stored in memory (they are not
+a persistent bag). 
 </P>
 <H2 CLASS="western">System Functions</H2>
 <P><A HREF="functions.html">MRQL System functions</A>. 
@@ -1009,7 +1001,8 @@ methods of a class, use the MRQL command:
 To selectively import a list of methods from a class, use: 
 </P>
 <PRE STYLE="margin-bottom: 0.2in"><B>import</B> m<SUB>1</SUB>, ..., m<SUB>n</SUB> <B>from</B> &quot;class-path&quot;;</PRE><P>
-For example, you can define your functions in a file <tt>MyFunctions.java</tt> in the <tt>mrql</tt> directory: 
+For example, you can define your functions in a file <TT>MyFunctions.java</TT>
+in the <TT>mrql</TT> directory: 
 </P>
 <PRE>package myPackage;
 import hadoop.mrql.*;
@@ -1018,12 +1011,11 @@ public class MyFunctions {
         return new MR_string(s.get().substring(i.get()));
     }
 }</PRE><P>
-You can compile it using:
-<pre>
-javac -cp mrql.jar MyFunctions.java -d classes
-make
-</pre>
-which creates a new <tt>mrql.jar</tt> file that includes MyFunctions.
+You can compile it using: 
+</P>
+<PRE>javac -cp mrql.jar MyFunctions.java -d classes
+make</PRE><P>
+which creates a new <TT>mrql.jar</TT> file that includes MyFunctions.
 Then, you may import the method <TT>substring</TT> using: 
 </P>
 <PRE STYLE="margin-bottom: 0.2in"><B>import</B> &quot;myPackage.MyFunctions&quot;;</PRE><P>
@@ -1103,7 +1095,7 @@ value to be processed by the MRQL compiler to embed MRQL abstract
 syntax trees. 
 </P>
 <HR>
-<ADDRESS>Last modified: 08/15/12 by <A HREF="http://lambda.uta.edu/">Leonidas
+<ADDRESS>Last modified: 02/12/13 by <A HREF="http://lambda.uta.edu/">Leonidas
 Fegaras</A></ADDRESS>
 </BODY>
 </HTML>

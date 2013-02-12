@@ -414,7 +414,7 @@ final public class MapReduceAlgebra {
 	if (x instanceof Bag)
 	    ((Bag)x).materialize();
 	return x;
-    };
+    }
 
     public static void dump ( String file, Tree type, MRData value ) throws IOException {
 	PrintStream ftp = new PrintStream(file+".type");

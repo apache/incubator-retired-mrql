@@ -56,6 +56,10 @@ class Evaluator extends Interpreter {
 	return MapReducePlan.collect(x);
     }
 
+    final static MRData bsp ( Tree plan, Environment env ) throws Exception {
+	throw new Error("You can not run a BSP task in Map-Reduce mode");
+    }
+
     final static MRData aggregate ( Tree acc_fnc,
 				    Tree zero,
 				    Tree plan,

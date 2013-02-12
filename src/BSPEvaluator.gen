@@ -54,6 +54,33 @@ class Evaluator extends Interpreter {
 	return BSPPlan.BSPop.distribute(s);
     }
 
+    final static MRData bsp ( Tree plan, Environment env ) throws Exception {
+	match plan {
+	case BSP(tuple(...ns),`superstep,`init_state,`o,...S):
+	    int[] os = new int[ns.length()];
+	    for ( int i = 0; i < os.length; i++ )
+		os[i] = (int)((LongLeaf)ns.nth(i)).value();
+	    DataSet ds = eval(S.head(),env);
+	    for ( Tree s: S.tail() )
+		ds.merge(eval(s,env));
+	    return BSPPlan.BSP(os,
+			       closure(superstep,env),
+			       init_state,
+			       o.equals(#<true>),
+			       ds);
+	case BSP(`n,`superstep,`init_state,`o,...S):
+	    DataSet ds = eval(S.head(),env);
+	    for ( Tree s: S.tail() )
+		ds.merge(eval(s,env));
+	    return BSPPlan.BSP(new int[]{(int)((LongLeaf)n).value()},
+			       closure(superstep,env),
+			       init_state,
+			       o.equals(#<true>),
+			       ds);
+	}
+	throw new Error("Cannot perform the BSP plan: "+plan);
+    }
+
     final static MRData aggregate ( Tree acc_fnc,
 				    Tree zero,
 				    Tree plan,
@@ -105,15 +132,6 @@ class Evaluator extends Interpreter {
     final static DataSet evalD ( final Tree e, final Environment env ) {
 	try {
 	    match e {
-	    case BSP(`n,`superstep,`init_state,`o,...S):
-		DataSet ds = eval(S.head(),env);
-		for ( Tree s: S.tail() )
-		    ds.merge(eval(s,env));
-		return BSPPlan.BSP((int)((LongLeaf)n).value(),
-				   closure(superstep,env),
-				   init_state,
-				   o.equals(#<true>),
-				   ds);
 	    case BSPSource(`n,BinarySource(`file,_)):
 		return Plan.binarySource((int)((LongLeaf)n).value(),file.stringValue());
 	    case BSPSource(`n,ParsedSource(`parser,`file,...args)):

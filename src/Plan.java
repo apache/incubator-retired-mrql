@@ -321,8 +321,8 @@ public class Plan {
 	long i = 0;
 	for ( MRData e: s ) {
 	    counter_key.set(i++);
-	    counter_container.set(e);
-	    writer.append(counter_container,counter_container);
+	    value_container.set(e);
+	    writer.append(counter_container,value_container);
 	};
 	writer.close();
  	return new DataSet(new BinaryDataSource(0,newpath,conf),0,0);
@@ -346,6 +346,12 @@ public class Plan {
 	}
     }
 
+    public final static PrintStream print_stream ( String file )  throws Exception {
+	Path path = new Path(file);
+	FileSystem fs = path.getFileSystem(conf);
+	return new PrintStream(fs.create(path));
+    }
+
     // dump both the MRQL data and their MRQL type into files
     public final static void dump ( String file, Tree type, MRData data ) throws Exception {
 	Path path = new Path(file);
@@ -363,13 +369,13 @@ public class Plan {
 	    long i = 0;
 	    for ( MRData e: s ) {
 		counter_key.set(i++);
-		counter_container.set(e);
-		writer.append(counter_container,counter_container);
+		value_container.set(e);
+		writer.append(counter_container,value_container);
 	    }
 	} else {
 	    counter_key.set(0);
-	    counter_container.set(data);
-	    writer.append(counter_container,counter_container);
+	    value_container.set(data);
+	    writer.append(counter_container,value_container);
 	};
 	writer.close();
     }
