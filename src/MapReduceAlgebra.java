@@ -493,11 +493,11 @@ final public class MapReduceAlgebra {
     }
 
     // The BSP operator
-    public static Bag BSP ( final int source,
-			    final Function superstep,
-			    final MRData init_state,
-			    boolean order,
-			    final Bag[] inputs ) {
+    public static MRData BSP ( final int[] source,
+			       final Function superstep,
+			       final MRData init_state,
+			       boolean order,
+			       final Bag[] inputs ) {
 	Bag msgs = new Bag();
 	MRData state = init_state;
 	Tuple result;
@@ -540,19 +540,22 @@ final public class MapReduceAlgebra {
 		    }
 		});
 	} while (!exit);
-	MRData data = getCache(source);
-	if (data instanceof Bag)
-	    if (order) {
-		final Iterator<MRData> iter = ((Bag)data).iterator();
-		return new Bag(new BagIterator() {
-			public boolean hasNext () {
-			    return iter.hasNext();
-			}
-			public MRData next () {
-			    return ((Tuple)iter.next()).get(0);
-			}
-		    });
-	    } else return (Bag)data;
-	else return new Bag(data);
+	MRData[] data = new MRData[source.length];
+	for ( int i = 0; i < data.length; i++ )
+	    data[i] = getCache(source[i]);
+	if (order && data[0] instanceof Bag) {
+	    final Iterator<MRData> iter = ((Bag)data[0]).iterator();
+	    return new Bag(new BagIterator() {
+		    public boolean hasNext () {
+			return iter.hasNext();
+		    }
+		    public MRData next () {
+			return ((Tuple)iter.next()).get(0);
+		    }
+		});
+	};
+	if (data.length == 1)
+	    return data[0];
+	else return new Tuple(data);
     }
 }

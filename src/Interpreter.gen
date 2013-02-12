@@ -702,10 +702,31 @@ class Interpreter extends Translate {
 	    if (Config.hadoop_mode)
 		return Evaluator.aggregate(closure(acc,env),zero,s,env);
 	    else return MapReduceAlgebra.aggregate(evalF(acc,env),evalE(zero,env),evalM(s,env));
-	case BSP(...):
+	case BSP(tuple(...ns),`superstep,`state,`o,...as):
 	    if (Config.hadoop_mode)
 		return Evaluator.bsp(e,env);
-	    else fail
+	    Bag[] ds = new Bag[as.length()];
+	    for ( int i = 0; i < ds.length; i++ )
+		ds[i] = evalM(as.nth(i),env);
+	    int[] nn = new int[ns.length()];
+	    for ( int i = 0; i < ns.length(); i++ )
+		nn[i] = (int)((LongLeaf)ns.nth(i)).value();
+	    return MapReduceAlgebra.BSP(nn,
+					evalF(superstep,env),
+					evalE(state,env),
+					o.equals(#<true>),
+					ds);
+	case BSP(`n,`superstep,`state,`o,...as):
+	    if (Config.hadoop_mode)
+		return Evaluator.bsp(e,env);
+	    Bag[] ds = new Bag[as.length()];
+	    for ( int i = 0; i < ds.length; i++ )
+		ds[i] = evalM(as.nth(i),env);
+	    return MapReduceAlgebra.BSP(new int[]{(int)((LongLeaf)n).value()},
+					evalF(superstep,env),
+					evalE(state,env),
+					o.equals(#<true>),
+					ds);
 	case Loop(lambda(tuple(...vs),tuple(...bs)),tuple(...ss),`num):
 	    if (Config.hadoop_mode)
 		return Evaluator.loop(e,env);
@@ -902,24 +923,6 @@ class Interpreter extends Translate {
 		return MapReduceAlgebra.generator((int)((LongLeaf)n).value(),
 						  ((MR_long)evalE(min,env)).get(),
 						  ((MR_long)evalE(max,env)).get());
-	    case BSP(tuple(`n,...),`superstep,`state,`o,...as):
-		Bag[] ds = new Bag[as.length()];
-		for ( int i = 0; i < ds.length; i++ )
-		    ds[i] = evalM(as.nth(i),env);
-		return MapReduceAlgebra.BSP((int)((LongLeaf)n).value(),
-					    evalF(superstep,env),
-					    evalE(state,env),
-					    o.equals(#<true>),
-					    ds);
-	    case BSP(`n,`superstep,`state,`o,...as):
-		Bag[] ds = new Bag[as.length()];
-		for ( int i = 0; i < ds.length; i++ )
-		    ds[i] = evalM(as.nth(i),env);
-		return MapReduceAlgebra.BSP((int)((LongLeaf)n).value(),
-					    evalF(superstep,env),
-					    evalE(state,env),
-					    o.equals(#<true>),
-					    ds);
 	    case Dump(`s):
 		Bag bs = (Bag)evalE(s,env);
 		final Iterator<MRData> iter = bs.iterator();
