@@ -1,0 +1,384 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.mrql;
+
+import Gen.*;
+import java.util.*;
+import java.io.*;
+
+
+/** simplify algebraic forms using heuristic rewriting rules that improve performance in most cases */
+public class Simplification extends Normalization {
+
+    /* true if x is functional dependent on y (ie, equal x's implies equal y's) */
+    private static boolean functional_dependent ( Tree x, Tree y ) {
+	if (x.equals(y))
+	    return true;
+	match y {
+	case tuple(...ts):
+	    for ( Tree t: ts )
+		if (functional_dependent(x,t))
+		    return true;
+	case record(...rs):
+	    for ( Tree r: rs )
+		match r {
+		case bind(_,`t):
+		    if (functional_dependent(x,t))
+			return true;
+		}
+	};
+	return false;
+    }
+
+    private static boolean simple_accessor ( Tree v, Tree e ) {
+	match e {
+	case nth(`u,`n): return simple_accessor(v,u);
+	case project(`u,`a): return simple_accessor(v,u);
+	};
+	return e.equals(v);
+    }
+
+    private static Tree get_accessor ( Tree v, Tree d, Tree e ) {
+	match d {
+	case nth(`u,`n):
+	    int nn = (int)((LongLeaf)n).value();
+	    Trees bl = #[];
+	    for ( int i = 0; i < 2; i++ )
+		bl = bl.append(i == nn ? get_accessor(#<nth(`v,`i)>,u,e) : #<nth(`v,`i)>);
+	    return #<tuple(...bl)>;
+	case project(`u,`a): return v;
+	};
+	return e;
+    }
+
+    private static Trees factor_out_aggr ( Tree e, Tree v ) {
+	match e {
+	case call(`g,cmap(`f,`d)):
+	    if (!simple_accessor(v,d) || !free_variables(f,#[]).is_empty())
+		fail;
+	    return #[bind(`e,`d)];
+       case `f(...al):
+	   Trees bl = #[];
+	   for ( Tree a: al )
+	       bl = bl.append(factor_out_aggr(a,v));
+	   return bl;
+	};
+	return #[];
+    }
+
+    private static Trees factor_out_aggregations ( Tree e, Tree v ) {
+	Trees al = factor_out_aggr(e,v);
+	Tree t = e;
+	for ( Tree a: al )
+	    match a {
+	    case bind(`u,`d):  t = subst(u,#<0>,t);
+	    };
+	Trees bl = #[];
+	for ( Tree a: al )
+	    match a {
+	    case bind(`u,`d):
+		if (occurences(d,t) == 0) {
+		    boolean exists = false;
+		    for ( Tree b: bl )
+			match b {
+			case bind(`uu,`dd):
+			    if (d.equals(dd))
+				if (alpha_equivalent(u,uu))
+				    exists = true;
+			};
+		    if (true || !exists)
+			bl = bl.append(a);
+		}
+	    };
+	return bl;
+    }
+
+    /** Algebraic normalization (algebra to algebra)
+     * @param e algebraic expression
+     * @return an improved algebraic expression
+     */
+    public static Tree simplify ( Tree e ) {
+	match e {
+	case cmap(`f,cmap(lambda(`x,`g),`s)):
+	    return simplify(#<cmap(lambda(`x,cmap(`f,`g)),`s)>);
+	case map(`f,cmap(lambda(`x,`g),`s)):
+	    return simplify(#<cmap(lambda(`x,map(`f,`g)),`s)>);
+	case cmap(`g,join(`k1,`k2,lambda(`p,`f),`X,`Y)):
+	    return simplify(#<join(`k1,`k2,lambda(`p,cmap(`g,`f)),`X,`Y)>);
+	case cmap(lambda(`x,`S(`y)),`u):
+	    if (is_collection(S) && x.equals(y))
+		return simplify(u);
+	    else fail
+	case cmap(lambda(`x,`b),`S(`a)):
+	    if (is_collection(S) && x.is_variable())
+		return simplify(subst_var(x,a,b));
+	    else fail
+	case cmap(`f,`S()):
+	    if (is_collection(S))
+		return #<`S()>;
+	    else fail
+	case cmap(lambda(`x,`T(`b)),`S(...as)):
+	    if (is_collection(S) && is_collection(T) && x.is_variable()) {
+		Trees bs = #[];
+		for ( Tree a: as )
+		    bs = bs.append(simplify(subst_var(x,a,b)));
+		return #<`T(...bs)>;
+	    } else fail
+	case map(lambda(`x,`b),`S(`a)):
+	    if (is_collection(S) && x.is_variable())
+		return #<`S(`(simplify(subst_var(x,a,b))))>;
+	    else fail
+	case map(`f,`S()):
+	    if (is_collection(S))
+		return #<`S()>;
+	    else fail
+	case filter(lambda(`x,`b),`m,`S(`a)):
+	    if (is_collection(S) && x.is_variable())
+		return simplify(#<if(`(subst_var(x,a,b)),apply(`m,`a),`S())>);
+	    else fail
+	case filter(`p,`m,`S()):
+	    if (is_collection(S))
+		return #<`S()>;
+	    else fail
+	case cmap(`f,if(`p,`x,`y)):
+	    return simplify(#<if(`p,cmap(`f,`x),cmap(`f,`y))>);
+	// if the join reducer contains an independent aggregation push it to the input
+	case join(`kx,`ky,lambda(`v,cmap(lambda(`v1,cmap(lambda(`v2,bag(tuple(`k,`b))),
+							 nth(`vy,1))),
+					 nth(`vx,0))),
+		  `X,`Y):
+	    if (!vx.equals(v) || !vy.equals(v))
+		fail;
+	    Trees l1 = factor_out_aggregations(b,v1);
+	    Trees dl = #[];
+	    if (!l1.is_empty())
+		for ( Tree a: l1 )
+		    match a {
+		    case bind(`u,`d):
+			Tree nv = new_var();
+			b = subst(u,d,b);
+			if (!dl.member(d))
+			    X = #<cmap(lambda(`nv,bag(`(subst(v1,nv,get_accessor(v1,d,u))))),`X)>;
+			dl = dl.append(d);
+		    };
+	    Trees l2 = factor_out_aggregations(b,v2);
+	    dl = #[];
+	    if (!l2.is_empty())
+		for ( Tree a: l2 )
+		    match a {
+		    case bind(`u,`d):
+			Tree nv = new_var();
+			b = subst(u,d,b);
+			if (!dl.member(d))
+			    Y = #<cmap(lambda(`nv,bag(`(subst(v2,nv,get_accessor(v2,d,u))))),`Y)>;
+			dl = dl.append(d);
+		    };
+	    if (l1.is_empty() && l2.is_empty())
+		fail;
+	    return simplify(#<join(`kx,`ky,lambda(`v,cmap(lambda(`v1,cmap(lambda(`v2,bag(tuple(`k,`b))),
+									  nth(`vy,1))),
+							  nth(`vx,0))),
+				   `X,`Y)>);
+        // if the reducer of a join generates pairs (k,v), where k is functional dependent
+        // on a join key, then the outer groupBy just groups the v values
+	case groupBy(join(lambda(`vx,`bx),`ky,
+			  lambda(`v,cmap(lambda(`x,cmap(lambda(`y,bag(tuple(`ex,`br))),
+							nth(`v1,1))),
+					 nth(`v2,0))),
+			  `X,`Y)):
+	    if (v1.equals(v) && v2.equals(v) && functional_dependent(subst(vx,x,bx),ex))
+		return simplify(#<join(lambda(`vx,`bx),`ky,
+				       lambda(`v,groupBy(cmap(lambda(`x,cmap(lambda(`y,bag(tuple(`ex,`br))),
+									     nth(`v1,1))),
+							      nth(`v2,0)))),
+				       `X,`Y)>);
+	    fail
+	 // same for the right key
+	case groupBy(join(`kx,lambda(`vy,`by),
+			  lambda(`v,cmap(lambda(`x,cmap(lambda(`y,bag(tuple(`ey,`br))),
+							nth(`v1,1))),
+					 nth(`v2,0))),
+			  `X,`Y)):
+	    if (v1.equals(v) && v2.equals(v) && functional_dependent(subst(vy,y,by),ey))
+		return simplify(#<join(`kx,lambda(`vy,`by),
+				       lambda(`v,groupBy(cmap(lambda(`x,cmap(lambda(`y,bag(tuple(`ey,`br))),
+									     nth(`v1,1))),
+							      nth(`v2,0)))),
+				       `X,`Y)>);
+	    fail
+	// same for the left key, different nesting
+	case groupBy(join(lambda(`vx,`bx),`ky,
+			  lambda(`v,cmap(lambda(`y,cmap(lambda(`x,bag(tuple(`ex,`br))),
+							nth(`v1,0))),
+					 nth(`v2,1))),
+			  `X,`Y)):
+	    if (v1.equals(v) && v2.equals(v) && functional_dependent(subst(vx,x,bx),ex))
+		return simplify(#<join(lambda(`vx,`bx),`ky,
+				       lambda(`v,groupBy(cmap(lambda(`y,cmap(lambda(`x,bag(tuple(`ex,`br))),
+									     nth(`v1,1))),
+							      nth(`v2,0)))),
+				       `X,`Y)>);
+	    fail
+	// same for the right key, different nesting
+	case groupBy(join(`kx,lambda(`vy,`by),
+			  lambda(`v,cmap(lambda(`y,cmap(lambda(`x,bag(tuple(`ey,`br))),
+							nth(`v1,0))),
+					 nth(`v2,1))),
+			  `X,`Y)):
+	    if (v1.equals(v) && v2.equals(v) && functional_dependent(subst(vy,y,by),ey))
+		return simplify(#<join(`kx,lambda(`vy,`by),
+				       lambda(`v,groupBy(cmap(lambda(`y,cmap(lambda(`x,bag(tuple(`ey,`br))),
+									     nth(`v1,0))),
+							      nth(`v2,1)))),
+				       `X,`Y)>);
+	    fail
+	// same for the left key, right nested
+	case groupBy(join(lambda(`vx,`bx),`ky,
+			  lambda(`v,cmap(lambda(`x,bag(tuple(`ex,`br))),
+					 nth(`v1,0))),
+			  `X,`Y)):
+	    if (v1.equals(v) && functional_dependent(subst(vx,x,bx),ex))
+		return simplify(#<join(lambda(`vx,`bx),`ky,
+				       lambda(`v,groupBy(cmap(lambda(`x,bag(tuple(`ex,`br))),
+							      nth(`v1,0)))),
+				       `X,`Y)>);
+	    fail
+	// same for the right key, left nested
+	case groupBy(join(`kx,lambda(`vy,`by),
+			  lambda(`v,cmap(lambda(`y,bag(tuple(`ey,`br))),
+					 nth(`v2,1))),
+			  `X,`Y)):
+	    if (v2.equals(v) && functional_dependent(subst(vy,y,by),ey))
+		return simplify(#<join(`kx,lambda(`vy,`by),
+				       lambda(`v,groupBy(cmap(lambda(`y,bag(tuple(`ey,`br))),
+							      nth(`v2,1)))),
+				       `X,`Y)>);
+	    fail
+	// if we group-by the join key, then embed the group-by in the join reducer
+	// (redundant rule)
+	case groupBy(join(`kx,`ky,lambda(`v,cmap(lambda(`v1,cmap(lambda(`v2,bag(tuple(`k,`u))),`e1)),`e2)),
+			  `X,`Y)):
+	    if (((e1.equals(#<nth(`v,0)>) && e2.equals(#<nth(`v,1)>))
+		 || (e2.equals(#<nth(`v,0)>) && e1.equals(#<nth(`v,1)>)))
+		&& (alpha_equivalent(kx,#<lambda(`v1,`k)>)
+		    || alpha_equivalent(kx,#<lambda(`v2,`k)>)))
+		return simplify(#<join(`kx,`ky,lambda(`v,groupBy(cmap(lambda(`v1,cmap(lambda(`v2,
+								      bag(tuple(`k,`u))),`e1)),`e2))),
+				       `X,`Y)>);
+		fail
+	case groupBy(groupBy(`x)):
+	    Tree nv = new_var();
+	    return simplify(#<cmap(lambda(`nv,bag(bag(`nv))),groupBy(`x))>);
+	case repeat(lambda(`v,`b),`s,...l):
+	    repeat_variables = repeat_variables.cons(v);
+	    return #<repeat(lambda(`v,`(simplify(b))),`(simplify(s)),...l)>;
+	case closure(lambda(`v,`b),`s,...l):
+	    repeat_variables = repeat_variables.cons(v);
+	    return #<closure(lambda(`v,`(simplify(b))),`(simplify(s)),...l)>;
+	case loop(lambda(tuple(...vs),`b),`s,`n):
+	    repeat_variables = repeat_variables.append(vs);
+	    return #<loop(lambda(tuple(...vs),`(simplify(b))),`(simplify(s)),`n)>;
+	case aggregate(`acc,`zero,`T()):
+	    if (is_collection(T))
+		return zero;
+	    else fail
+	case aggregate(`acc,`zero,`T(`s)):
+	    if (is_collection(T))
+		return simplify(#<apply(`acc,tuple(`zero,`s))>);
+	    else fail
+	case apply(lambda(`v,`b),`u):
+	    if (!v.is_variable())
+		fail;
+	    return simplify(subst_var(v,u,b));
+	case apply(function(tuple(...el),_,`b),`u):
+	    int i = 0;
+	    for ( Tree a: el )
+		match a {
+		case `bind(`v,_):
+		    b = subst(v,#<nth(`u,`(i++))>,b);
+		};
+	    return simplify(b);
+        case call(and,true,`u): return simplify(u);
+        case call(and,`u,true): return simplify(u);
+        case call(and,false,`u):return #<false>;
+        case call(and,`u,false): return #<false>;
+        case call(or,true,`u): return #<true>;
+        case call(or,`u,true): return #<true>;
+        case call(or,false,`u): return simplify(u);
+        case call(or,`u,false): return simplify(u);
+	case call(not,true): return #<false>;
+	case call(not,false): return #<true>;
+	case if(true,`e1,`e2): return simplify(e1);
+	case if(false,`e1,`e2): return simplify(e2);
+	case call(count,cmap(lambda(`v,`S(`x)),`u)):
+	    if (is_collection(S))
+	        return simplify(#<call(count,`u)>);
+	    else fail
+	case call(count,`groupBy(cmap(lambda(`v,`S(tuple(`x,`y))),`u))):
+	    if (is_collection(S) && !y.equals(#<0>) && #[groupBy,orderBy].member(#<`groupBy>))
+		return #<call(count,groupBy(cmap(lambda(`v,`S(tuple(`x,0))),`u)))>;
+	    else fail
+	case call(count,`S(...r)):
+	    if (is_collection(S))
+	        return #<typed(`(r.length()),long)>;
+	    else fail
+	case call(`f,`S(`x)):
+	    if (!is_collection(S))
+		fail;
+	    for ( Tree m: monoids )
+		match m {
+		case `aggr(`mtp,`plus,`zero,`unit):
+		    if (!aggr.equals(f.toString()))
+			continue;
+		    if (TypeInference.unify(mtp,TypeInference.type_inference2(x)) != null)
+			return simplify(#<apply(`unit,`x)>);
+		};
+	    fail
+	case nth(tuple(...al),`n):
+	    if (!n.is_long())
+		fail;
+	    int i = (int)n.longValue();
+	    if (i >= 0 && i < al.length())
+		return simplify(al.nth(i));
+	case project(record(...bl),`a):
+	    for ( Tree b: bl )
+		match b {
+		case bind(`v,`u):
+		    if (v.equals(a))
+			return simplify(u);
+		};
+	case `f(...al):
+	    Trees bl = #[];
+	    for ( Tree a: al )
+		bl = bl.append(simplify(a));
+	    return #<`f(...bl)>;
+	};
+	return e;
+    }
+
+    /** Algebraic normalization (algebra to algebra) applied multiple times
+     * @param e algebraic expression
+     * @return an improved algebraic expression
+     */
+    public static Tree simplify_all ( Tree e ) {
+	Tree ne = simplify(e);
+	if (e.equals(ne))
+	    return e;
+	else return simplify_all(ne);
+    }
+}

@@ -1,0 +1,156 @@
+<?xml version="1.0"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+   
+        http://www.apache.org/licenses/LICENSE-2.0
+   
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<project name="MRQL" basedir="." default="mr">
+  <property name="HADOOP" location="${user.home}/hadoop-1.0.3"/>
+  <property name="HAMA" location="${user.home}/hama-0.5.0"/>
+  <property name="CUPJAR" location="/usr/share/java/cup.jar"/>
+
+  <property name="package" value="org.apache.mrql"/>
+  <property name="GENJAR" location="lib/gen.jar"/>
+  <property name="JLINEJAR" location="lib/jline-1.0.jar"/>
+
+  <path id="classpath">
+    <pathelement location="${GENJAR}"/>
+    <pathelement location="${JLINEJAR}"/>
+    <pathelement location="${CUPJAR}"/>
+    <fileset dir="${HADOOP}" includes="hadoop-core-*.jar"/>
+    <fileset dir="${HADOOP}/lib" includes="commons-cli-*jar"/>
+    <fileset dir="${HAMA}" includes="hama-core-*jar"/>
+  </path>
+
+  <target name="mr"
+	  depends="common"
+	  description="build the MRQL MapReduce jar">
+    <fileset id="mr.gen.path" dir="src/MapReduce" includes="*.gen"/>
+    <pathconvert pathsep=" " property="mr.gen.files" refid="mr.gen.path"/>
+    <java classname="Gen.Main">
+      <classpath refid="classpath"/>
+      <arg line="${mr.gen.files}"/>
+      <arg line="-o"/>
+      <arg file="tmp"/>
+    </java>
+    <javac srcdir="src:tmp" destdir="classes" classpathref="classpath"
+	   includeantruntime="false">
+      <exclude name="BSP/*"/>
+    </javac>
+    <jar destfile="lib/mrql.jar" basedir="classes">
+      <zipfileset includes="**/*.class" src="${GENJAR}"/>
+      <zipfileset includes="**/*" src="${JLINEJAR}"/>
+      <zipfileset includes="**/*.class" src="${CUPJAR}"/>
+    </jar>
+  </target>
+
+  <target name="bsp"
+	  depends="common"
+	  description="build the MRQL BSP jar">
+    <fileset id="bsp.gen.path" dir="src/BSP" includes="*.gen"/>
+    <pathconvert pathsep=" " property="bsp.gen.files" refid="bsp.gen.path"/>
+    <java classname="Gen.Main">
+      <classpath refid="classpath"/>
+      <arg line="${bsp.gen.files}"/>
+      <arg line="-o"/>
+      <arg file="tmp"/>
+    </java>
+    <javac srcdir="src:tmp" destdir="classes" classpathref="classpath"
+	   includeantruntime="false">
+      <exclude name="MapReduce/*"/>
+    </javac>
+    <jar destfile="lib/mrql-bsp.jar" basedir="classes">
+      <zipfileset includes="**/*.class" src="${GENJAR}"/>
+      <zipfileset includes="**/*" src="${JLINEJAR}"/>
+      <zipfileset includes="**/*.class" src="${CUPJAR}"/>
+    </jar>
+  </target>
+
+  <target name="common"
+	  depends="clean_build,mrql_parser,json_parser">
+    <fileset id="gen.path" dir="src" includes="*.gen"/>
+    <pathconvert pathsep=" " property="gen.files" refid="gen.path"/>
+    <java classname="Gen.Main">
+      <classpath refid="classpath"/>
+      <arg line="${gen.files}"/>
+      <arg line="-o"/>
+      <arg file="tmp"/>
+    </java>
+  </target>
+
+  <target name="clean_build" >
+    <delete dir="classes"/>
+    <delete dir="tmp"/>
+    <mkdir dir="classes"/>
+    <mkdir dir="tmp"/>
+  </target>
+
+<target name="mrql_parser">
+    <exec executable="jflex">
+      <arg line="--quiet --nobak"/>
+      <arg file="src/mrql.lex"/>
+      <arg line="-d"/>
+      <arg file="tmp"/>
+    </exec>
+    <java classname="Gen.Main">
+      <classpath refid="classpath"/>
+      <arg file="src/mrql.cgen"/>
+      <arg line="-o"/>
+      <arg file="tmp/mrql.cup"/>
+    </java>
+    <exec executable="cup">
+      <arg line="-nosummary"/>
+      <arg line="-parser MRQLParser"/>
+      <arg file="tmp/mrql.cup"/>
+    </exec>
+    <move todir="tmp">
+      <filelist dir=".">
+	<file name="sym.java"/>
+	<file name="MRQLParser.java"/>
+      </filelist>
+    </move>
+  </target>
+
+  <target name="json_parser">
+    <exec executable="jflex">
+      <arg line="--quiet --nobak"/>
+      <arg file="src/JSON.lex"/>
+      <arg line="-d"/>
+      <arg file="tmp"/>
+    </exec>
+    <exec executable="cup">
+      <arg line="-nosummary"/>
+      <arg line="-parser JSONParser"/>
+      <arg line="-symbols jsym"/>
+      <arg file="src/JSON.cup"/>
+    </exec>
+    <move todir="tmp">
+      <filelist dir=".">
+	<file name="jsym.java"/>
+	<file name="JSONParser.java"/>
+      </filelist>
+    </move>
+  </target>
+
+  <target name="clean">
+    <delete dir="classes"/>
+    <delete dir="tmp"/>
+    <delete dir="mrql"/>
+    <delete>
+      <fileset dir="." includes="**/*~"/>
+    </delete>
+  </target>
+
+</project>
