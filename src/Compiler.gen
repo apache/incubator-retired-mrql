@@ -1,26 +1,21 @@
-/********************************************************************************
-   Copyright 2011-2012 Leonidas Fegaras, University of Texas at Arlington
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-   File: Compiler.gen
-   Compile MR functional arguments to Java code to be evaluated at the MR setup time
-   Programmer: Leonidas Fegaras, UTA
-   Date: 05/27/11 - 04/28/12
-
-********************************************************************************/
-
-package hadoop.mrql;
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.mrql;
 
 import Gen.*;
 import java.io.*;
@@ -30,28 +25,10 @@ import java.lang.reflect.*;
 import java.util.*;
 import java.net.*;
 import java.util.jar.*;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.mapreduce.*;
 
 
-// Compile the MRQL functional arguments into Java bytecode
-final class JavaSourceFromString extends SimpleJavaFileObject {
-    final String code;
-
-    JavaSourceFromString ( String name, String code ) {
-	super(URI.create("string:///hadoop/mrql/" + name.replace('.','/') + Kind.SOURCE.extension),Kind.SOURCE);
-	this.code = code;
-    }
-
-    @Override
-    public CharSequence getCharContent ( boolean ignoreEncodingErrors ) {
-	return code;
-    }
-}
-
-
-final class Compiler extends Translate {
+/** compilation of MRQL expressions to Java code and then to Java bytecode */
+final public class Compiler extends Translator {
     static JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     static DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
     final static String tmp_dir = "/tmp/mrql_jar_"+System.getProperty("user.name");
@@ -59,7 +36,22 @@ final class Compiler extends Translate {
     static Trees in_memory_repeat_vars = #[];
     static int lambda_num = 0;
 
-    static String new_lambda_name () {
+    /** Compile the MRQL functional arguments into Java bytecode */
+    final private static class JavaSourceFromString extends SimpleJavaFileObject {
+	final String code;
+
+	JavaSourceFromString ( String name, String code ) {
+	    super(URI.create("string:///org/apache/mrql/" + name.replace('.','/') + Kind.SOURCE.extension),Kind.SOURCE);
+	    this.code = code;
+	}
+
+	@Override
+	public CharSequence getCharContent ( boolean ignoreEncodingErrors ) {
+	    return code;
+	}
+    }
+
+    private static String new_lambda_name () {
 	return "MRQL_Lambda_"+(lambda_num++);
     }
 
@@ -103,13 +95,13 @@ final class Compiler extends Translate {
 	remove(new File(tmp_dir));
     }
 
-    final public static Tree compile ( Tree e, StringBuffer out ) throws Exception {
+    final private static Tree compile ( Tree e, StringBuffer out ) throws Exception {
 	match e {
 	case repeat(lambda(`v,`body),`s,`n):
 	    in_memory_repeat_vars = in_memory_repeat_vars.cons(v);
 	    return #<repeat(lambda(`v,`body),`(compile(s,out)),`n)>;
 	case `f(...al):
-	    if (!Translate.plans_with_distributed_lambdas.member(#<`f>))
+	    if (!plans_with_distributed_lambdas.member(#<`f>))
 		fail;
 	    Trees nl = #[];
 	    for ( Tree a: al)
@@ -135,9 +127,12 @@ final class Compiler extends Translate {
 	return e;
     }
 
-    static StringBuffer out;
+    private static StringBuffer out;
 
-    // compile the functional arguments of the MRQL operators using the Java compile
+    /** compile the functional arguments of the MRQL operators using the Java compiler
+     * @param query the expression to compile
+     * @return the query with all functional arguments compiled to Java bytecode
+     */
     final public static Tree compile ( Tree query ) {
 	try {
 	    // remove the old jar
@@ -145,11 +140,11 @@ final class Compiler extends Translate {
 		remove(new File(jar_path));
 	    jar_path = tmp_dir+"/mrql_args_"+(new Random().nextInt(1000000))+".jar";
 	    out = new StringBuffer(1000);
-	    out.append("package hadoop.mrql;\n");
+	    out.append("package org.apache.mrql;\n");
 	    Tree nq = compile(query,out);
 	    StringBuffer sb = new StringBuffer(1000);
-	    for ( String f: Translate.global_functions )
-		match Translate.global_functions.lookup(f) {
+	    for ( String f: global_functions )
+		match global_functions.lookup(f) {
 		case function(tuple(...params),`otp,`body):
 		    sb.append("final public static "+get_MR_type(otp)+" "+f);
 		    if (params.is_empty())
@@ -208,7 +203,7 @@ final class Compiler extends Translate {
 	}
     }
 
-    // load the Java class of the anonymous function with name lambda_name
+    /** load the Java class of the anonymous function with name lambda_name */
     final public static Function compiled ( ClassLoader cl, String lambda_name ) throws Exception {
 	URL[] urls = ((URLClassLoader) cl).getURLs();
 	URL[] new_urls = new URL[urls.length+1];
@@ -216,14 +211,14 @@ final class Compiler extends Translate {
 	    new_urls[i+1] = urls[i];
 	new_urls[0] = new URL("file://"+jar_path);
 	URLClassLoader loader = new URLClassLoader(new_urls,cl);
-	Class c = loader.loadClass("hadoop.mrql."+lambda_name);
+	Class c = loader.loadClass("org.apache.mrql."+lambda_name);
 	Constructor cc = c.getDeclaredConstructors()[0];
 	cc.setAccessible(true);
 	return (Function)cc.newInstance();
     }
 
-    // The Java type of an MRQL type
-    static String get_MR_type ( Tree type ) {
+    /** The Java type of an MRQL type */
+    private static String get_MR_type ( Tree type ) {
 	match type {
 	case boolean: return "MR_bool";
 	case byte: return "MR_byte";
@@ -241,7 +236,7 @@ final class Compiler extends Translate {
 	return "MRData";
     }
 
-    static Trees remove_duplicates ( Trees al ) {
+    private static Trees remove_duplicates ( Trees al ) {
 	if (al.is_empty())
 	    return al;
 	Trees el = remove_duplicates(al.tail());
@@ -250,10 +245,10 @@ final class Compiler extends Translate {
 	else return el.cons(al.head());
     }
 
-    // lambda lifting: generate Java code from an anonymous function
-    static String compilef ( String v, Tree body ) throws Exception {
+    /** lambda lifting: generate Java code from an anonymous function */
+    private static String compilef ( String v, Tree body ) throws Exception {
 	String fname = new_lambda_name();
-	Trees free_vars = remove_duplicates(Translate.free_variables(body,#[`v]));
+	Trees free_vars = remove_duplicates(free_variables(body,#[`v]));
 	StringBuffer sb = new StringBuffer(1000);
 	sb.append("final class "+fname+" extends Function {\n");
 	for ( Tree var: free_vars )
@@ -282,7 +277,7 @@ final class Compiler extends Translate {
 	return s+")";
     }
 
-    static String compileF ( Tree fnc ) throws Exception {
+    private static String compileF ( Tree fnc ) throws Exception {
 	match fnc {
 	case lambda(`v,`b):
 	    return compilef(v.toString(),b);
@@ -304,7 +299,7 @@ final class Compiler extends Translate {
 	throw new Exception("Ill-formed lambda: "+fnc);
     }
 
-    public static String compileEL ( Trees el ) throws Exception {
+    private static String compileEL ( Trees el ) throws Exception {
 	if (el.is_empty())
 	    return "";
 	String ret = compileE(el.head());
@@ -313,7 +308,7 @@ final class Compiler extends Translate {
 	return ret;
     }
 
-    public static String compileE ( Tree e ) throws Exception {
+    private static String compileE ( Tree e ) throws Exception {
 	if (e == null)
 	    return "(new MR_byte(0))";
 	if (e.equals(#<true>))
@@ -445,6 +440,10 @@ final class Compiler extends Translate {
 	    return "MapReduceAlgebra.aggregate("+compileF(acc)+","+compileE(zero)+",(Bag)("+compileE(s)+"))";
 	case Aggregate(`acc,`zero,`s):
 	    return "MapReducePlan.aggregate("+compileF(acc)+","+compileE(zero)+","+compileM(s)+")";
+	case mergeGroupByJoin(`kx,`ky,`gx,`gy,`m,`c,`r,`x,`y,`o):
+	    return "MapReduceAlgebra.mergeGroupByJoin("+compileF(kx)+","+compileF(ky)
+		   +","+compileF(gx)+","+compileF(gy)+","+compileF(m)+","+compileF(c)
+		   +","+compileF(r)+",(Bag)"+compileE(x)+",(Bag)"+compileE(y)+")";
 	case function(tuple(...params),`tp,`body):
 	    return compileF(e);
 	case typed(`x,_):
@@ -452,7 +451,7 @@ final class Compiler extends Translate {
 	case apply(`f,tuple(...args)):
 	    if (!f.is_variable())
 		fail;
-	    match Translate.global_functions.lookup(f.toString()) {
+	    match global_functions.lookup(f.toString()) {
 	    case function(tuple(...params),`otp,`body):
 		String ret = "UserFunctions."+f+"(";
 		if (args.is_empty())
@@ -478,7 +477,7 @@ final class Compiler extends Translate {
 	throw new Exception("Cannot compile: "+e);
     }
 
-    final static String compileM ( Tree e ) throws Exception {
+    final private static String compileM ( Tree e ) throws Exception {
 	match e {
 	case cMap(`f,`s):
 	    return "MapReduceAlgebra.cmap("+compileF(f)+",(Bag)"+compileM(s)+")";
@@ -494,6 +493,9 @@ final class Compiler extends Translate {
 	case MapCombineReduce(`m,`c,`r,`s,_):
 	    return "MapReduceAlgebra.mapReduce("+compileF(m)
 		   +","+compileF(r)+",(Bag)"+compileM(s)+")";
+	case MapReduce2(`mx,`my,`c,`r,`x,`y,_):
+	    return "MapReduceAlgebra.mapReduce2("+compileF(mx)+","+compileF(my)
+		   +","+compileF(r)+",(Bag)"+compileM(x)+",(Bag)"+compileM(y)+")";
 	case MapReduce2(`mx,`my,`r,`x,`y,_):
 	    return "MapReduceAlgebra.mapReduce2("+compileF(mx)+","+compileF(my)
 		   +","+compileF(r)+",(Bag)"+compileM(x)+",(Bag)"+compileM(y)+")";
@@ -506,6 +508,10 @@ final class Compiler extends Translate {
 	case MapAggregateJoin(`kx,`ky,`r,`acc,`zero,`x,`y):
 	    return "new Bag(MapReduceAlgebra.aggregate("+compileF(acc)
 		   +","+compileE(zero)+","+compileM(#<MapJoin(`kx,`ky,`r,`x,`y)>)+"))";
+	case GroupByJoin(`kx,`ky,`gx,`gy,`m,`c,`r,`x,`y,`o):
+	    return "MapReduceAlgebra.groupByJoin("+compileF(kx)+","+compileF(ky)
+		   +","+compileF(gx)+","+compileF(gy)+","+compileF(m)+","+compileF(c)
+		   +","+compileF(r)+",(Bag)"+compileM(x)+",(Bag)"+compileM(y)+")";
 	case CrossProduct(`mx,`my,`r,`x,`y):
 	    return "MapReduceAlgebra.crossProduct("+compileF(mx)+","+compileF(my)
 		   +","+compileF(r)+",(Bag)"+compileM(x)+",(Bag)"+compileM(y)+")";
@@ -528,21 +534,21 @@ final class Compiler extends Translate {
 	    if (!Config.hadoop_mode)
 		return "MapReduceAlgebra.parsedSource(((MR_int)"+compileE(n)+").get(),\""
 		       +parser+"\",((MR_string)"+compileE(file)+").get(),"
-		       +Translate.reify(args)+")";
+		       +reify(args)+")";
 	    Class<? extends Parser> p = DataSource.parserDirectory.get(parser.toString());
 	    if (p == null)
 		throw new Error("Unknown parser: "+parser);
 	    return "Plan.parsedSource("+p+".class,((MR_string)"+compileE(file)+").get(),"
-		   +Translate.reify(args)+")";
+		   +reify(args)+")";
 	case ParsedSource(`parser,`file,...args):
 	    if (!Config.hadoop_mode)
 		return "MapReduceAlgebra.parsedSource(\""+parser+"\",((MR_string)"
-		       +compileE(file)+").get(),"+Translate.reify(args)+")";
+		       +compileE(file)+").get(),"+reify(args)+")";
 	    Class<? extends Parser> p = DataSource.parserDirectory.get(parser.toString());
 	    if (p == null)
 		throw new Error("Unknown parser: "+parser);
 	    return "Plan.parsedSource("+p+".class,((MR_string)"+compileE(file)+").get(),"
-		   +Translate.reify(args)+")";
+		   +reify(args)+")";
 	case Merge(`x,`y):
 	    return "((Bag)"+compileM(x)+").union((Bag)"+compileM(y)+")";
 	case Generator(`min,`max,`size):

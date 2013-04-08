@@ -1,31 +1,21 @@
-/********************************************************************************
-   Copyright 2011-2012 Leonidas Fegaras, University of Texas at Arlington
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-   File: Bag.java
-   The Java data strutures for Bags (multisets)
-   There are 3 kinds of Bag implementations, which are converted at run-time, when necessary
-   1) vector-based (materialized): used for small bags (when size<=Config.max_materialized_bag)
-   2) stream-based: can be traversed only once; implemented as Java iterators
-   3) spilled to a local file: can be accessed multiple times
-
-   Programmer: Leonidas Fegaras, UTA
-   Date: 10/14/10 - 08/10/12
-
-********************************************************************************/
-
-package hadoop.mrql;
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.mrql;
 
 import java.util.*;
 import java.io.*;
@@ -33,15 +23,13 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 
 
-abstract class BagIterator implements Iterator<MRData> {
-    public void remove () {
-	throw new Error("Bag deletions are not permitted");
-    }
-}
-
-
-// Lazy multisets. Normally stream-based, but materialized to a vector when necessary.
-// When the size of the materialized vector exceeds a limit, it is spilled to a local file
+/**
+ *   A sequence of MRData.
+ *   There are 3 kinds of Bag implementations, which are converted at run-time, when necessary:
+ *   1) vector-based (materialized): used for small bags (when size is less than Config.max_materialized_bag);
+ *   2) stream-based: can be traversed only once; implemented as Java iterators;
+ *   3) spilled to a local file: can be accessed multiple times
+ */
 public class Bag implements MRData, Iterable<MRData> {
     enum Modes { STREAMED, MATERIALIZED, SPILLED };
     private Modes mode;
@@ -51,16 +39,27 @@ public class Bag implements MRData, Iterable<MRData> {
     private String path;                    // local path that contains the spilled bag
     private SequenceFile.Writer writer;     // the file writer for spiled bags
 
+    /**
+     * create an empty bag as an ArrayList
+     */
     public Bag () {
 	mode = Modes.MATERIALIZED;
 	content = new ArrayList<MRData>();
     }
 
+    /**
+     * create an empty bag as an ArrayList with a given capacity
+     * @param size initial capacity
+     */
     public Bag ( final int size ) {
 	mode = Modes.MATERIALIZED;
 	content = new ArrayList<MRData>(size);
     }
 
+    /**
+     * in-memory Bag construction (an ArrayList) initialized with data
+     * @param as a vector of MRData to insert in the Bag
+     */
     public Bag ( final MRData ...as ) {
 	mode = Modes.MATERIALIZED;
 	content = new ArrayList<MRData>(as.length);
@@ -68,25 +67,32 @@ public class Bag implements MRData, Iterable<MRData> {
 	    content.add(a);
     }
 
-    // lazy construction (stream-based)
+    /**
+     * lazy construction (stream-based) of a Bag
+     * @param i the Iterator that generates the Bag elements
+     */
     public Bag ( final BagIterator i ) {
 	mode = Modes.STREAMED;
 	iterator = i;
 	consumed = false;
     }
 
+    /** is the Bag stored in an ArrayList? */
     public boolean materialized () {
 	return mode == Modes.MATERIALIZED;
     }
 
+    /** is the Bag stream-based? */
     public boolean streamed () {
 	return mode == Modes.STREAMED;
     }
 
+    /** is the Bag spilled into a file? */
     public boolean spilled () {
 	return mode == Modes.SPILLED;
     }
 
+    /** return the Bag size (cache it in memory if necessary) */
     public int size () {
 	if (materialized())
 	    return content.size();
@@ -100,11 +106,16 @@ public class Bag implements MRData, Iterable<MRData> {
 	return i;
     }
 
+    /** trim the ArrayList that caches the Bag */
     public void trim () {
 	if (materialized())
 	    content.trimToSize();
     }
 
+    /** get the n'th element of a Bag (cache it in memory if necessary)
+     * @param n the index
+     * @return the n'th element
+     */
     public MRData get ( final int n ) {
 	if (materialized())
 	    if (n < size())
@@ -121,6 +132,11 @@ public class Bag implements MRData, Iterable<MRData> {
 	throw new Error("Cannot retrieve the "+n+"th element of a sequence");
     }
 
+    /** replace the n'th element of a Bag with a new value
+     * @param n the index
+     * @param value the new value
+     * @return the Bag
+     */
     public Bag set ( final int n, final MRData value ) {
 	if (!materialized())
 	    throw new Error("Cannot replace an element of a non-materialized sequence");
@@ -128,7 +144,10 @@ public class Bag implements MRData, Iterable<MRData> {
 	return this;
     }
 
-    public boolean add ( final MRData x ) {
+    /** add a new value to a Bag (cache it in memory if necessary)
+     * @param value the new value
+     */
+    public void add ( final MRData x ) {
 	materialize();
 	if (!spilled() && Config.hadoop_mode
 	     && size() >= Config.max_materialized_bag)
@@ -143,24 +162,32 @@ public class Bag implements MRData, Iterable<MRData> {
 		    System.err.println("*** Appending elements to a spilled Bag: "+path);
 		};
 		writer.append(new MRContainer(x),NullWritable.get());
-		return true;
 	    } catch (IOException e) {
 		throw new Error("Cannot append an element to a spilled Bag: "+path);
 	    }
-	else return content.add(x);
+	else content.add(x);
     }
 
+    /** add a new value to a Bag (cache it in memory if necessary)
+     * @param value the new value
+     * @return the Bag
+     */
     public Bag add_element ( final MRData x ) {
 	add(x);
 	return this;
     }
 
+    /** add the elements of a Bag to the end of this Bag
+     * @param b the Bag whose elements are copied
+     * @return the Bag
+     */
     public Bag addAll ( final Bag b ) {
 	for ( MRData e: b )
 	    add(e);
 	return this;
     }
 
+    /** make this Bag empty (cache it in memory if necessary) */
     public void clear () throws IOException {
 	if (materialized())
 	    content.clear();
@@ -176,7 +203,7 @@ public class Bag implements MRData, Iterable<MRData> {
 	content = new ArrayList<MRData>();
     }
 
-    // materialize when is absolutely necessary
+    /** cache the Bag to an ArrayList when is absolutely necessary */
     public void materialize () {
 	if (materialized() || spilled())
 	    return;
@@ -204,7 +231,8 @@ public class Bag implements MRData, Iterable<MRData> {
 	return path;
     }
 
-    public void spill () {
+    /** spill the Bag to a local file */
+    private void spill () {
 	if (!spilled() && Config.hadoop_mode)
 	    try {
 		if (Plan.conf == null)
@@ -226,6 +254,10 @@ public class Bag implements MRData, Iterable<MRData> {
 	    }
     }
 
+    /**
+     * sort the Bag (cache it in memory if necessary).
+     * If the Bag was spilled during caching, use external sorting
+     */
     public void sort () {
 	materialize();
 	if (spilled())  // if it was spilled during materialize()
@@ -248,6 +280,7 @@ public class Bag implements MRData, Iterable<MRData> {
 	else Collections.sort(content);
     }
 
+    /** return the Bag Iterator */
     public Iterator<MRData> iterator () {
 	if (spilled())
 	    try {
@@ -289,12 +322,18 @@ public class Bag implements MRData, Iterable<MRData> {
 	}
     }
 
+    /** cache MRData in memory by caching all Bags at any place and depth in MRData */
     public void materializeAll () {
 	materialize();
 	for (MRData e: this)
 	    e.materializeAll();
     }
 
+    /** concatenate the elements of a given Bag to the elements of this Bag.
+     * Does not change either Bag
+     * @param s the given Bag
+     * @return a new Bag
+     */
     public Bag union ( final Bag s ) {
 	final Iterator<MRData> i1 = iterator();
 	final Iterator<MRData> i2 = s.iterator();
@@ -318,6 +357,10 @@ public class Bag implements MRData, Iterable<MRData> {
 	    });
     }
 
+    /** does this Bag contain an element?
+     * Cache this Bag in memory befor tetsing if necessary
+     * @param x the element to find
+     */
     public boolean contains ( final MRData x ) {
 	if (materialized())
 	    return content.contains(x);
@@ -331,6 +374,11 @@ public class Bag implements MRData, Iterable<MRData> {
 	return false;
     }
 
+    /** if this Bag is a Map from keys to values (a Bag of (key,value) pairs),
+     * find the value with the given key; raise an error if not found
+     * @param key the search key
+     * @returns the value associated with the key
+     */
     public MRData map_find ( final MRData key ) {
 	if (streamed() && consumed)
 	    throw new Error("*** The collection stream has already been consumed");
@@ -344,6 +392,10 @@ public class Bag implements MRData, Iterable<MRData> {
 	throw new Error("key "+key+" not found in map");
     }
 
+    /** if this Bag is a Map from keys to values (a Bag of (key,value) pairs),
+     * does it contain a given key?
+     * @param key the search key
+     */
     public boolean map_contains ( final MRData key ) {
 	if (streamed() && consumed)
 	    throw new Error("*** The collection stream has already been consumed");
@@ -355,6 +407,9 @@ public class Bag implements MRData, Iterable<MRData> {
 	return false;
     }
 
+    /** the output serializer for Bag.
+     * Stream-based Bags are serialized lazily (without having to cache the Bag in memory)
+     */
     final public void write ( DataOutput out ) throws IOException {
 	if (materialized()) {
 	    out.writeByte(MRContainer.BAG);
@@ -369,6 +424,7 @@ public class Bag implements MRData, Iterable<MRData> {
 	}
     }
 
+    /** the input serializer for Bag */
     final public static Bag read ( DataInput in ) throws IOException {
 	int n = WritableUtils.readVInt(in);
 	Bag bag = new Bag(n);
@@ -377,6 +433,7 @@ public class Bag implements MRData, Iterable<MRData> {
 	return bag;
     }
 
+    /** a lazy input serializer for a Bag (it doesn't need to cache a Bag in memory) */
     public static Bag lazy_read ( final DataInput in ) throws IOException {
 	Bag bag = new Bag(100);
 	MRData data = MRContainer.read(in);
@@ -389,6 +446,7 @@ public class Bag implements MRData, Iterable<MRData> {
 	return bag;
     }
 
+    /** the input serializer for Bag */
     public void readFields ( DataInput in ) throws IOException {
 	int n = WritableUtils.readVInt(in);
 	mode = Modes.MATERIALIZED;
@@ -405,6 +463,7 @@ public class Bag implements MRData, Iterable<MRData> {
 	    add(MRContainer.read(in));
     }
 
+    /** compare this Bag with a given Bag by comparing their associated elements */
     public int compareTo ( MRData x ) {
 	Bag xt = (Bag)x;
 	Iterator<MRData> xi = xt.iterator();
@@ -423,6 +482,7 @@ public class Bag implements MRData, Iterable<MRData> {
 	else return 0;
     }
 
+    /** compare this Bag with a given Bag by comparing their associated elements */
     final public static int compare ( byte[] x, int xs, int xl, byte[] y, int ys, int yl, int[] size ) {
 	try {
 	    int xn = WritableComparator.readVInt(x,xs);
@@ -447,6 +507,7 @@ public class Bag implements MRData, Iterable<MRData> {
 	}
     }
 
+    /** is this Bag equal to another Bag (order is important) */
     public boolean equals ( Object x ) {
 	if (!(x instanceof Bag))
 	    return false;
@@ -459,6 +520,7 @@ public class Bag implements MRData, Iterable<MRData> {
 	return xi.hasNext() || yi.hasNext();
     }
 
+    /** the hash code of this Bag is the XOR of the hash code of its elements */
     public int hashCode () {
 	int h = 127;
 	for ( MRData e: this )
@@ -466,6 +528,7 @@ public class Bag implements MRData, Iterable<MRData> {
 	return Math.abs(h);
     }
 
+    /** show the first few Bag elements (controlled by -bag_print) */
     public String toString () {
 	materialize();
 	StringBuffer b = new StringBuffer("{ ");

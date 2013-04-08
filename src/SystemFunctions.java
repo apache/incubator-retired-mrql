@@ -1,35 +1,27 @@
-/********************************************************************************
-   Copyright 2011-2012 Leonidas Fegaras, University of Texas at Arlington
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-   File: Functions.java
-   System-defined functions
-   Programmer: Leonidas Fegaras, UTA
-   Date: 11/04/10 - 03/31/11
-   Call importClass to import a new class with user-defined methods
-
-********************************************************************************/
-
-package hadoop.mrql;
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.mrql;
 
 import java.util.*;
 import java.lang.Math;
-import java.lang.reflect.Method;
-import Gen.*;
 
 
-// System functions must be from MRData to MRData
+/** System functions must be from MRData to MRData */
 final public class SystemFunctions {
 
     // used for shortcutting sync in bsp supersteps
@@ -236,6 +228,10 @@ final public class SystemFunctions {
 	return new MR_long(i);
     }
 
+    public static MR_long hash_code ( MRData x ) {
+	return new MR_long(x.hashCode());
+    }
+
     public static MRData index ( Bag b, MR_int mi ) {
 	int i = mi.get();
 	if (i < 0)
@@ -291,6 +287,7 @@ final public class SystemFunctions {
 	return x;
     }
 
+    /** coerce a basic type to a new type indicated by the basic type number */
     public static MRData coerce ( MRData from, MR_int type ) {
 	byte tp = (byte)type.get();
 	if (from instanceof MR_short) {
@@ -363,7 +360,7 @@ final public class SystemFunctions {
 	return null;
     }
  
-    // used in avg
+    /** used in avg */
     public static MR_double avg_value ( MRData t ) {
 	MR_double sum = (MR_double)((Tuple)t).first();
 	MR_long count = (MR_long)((Tuple)t).second();
@@ -466,201 +463,5 @@ final public class SystemFunctions {
 	for ( MRData e: s )
 	    z = c.lambda().eval(new Tuple(z,e));
 	return z;
-    }
-}
-
-
-final class MethodInfo implements Comparable<MethodInfo> {
-    public String name;
-    public Trees signature;
-    public Method method;
-
-    MethodInfo ( String n, Trees s, Method m ) {
-	name = n;
-	signature = s;
-	method = m;
-    }
-
-    public int compareTo ( MethodInfo x )  {
-	int c = name.compareTo(x.name);
-	if (c != 0)
-	    return c;
-	if (signature.length() < x.signature.length())
-	    return -1;
-	if (signature.length() > x.signature.length())
-	    return 1;
-	// handles overloading: more specific method signatures first
-	for ( int i = 1; i < signature.length(); i++ ) {
-	    int ct = Translate.compare_types(signature.nth(i),x.signature.nth(i));
-	    if (ct != 0)
-		return ct;
-	};
-	return Translate.compare_types(signature.nth(0),x.signature.nth(0));
-    }
-
-    public boolean equals ( Object x ) {
-	return name.equals(((MethodInfo)x).name)
-	       && signature.equals(((MethodInfo)x).signature);
-    }
-}
-
-
-final class ClassImporter {
-    final static boolean trace_imported_methods = false;
-
-    final static String[] object_methods
-	= { "hashCode", "getClass", "wait", "equals", "toString", "notify", "notifyAll" };
-
-    static Vector<MethodInfo> methods = new Vector<MethodInfo>();
-
-    public static void load_classes () {
-	if (methods == null)
-	    methods = new Vector<MethodInfo>();
-	if (methods.size() == 0) {
-	    importClass("hadoop.mrql.SystemFunctions");
-	    //****** import your classes with user-defined functions here
-	}
-    }
-
-    static boolean object_method ( String s ) {
-	for (int i = 0; i < object_methods.length; i++)
-	    if (object_methods[i].equals(s))
-		return true;
-	return false;
-    }
-
-    static Tree getType ( Class<?> c ) {
-	String cn = c.getCanonicalName();
-	Class<?>[] inf = c.getInterfaces();
-	if (cn.equals("hadoop.mrql.MRData"))
-	    return new VariableLeaf("any");
-	if (cn.startsWith("hadoop.mrql.MR_"))
-	    return new VariableLeaf(cn.substring(15));
-	if (cn.equals("hadoop.mrql.Bag"))
-	    return new Node("bag",new Trees(new VariableLeaf("any")));
-	if (cn.equals("hadoop.mrql.Inv"))
-	    return new VariableLeaf("any");
-	if (cn.equals("hadoop.mrql.Union"))
-	    return new VariableLeaf("union");
-	if (cn.equals("hadoop.mrql.Lambda"))
-	    return new VariableLeaf("any");
-	if (inf.length > 0 && inf[0].equals("hadoop.mrql.MRData"))
-	    return new VariableLeaf("any");
-	throw new Error("Unsupported type in imported method: "+cn);
-    }
-
-    static Trees signature ( Method m ) {
-	Class<?> co = m.getReturnType();
-	Class<?>[] cs = m.getParameterTypes();
-	Trees as = new Trees(getType(co));
-	for (int i = 0; i < cs.length; i++)
-	    as = as.append(getType(cs[i]));
-	return as;
-    }
-
-    public static String method_name ( int method_number ) {
-	return methods.get(method_number).name;
-    }
-
-    public static Trees signature ( int method_number ) {
-	return methods.get(method_number).signature;
-    }
-
-    public static void importClass ( String class_name ) {
-	try {
-	    Method[] ms = Class.forName(class_name).getMethods();
-	    Vector<MethodInfo> mv = new Vector<MethodInfo>();
-	    for (int i = 0; i < ms.length; i++)
-		if (!object_method(ms[i].getName()) && ms[i].getModifiers() == 9)
-		    try {
-			Trees sig = signature(ms[i]);
-			MethodInfo m = new MethodInfo(ms[i].getName(),sig,ms[i]);
-			mv.add(m);
-			methods.add(m);
-		    } catch ( Exception e ) {
-			System.out.println("Warning: method "+ms[i].getName()+" cannot be imported");
-			System.out.println(e);
-			throw new Error("");
-		    };
-	    Collections.sort(methods);
-	    if (Translate.functions == null)
-		Translate.functions = Trees.nil;
-	    for ( MethodInfo m: methods )
-		Translate.functions = Translate.functions.append(new Node(m.name,m.signature));
-	    if (trace_imported_methods) {
-		System.out.print("Importing methods: ");
-		for (int i = 0; i < mv.size(); i++ )
-		    System.out.print(mv.get(i).name+mv.get(i).signature.tail()
-				     +":"+mv.get(i).signature.head()+"  ");
-		System.out.println();
-	    }
-	} catch (ClassNotFoundException x) {
-	    throw new Error("Undefined class: "+class_name);
-	}
-    }
-
-    public static void importMethod ( String class_name, String method_name ) {
-	try {
-	    Method[] ms = Class.forName(class_name).getMethods();
-	    MethodInfo m = null;
-	    for (int i = 0; i < ms.length; i++)
-		if (ms[i].getName().equals(method_name)
-		    && !object_method(ms[i].getName()) && ms[i].getModifiers() == 9) {
-		    Trees sig = signature(ms[i]);
-		    m = new MethodInfo(ms[i].getName(),sig,ms[i]);
-		    Translate.functions = Translate.functions.append(new Node(ms[i].getName(),sig));
-		    break;
-		};
-	    if (m == null)
-		throw new Error("No such method: "+method_name);
-	    methods.add(m);
-	    Collections.sort(methods);
-	    if (trace_imported_methods)
-		System.out.println("Importing method: "+m.name+m.signature.tail()
-				   +":"+m.signature.head()+"  ");
-	} catch (ClassNotFoundException x) {
-	    throw new Error("Undefined class: "+class_name);
-	}
-    }
-
-    public static Tree find_method ( String method_name, Trees args ) {
-	for (int i = 0; i < methods.size(); i++ ) {
-	    MethodInfo m = methods.get(i);
-	    if (m.name.equals(method_name) && Translate.subtype(args,m.signature.tail()))
-		return m.signature.head();
-	};
-	return null;
-    }
-
-    public static void print_methods () {
-	for (int i = 0; i < methods.size(); i++ ) {
-	    MethodInfo m = methods.get(i);
-	    System.out.print(" "+m.name+":"+m.signature.tail()+"->"+m.signature.head());
-	};
-    }
-
-    public static int find_method_number ( String method_name, Trees args ) {
-	for (int i = 0; i < methods.size(); i++ ) {
-	    MethodInfo m = methods.get(i);
-	    if (m.name.equals(method_name) && Translate.subtype(args,m.signature.tail()))
-		return i;
-	};
-	return -1;
-    }
-
-    public static MRData call ( int method_number, MRData... args ) {
-	if (method_number < 0 || method_number >= methods.size())
-	    throw new Error("Run-time error (unknown method name)");
-	MethodInfo m = methods.get(method_number);
-	try {
-	    return (MRData)m.method.invoke(null,(Object[])args);
-	} catch (Exception e) {
-	    Tuple t = new Tuple(args.length);
-	    for ( int i = 0; i < args.length; i++ )
-		t.set(i,args[i]);
-	    System.err.println("Run-time error in method call: "+m.name+t+" of type "
-			       +m.signature.tail()+"->"+m.signature.head());
-	    throw new Error(e.toString());
-	}
     }
 }

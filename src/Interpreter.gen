@@ -1,68 +1,35 @@
-/********************************************************************************
-   Copyright 2011-2013 Leonidas Fegaras, University of Texas at Arlington
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.mrql;
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-   File: Interpreter.gen
-   The MRQL interpreter
-   Programmer: Leonidas Fegaras, UTA
-   Date: 10/14/10 - 02/10/13
-
-********************************************************************************/
-
-package hadoop.mrql;
-
-import java_cup.runtime.*;
 import Gen.*;
-import java.util.*;
-import java.io.*;
+import java.util.Iterator;
+import java.io.PrintStream;
 
 
-// the run-time environment for in-memory evaluation (binds variables to MRData)
-final class Environment {
-    public String name;
-    public MRData value;
-    public Environment next;
-
-    Environment ( String n, MRData v, Environment next ) {
-	name = n;
-	value = v;
-	this.next = next;
-    }
-}
-
-
-class Interpreter extends Translate {
+/** The MRQL interpreter */
+public class Interpreter extends TypeInference {
 
     public final static Tree identity_mapper = #<lambda(x,bag(x))>;
 
     static Environment global_env = null;
 
-    static {
-	// XML and JSON are user-defined types:
-	datadef("XML",#<union(Node(tuple(string,bag(tuple(string,string)),list(XML))),
-			      CData(string))>);
-	datadef("JSON",#<union(JObject(bag(tuple(string,JSON))),
-			       JArray(list(JSON)),
-			       Jstring(string),
-			       Jlong(long),
-			       Jdouble(double),
-			       Jbool(bool),
-			       Jnull(tuple()))>);
-	constant(#<PI>,#<double>,new MR_double(Math.PI));
-	DataSource.loadParsers();
-    }
-
+    /** retrieve variable binding */
     public final static MRData variable_lookup ( final String v, final Environment environment ) {
 	for ( Environment env = environment; env != null; env = env.next ) {
 	    if (v == env.name)  // doesn't need equals()
@@ -71,10 +38,12 @@ class Interpreter extends Translate {
 	return null;
     }
 
+    /** insert a new global variable binding */
     public final static void global_binding ( final String var, final MRData value ) {
 	global_env = new Environment(var,value,global_env);
     }
 
+    /** remove a global variable binding */
     public static void remove_binding ( String v ) {
 	for ( Environment env = global_env; env.next != null; env = env.next )
 	    if (v == env.next.name)  // doesn't need equals()
@@ -83,307 +52,10 @@ class Interpreter extends Translate {
 	    global_env = global_env.next;
     }
 
-    final static String print_XML ( final Union x ) {
-	if (x.tag() == 1)
-	    return ((MR_string)x.value()).get();
-	Tuple t = (Tuple)x.value();
-	String s = "<"+((MR_string)t.get(0)).get();
-	for ( MRData a: (Bag)t.get(1) ) {
-	    Tuple attr = (Tuple)a;
-	    s += " "+((MR_string)attr.first()).get()+"=\""
-		 +((MR_string)attr.second()).get()+"\"";
-	};
-	Bag c = (Bag)t.get(2);
-	if (c.size() == 0)
-	    return s+"/>";
-	s += ">";
-	for ( MRData e: c )
-	    s += print_XML((Union)e);
-	return s+"</"+((MR_string)t.get(0)).get()+">";
-    }
-
-    static String print_JSON ( final Union x ) {
-	switch (x.tag()) {
-	case 0:
-	    String s = "{ ";
-	    for ( MRData e: (Bag)x.value() ) {
-		Tuple t = (Tuple)e;
-		s += t.get(0)+": "+print_JSON((Union)t.get(1))+", ";
-	    };
-	    return s.substring(0,s.length()-2)+" }";
-	case 1:
-	    String q = "[ ";
-	    for ( MRData e: (Bag)x.value() )
-		q += print_JSON((Union)e)+", ";
-	    return q.substring(0,q.length()-2)+" ]";
-	};
-	return ""+x.value();
-    }
-
-    // An MRData printer based on type information
-    final static String print ( final MRData x, final Tree type ) {
-	try {
-	    if (x instanceof Inv)
-		return print(((Inv)x).value(),type);
-	    if (type.equals(#<XML>))
-		return print_XML((Union)x);
-	    if (type.equals(#<JSON>))
-		return print_JSON((Union)x);
-	    match expand(type) {
-	    case persistent(`tp):
-		return print(x,tp);
-	    case Bag(`tp):
-		if (x instanceof MR_dataset) {
-		    DataSet ds = ((MR_dataset)x).dataset();
-		    return print(Plan.collect(ds),#<bag(`tp)>);
-		} else return print(x,#<bag(`tp)>);
-	    case List(`tp):
-		if (x instanceof MR_dataset) {
-		    DataSet ds = ((MR_dataset)x).dataset();
-		    return print(Plan.collect(ds),#<list(`tp)>);
-		} else return print(x,#<list(`tp)>);
-	    case bag(`tp):
-	        Bag b = (Bag)x;
-		Iterator<MRData> bi = b.iterator();
-		if (!bi.hasNext())
-		    return "{}";
-		String s = "{ "+print(bi.next(),tp);
-		for ( long i = 1; bi.hasNext() && (Config.max_bag_size_print < 0
-						   || i < Config.max_bag_size_print); i++ )
-		    s += ", "+print(bi.next(),tp);
-		if (bi.hasNext())
-		    return s+", ... }";
-		else return s+" }";
-	    case list(`tp):
-	        Bag b = (Bag)x;
-		Iterator<MRData> bi = b.iterator();
-		if (!bi.hasNext())
-		    return "[]";
-		String s = "[ "+print(bi.next(),tp);
-		for ( long i = 1; bi.hasNext() && (Config.max_bag_size_print < 0
-						   || i < Config.max_bag_size_print); i++ )
-		    s += ", "+print(bi.next(),tp);
-		if (bi.hasNext())
-		    return s+", ... ]";
-		else return s+" ]";
-	    case tuple(...el):
-	        Tuple t = (Tuple)x;
-		if (t.size() == 0)
-		    return "()";
-		String s = "("+print(t.get((short)0),el.nth(0));
-		for ( short i = 1; i < t.size(); i++ )
-		    s += ","+print(t.get(i),el.nth(i));
-		return s+")";
-	    case record(...el):
-	        Tuple t = (Tuple)x;
-		if (t.size() == 0)
-		    return "<>";
-		String s = "< ";
-		match el.nth(0) {
-		case bind(`a,`tp):
-		    s += a+": "+print(t.get((short)0),tp);
-		};
-		for ( short i = 1; i < t.size(); i++ )
-		    match el.nth(i) {
-		    case bind(`a,`tp):
-			s += ", "+a+": "+print(t.get(i),tp);
-		    };
-		return s+" >";
-	    case union(...el):
-	        Union u = (Union)x;
-		match el.nth(u.tag()) {
-		case `c(tuple(...ts)):
-		    return c+print(u.value(),#<tuple(...ts)>);
-		case `c(`tp):
-		    return c+"("+print(u.value(),tp)+")";
-		}
-	    };
-	    return x.toString();
-	} catch (Exception ex) {
-	    return x.toString();
-	}
-    }
-
-    final static String tab ( int n ) {
-	String s = "";
-	for ( int i = 0; i < n; i++ )
-	    s += " ";
-	return s;
-    }
-
-    public final static String print_plan ( Tree e, int n, boolean pv ) {
-	match e {
-	case cMap(`f,`s):
-	    return "cMap:\n"+tab(n+3)+"input: "+print_plan(s,n+10,true);
-	case AggregateMap(`f,`a,`z,`s):
-	    return "AggregateMap:\n"+tab(n+3)+"input: "+print_plan(s,n+10,true);
-	case MapReduce(`m,`r,`s,_):
-	    return "MapReduce:\n"+tab(n+3)+"input: "+print_plan(s,n+10,true);
-	case MapCombineReduce(`m,`c,`r,`s,_):
-	    return "MapCombineReduce:\n"+tab(n+3)+"input: "+print_plan(s,n+10,true);
-	case MapAggregateReduce(`m,`r,`a,`z,`s,_):
-	    return "MapAggregateReduce:\n"+tab(n+3)+"input: "+print_plan(s,n+10,true);
-	case MapReduce2(`mx,`my,`r,`x,`y,_):
-	    return "MapReduce2:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
-		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
-	case MapAggregateReduce2(`mx,`my,`r,`a,null,`x,`y,...):
-	    return "MapReduce2:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
-		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
-	case MapAggregateReduce2(`mx,`my,`r,`a,`z,`x,`y,...):
-	    return "MapAggregateReduce2:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
-		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
-	case MapJoin(`kx,`ky,`r,`x,`y):
-	    return "MapJoin:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
-		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
-	case MapAggregateJoin(`kx,`ky,`r,`a,null,`x,`y):
-	    return "MapJoin:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
-		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
-	case MapAggregateJoin(`kx,`ky,`r,`a,`z,`x,`y):
-	    return "MapAggregateJoin:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
-		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
-	case CrossProduct(`mx,`my,`r,`x,`y):
-	    return "CrossProduct:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
-		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
-	case CrossAggregateProduct(`mx,`my,`r,`a,null,`x,`y):
-	    return "CrossProduct:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
-		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
-	case CrossAggregateProduct(`mx,`my,`r,`a,`z,`x,`y):
-	    return "CrossAggregateProduct:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
-		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
-	case Aggregate(`a,`z,`s):
-	    return "Aggregate:\n"+tab(n+3)+"input: "+print_plan(s,n+10,true);
-	case BinarySource(`k,`file,_):
-	    return "Source (binary): "+file;
-	case BinarySource(`file,_):
-	    return "Source (binary): "+file;
-	case ParsedSource(`m,`parser,`file,...args):
-	    if (m instanceof LongLeaf)
-		return "Source ("+parser+"): "+file;
-	    else fail
-	case ParsedSource(`parser,`file,...args):
-	    return "Source ("+parser+"): "+file;
-	case Generator(...):
-	    return "Generator";
-	case Merge(`x,`y):
-	    return "Merge:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
-		   +tab(n+3)+"right: "+print_plan(y,n+10,true);
-	case BSP(_,_,_,_,...ds):
-	    String ret = "BSP:\n";
-	    for ( Tree d: ds )
-		ret += tab(n+3)+"input: "+print_plan(d,n+10,true);
-	    return ret;
-	case Loop(lambda(tuple(...vs),tuple(...bs)),tuple(...ss),...):
-	    String ret = "Loop ("+vs+"):\n"+tab(n+3)+"init: "
-		+vs.head()+" = "+print_plan(ss.head(),n+vs.head().toString().length()+12,true)+"\n";
-	    ss = ss.tail();
-	    for ( Trees s = vs.tail(); !s.is_empty() && !ss.is_empty(); s = s.tail(), ss = ss.tail() )
-		ret += tab(n+9)+s.head()+" = "+print_plan(ss.head(),n+s.head().toString().length()+12,true)+"\n";
-	    ret += tab(n+3)+"step: "
-		+vs.head()+" = "+print_plan(bs.head(),n+vs.head().toString().length()+12,true)+"\n";
-	    bs = bs.tail();
-	    for ( Trees s = vs.tail(); !s.is_empty() && !bs.is_empty(); s = s.tail(), bs = bs.tail() )
-		ret += tab(n+9)+s.head()+" = "+print_plan(bs.head(),n+s.head().toString().length()+12,true)+"\n";
-	    return ret;
-	case `f(lambda(`v,`b),`s,...):
-	    if (! #[Repeat,repeat,Closure,closure].member(#<`f>))
-		fail;
-	    return f+" ("+v+"):\n"+tab(n+3)+"init: "+print_plan(s,n+9,true)+"\n"
-		   +tab(n+3)+"step: "+print_plan(b,n+9,true);
-	case Let(`v,`u,`body):
-	    return "let "+v+" = "+print_plan(u,n+10+v.toString().length(),pv)+"\n"
-		   +tab(n)+print_plan(body,n,pv);
-	case If(_,`x1,If(_,`x2,If(_,`x3,`x4))):
-	    return "Choice 1: "+print_plan(x1,n+10,pv)+"\n"
-		   +tab(n)+"Choice 2: "+print_plan(x2,n+10,pv)+"\n"
-		   +tab(n)+"Choice 3: "+print_plan(x3,n+10,pv)+"\n"
-		   +tab(n)+"Choice 4: "+print_plan(x4,n+10,pv);
-	case If(_,`x1,If(_,`x2,`x3)):
-	    return "Choice 1: "+print_plan(x1,n+10,pv)+"\n"
-		   +tab(n)+"Choice 2: "+print_plan(x2,n+10,pv)+"\n"
-		   +tab(n)+"Choice 3: "+print_plan(x3,n+10,pv);
-	case If(`c,`x,`y):
-	    return "Choice 1: "+print_plan(x,n+10,pv)+"\n"
-		   +tab(n)+"Choice 2: "+print_plan(y,n+10,pv);
-	case `f(...as):
-	    String s = "";
-	    for (Tree a: as) {
-		String ps = print_plan(a,n,pv);
-		if (!ps.equals("") && !a.is_variable())
-		    s += ps+(ps.endsWith("\n")?"":"\n");
-	    };
-	    return s;
-	};
-	if (pv && e.is_variable())
-	    return e.toString();
-	return "";
-    }
-
-    final static Tree reify ( final MRData x, Tree type ) {
-	if (x instanceof MR_variable)
-	    return new VariableLeaf("t_"+((MR_variable)x).var_num);
-	type = expand(type);
-	match type {
-	case `T(`tp):
-	    if (!is_collection(T))
-		fail;
-	    Bag b = (Bag)x;
-	    Trees as = #[];
-	    for ( MRData e: b)
-		as = as.append(reify(e,tp));
-	    return #<`T(...as)>;
-	case tuple(...el):
-	    Tuple t = (Tuple)x;
-	    Trees as = #[];
-	    for ( short i = 0; i < t.size(); i++ )
-		as = as.append(reify(t.get(i),el.nth(i)));
-	    return #<tuple(...as)>;
-	case record(...el):
-	    Tuple t = (Tuple)x;
-	    Trees as = #[];
-	    for ( short i = 0; i < t.size(); i++ )
-		match el.nth(i) {
-		case bind(`a,`tp):
-		    as = as.append(#<bind(`a,`(reify(t.get(i),tp)))>);
-		};
-	    return #<record(...as)>;
-	case union(...el):
-	    Union u = (Union)x;
-	    match el.nth(u.tag()) {
-	    case `c(tuple(...ts)):
-		return #<call(`c,`(reify(u.value(),#<tuple(...ts)>)))>;
-	    case `c(`tp):
-		return #<call(`c,`(reify(u.value(),tp)))>;
-	    };
-	case string:
-	    String[] s = ((MR_string)x).get().split("\\x7B\\x7B");
-	    if (s.length == 1)
-		return new StringLeaf(s[0]);
-	    Trees as = s[0].length() == 0 ? #[] : #[].append(new StringLeaf(s[0]));
-	    for ( int i = 1; i < s.length; i++ ) {
-		String[] d = s[i].split("\\x7D\\x7D",2);
-		if (d.length < 2)
-		    throw new Error("");
-		as = as.append(new VariableLeaf("t_"+Integer.parseInt(d[0])));
-		if (d[1].length() > 0)
-		    as = as.append(new StringLeaf(d[1]));
-	    };
-	    Tree res = as.reverse().head();
-	    for ( Tree a: as.reverse().tail() )
-		res = #<call(plus,`a,`res)>;
-	    return res;
-        case short: return #<typed(`(((MR_short)x).get()),`type)>;
-        case int: return #<typed(`(((MR_int)x).get()),`type)>;
-	case long: return #<typed(`((int)((MR_long)x).get()),`type)>;
-        case float: return #<typed(`(((MR_float)x).get()),`type)>;
-	case double: return #<typed(`((float)(((MR_double)x).get())),`type)>;
-	};
-	throw new Error("wrong type: "+type);
-    }
-
     static int coerce_method = ClassImporter.find_method_number("coerce",#[any,int]);
 
-    // untyped reify: not type-correct but will not crash the run-time system
-    final static Tree reify ( final MRData x ) {
+    /** untyped reify: not type-correct but will not crash the run-time system */
+    private final static Tree reify ( final MRData x ) {
 	if (x instanceof Bag) {
 	    Bag b = (Bag)x;
 	    Trees as = #[];
@@ -411,8 +83,8 @@ class Interpreter extends Translate {
 	throw new Error("wrong MRData: "+x);
     }
 
-    // evaluate an MRQL function in memory
-    final static Function evalf ( final String v,
+    /** evaluate an MRQL function in memory */
+    private final static Function evalf ( final String v,
 				  final Tree body,
 				  final Environment env ) {
 	return new Function() {
@@ -422,7 +94,8 @@ class Interpreter extends Translate {
 	};
     }
 
-    final static Function evalF ( Tree fnc, Environment env ) {
+    /** evaluate an MRQL function in memory */
+    public final static Function evalF ( Tree fnc, Environment env ) {
 	match fnc {
 	case compiled(`ln,`lm):
 	    try {
@@ -446,9 +119,10 @@ class Interpreter extends Translate {
 	throw new Error("Ill-formed lambda: "+fnc);
     }
 
-    final static Function evalT ( final String[] params,
-				  final Tree body,
-				  final Environment env ) {
+    /** evaluate an MRQL function in memory */
+    private final static Function evalT ( final String[] params,
+					  final Tree body,
+					  final Environment env ) {
 	return new Function() {
 	    final public MRData eval ( final MRData x ) {
 		Environment new_env = env;
@@ -459,7 +133,6 @@ class Interpreter extends Translate {
 	};
     }
 
-    //final static Bag empty_bag = new Bag();
     final static String true_name = #<true>.toString();
     final static String false_name = #<false>.toString();
     final static String null_name = #<null>.toString();
@@ -476,7 +149,7 @@ class Interpreter extends Translate {
 	return b.toString();
     }
 
-    // evaluate an MRQL expression in memory
+    /** evaluate an MRQL expression in memory and print tracing info */
     final static MRData evalE ( final Tree e, final Environment env ) {
 	if (Config.trace_exp_execution) {
 	    tab_count += 3;
@@ -490,7 +163,8 @@ class Interpreter extends Translate {
 	return res;
     }
 
-    final static MRData evalEE ( final Tree e, final Environment env ) {
+    /** evaluate an MRQL expression in memory */
+    private final static MRData evalEE ( final Tree e, final Environment env ) {
 	try {
 	    if (e.is_variable()) {
 		String v = e.toString();
@@ -647,13 +321,6 @@ class Interpreter extends Translate {
 				evalF(r,env),
 				(Bag)evalE(x,env),
 				(Bag)evalE(y,env));
-	case join(`kx,`ky,`r,`x,`y):
-	    return MapReduceAlgebra.join(
-				evalF(kx,env),
-				evalF(ky,env),
-				evalF(r,env),
-				(Bag)evalE(x,env),
-				(Bag)evalE(y,env));
 	case crossProduct(`mx,`my,`r,`x,`y):
 	    return MapReduceAlgebra.crossProduct(
 			      evalF(mx,env),
@@ -764,7 +431,7 @@ class Interpreter extends Translate {
 		if (s != null)
 		    try {
 			Tree ft = Tree.parse(s);
-			store(f.toString(),ft);
+			TopLevel.store(f.toString(),ft);
 			fnc = evalE(ft,env);
 			global_binding(f.toString(),fnc);
 		    } catch (Exception ex) {
@@ -805,15 +472,17 @@ class Interpreter extends Translate {
 	}
     }
 
+    /** evaluate an MRQL expression in memory */
     final static MRData evalE ( final Tree e ) {
 	return evalE(e,null);
     }
 
+    /** evaluate MRQL physical operators in memory (returns a Bag) */
     final static Bag evalS ( final Tree e, final Environment env ) {
 	return evalM(e,env);
     }
 
-    // evaluate MRQL physical operators in memory (returns a Bag)
+    /** evaluate MRQL physical operators in memory (returns a Bag) */
     final static Bag evalM ( final Tree e, final Environment env ) {
 	if (Config.trace_execution) {
 	    tab_count += 3;
@@ -827,6 +496,7 @@ class Interpreter extends Translate {
 	return res;
     }
 
+    /** evaluate MRQL physical operators in memory (returns a Bag) */
     final static Bag evalMM ( final Tree e, final Environment env ) {
 	try {
 	    match e {
@@ -855,6 +525,13 @@ class Interpreter extends Translate {
 				evalF(r,env),
 				evalM(x,env),
 				evalM(y,env));
+	    case MapCombineReduce2(`mx,`my,`c,`r,`x,`y,_):
+		return MapReduceAlgebra.mapReduce2(
+				evalF(mx,env),
+				evalF(my,env),
+				evalF(r,env),
+				evalM(x,env),
+				evalM(y,env));
 	    case MapAggregateReduce2(`mx,`my,`r,`acc,`zero,`x,`y,_):
 		return new Bag(MapReduceAlgebra.aggregate(evalF(acc,env),evalE(zero,env),
 							  evalM(#< MapReduce2(`mx,`my,`r,`x,`y,false)>,env)));
@@ -868,6 +545,17 @@ class Interpreter extends Translate {
 	    case MapAggregateJoin(`kx,`ky,`r,`acc,`zero,`x,`y):
 		return new Bag(MapReduceAlgebra.aggregate(evalF(acc,env),evalE(zero,env),
 							  evalM(#<MapJoin(`kx,`ky,`r,`x,`y)>,env)));
+	    case GroupByJoin(`kx,`ky,`gx,`gy,`m,`c,`r,`x,`y,`o):
+		return MapReduceAlgebra.groupByJoin(
+				evalF(kx,env),
+				evalF(ky,env),
+				evalF(gx,env),
+				evalF(gy,env),
+				evalF(m,env),
+				evalF(c,env),
+				evalF(r,env),
+				evalM(x,env),
+				evalM(y,env));
 	    case CrossProduct(`mx,`my,`r,`x,`y):
 		return MapReduceAlgebra.crossProduct(
 				evalF(mx,env),
@@ -958,6 +646,11 @@ class Interpreter extends Translate {
 			    return new Tuple(i,iter.next());
 			}
 		    });
+	    case BSP(...):
+		MRData res = evalE(e,env);
+		if (res instanceof Bag)
+		    return (Bag)res;
+		else return new Bag(res);
 	    case `v:
 		if (!v.is_variable())
 		    fail;
@@ -983,8 +676,8 @@ class Interpreter extends Translate {
 	}
     }
 
-    // replace all non-free variables with their reified values
-    final static Tree closure ( Tree e, Environment env, Trees local_vars ) {
+    /** replace all non-free variables with their reified values */
+    private final static Tree closure ( Tree e, Environment env, Trees local_vars ) {
 	match e {
 	case lambda(`x,`b):
 	    return #<lambda(`x,`(closure(b,env,local_vars.cons(x))))>;
@@ -1016,6 +709,7 @@ class Interpreter extends Translate {
 	return e;
     }
 
+    /** replace all non-free variables with their reified values */
     final static Tree closure ( Tree e, Environment env ) {
 	return closure(e,env,#[]);
     }
@@ -1024,55 +718,52 @@ class Interpreter extends Translate {
     static Tree query_plan;
     static boolean is_dataset;
 
-    /* translate an MRQL expression e into a physical plan */
+    /** translate an MRQL expression e into a physical plan */
     final static Tree translate_expression ( Tree e ) {
 	try {
 	    if (Config.trace)
-		System.out.println("Query at line "+Main.parser.scanner.line_pos()+": "+print_query(e));
-	    Tree qt = type_inference(e);
+		System.out.println("Query at line "+Main.parser.line_pos()+": "+print_query(e));
+	    Tree qt = TypeInference.type_inference(e);
 	    System.out.println("Query type: "+print_type(qt));
 	    query_type = qt;
-	    Tree ne = remove_groupby(e);
+	    Tree ne = Normalization.remove_groupby(e);
 	    if (Config.trace)
 		System.out.println("After removing group-by:\n"+ne.pretty(0));
-	    ne = rename(ne);
+	    ne = Simplification.rename(ne);
 	    if (Config.trace)
 		System.out.println("After renaming variables:\n"+ne.pretty(0));
-	    ne = rename(normalize_all(ne));
+	    ne = Simplification.rename(Normalization.normalize_all(ne));
 	    if (Config.trace)
 		System.out.println("Normalized query:\n"+ne.pretty(0));
 	    type_inference(ne);
 	    ne = QueryPlan.best_plan(ne);
 	    if (Config.trace)
 		System.out.println("Best plan:\n"+ne.pretty(0));
-	    ne = rename(translate_select(ne));
+	    ne = Simplification.rename(Translator.translate_select(ne));
 	    if (Config.trace)
 		System.out.println("After removing select-queries:\n"+ne.pretty(0));
-	    ne = simplify_all(ne);
+	    ne = Simplification.simplify_all(ne);
 	    if (Config.trace)
 		System.out.println("Algebra expression:\n"+ne.pretty(0));
 	    Tree pt = type_inference(ne);
 	    if (Config.trace)
 		System.out.println("Algebraic type: "+print_type(pt));
-	    ne = translate_all(ne);
+	    ne = AlgebraicOptimization.translate_all(ne);
 	    if (Config.trace)
 		System.out.println("Translated expression:\n"+ne.pretty(0));
-	    Tree et = type_inference(ne);
-	    is_dataset = is_dataset_expr(ne);
+	    Tree et = TypeInference.type_inference(ne);
+	    is_dataset = PlanGeneration.is_dataset_expr(ne);
 	    if (Config.trace)
 		System.out.println("Physical plan type: "+print_type(et));
 	    repeat_variables = #[];
-	    Tree plan = makePlan(simplify_all(ne));
+	    Tree plan = PlanGeneration.makePlan(Simplification.simplify_all(ne));
 	    if (Config.bsp_mode) {
-		BSPTranslate.reset();
+		BSPTranslator.reset();
 		if (Config.trace)
 		    System.out.println("Physical plan:\n"+plan.pretty(0));
-		plan = BSPTranslate.mr2bsp(BSPTranslate.preprocess(plan));
+		plan = Materialization.materialize_terms(BSPTranslator.constructBSPplan(plan));
 		if (Config.trace)
 		    System.out.println("BSP plan:\n"+plan.pretty(0));
-		plan = materialize_terms(BSPTranslate.bspSimplify(plan));
-		if (Config.trace)
-		    System.out.println("BSP optimized plan:\n"+plan.pretty(0));
 		else {
 		    String splan = print_plan(plan,0,false);
 		    if (!splan.equals(""))
@@ -1080,8 +771,8 @@ class Interpreter extends Translate {
 		}
 	    } else {
 		if (Config.hadoop_mode)
-		    plan = physical_plan(plan);
-		plan = materialize_terms(common_factoring(plan));
+		    plan = PlanGeneration.physical_plan(plan);
+		plan = Materialization.materialize_terms(AlgebraicOptimization.common_factoring(plan));
 		if (Config.trace)
 		    System.out.println("Physical plan:\n"+plan.pretty(0));
 		else {
@@ -1097,279 +788,10 @@ class Interpreter extends Translate {
 	    if (!Config.trace && x.toString().endsWith("Type Error"))
 		return null;
 	    if (x.getMessage() != null) // system error
-		System.err.println("*** MRQL System Error at line "+Main.parser.scanner.line_pos()+": "+x);
+		System.err.println("*** MRQL System Error at line "+Main.parser.line_pos()+": "+x);
 	    if (Config.trace)
 		x.printStackTrace(System.err);
 	    return null;
-	}
-    }
-
-    static boolean memory_parsed_source ( Tree e ) {
-	match e {
-	case ParsedSource(...): return true;
-	case Merge(`x,`y): return memory_parsed_source(x) && memory_parsed_source(y);
-	};
-	return false;
-    }
-
-    /* translate and evaluate an MRQL expression e into MRData */
-    static MRData expression ( Tree e, boolean print ) {
-	try {
-	    Tree plan = translate_expression(e);
-	    query_plan = plan;
-	    tab_count = -3;
-	    if (plan == null)
-		return null;
-	    MRData res = evalE(plan,null);
-	    if (print)
-		if (!Config.hadoop_mode && Config.bsp_mode && memory_parsed_source(plan))
-		    System.out.println("Result:\n"+print(((Tuple)((Bag)res).get(0)).second(),query_type));
-		else System.out.println("Result:\n"+print(res,query_type));
-	    return res;
-	} catch (Exception x) {
-	    if (x.getMessage() != null)
-		System.err.println("*** MRQL System Error at line "+Main.parser.scanner.line_pos()+": "+x);
-	    if (Config.trace)
-		x.printStackTrace(System.err);
-	    return null;
-	} catch (Error x) {
-	    if (x.getMessage() != null)
-		System.err.println("*** MRQL System Error at line "+Main.parser.scanner.line_pos()+": "+x);
-	    if (Config.trace)
-		x.printStackTrace(System.err);
-	    return null;
-	}
-    }
-
-    /* translate, evaluate, and print the results of an MRQL expression e */
-    final static MRData expression ( Tree e ) {
-	reset();
-	return expression(e,true);
-    }
-
-    final static void assign ( String v, Tree e ) {
-	if (variable_lookup(v,global_env) != null) {
-	    global_type_env.remove(v);
-	    remove_binding(v);
-	};
-	global_vars.insert(v,e);
-    }
-
-    final static boolean is_function ( Tree e ) {
-	match e {
-	case function(...): return true;
-	};
-	return false;
-    }
-
-    final static Tree store ( String v, Tree e ) {
-	reset();
-	if (global_vars.lookup(v) != null)
-	    global_vars.remove(v);
-	MRData res = expression(e,false);
-	global_type_env.insert(v,query_type);
-	if (res instanceof Bag)
-	    ((Bag)res).materialize();
-	global_binding(v,res);
-	return query_plan;
-    }
-
-    final static void constant ( Tree v, Tree type, MRData value ) {
-	String var = v.toString();
-	if (global_vars.lookup(var) != null)
-	    global_vars.remove(var);
-	global_type_env.insert(var,type);
-	global_binding(var,value);
-    }
-
-    final static void functiondef ( String fnc, Trees params, Tree out_type, Tree body ) {
-	reset();
-	Trees as = #[];
-	Trees ps = #[];
-	for ( Tree param: params )
-	    match param {
-	    case bind(`v,`tp):
-		Tree ntp = normalize_type(tp);
-		as = as.append(ntp);
-		ps = ps.append(#<bind(`v,`ntp)>);
-	    case _: type_error(param,"Ill-formed function parameter: "+param);
-	    };
-	out_type = normalize_type(out_type);
-	// needed for recursive functions
-	global_type_env.insert(fnc,#<arrow(tuple(...as),`out_type)>);
-	Tree fname = #<`fnc>;
-	if (!is_pure(body))
-	    impure_functions = impure_functions.append(fname);
-	Tree plan = store(fnc,#<function(tuple(...ps),`out_type,`body)>);
-	if (plan != null)
-	    Translate.global_functions.insert(fnc,plan);
-	if (Config.hadoop_mode && plan != null)
-	    Plan.conf.set("mrql.global."+fnc,
-			  closure(plan,global_env).toString());
-    }
-
-    final static void dump ( String file, Tree e ) {
-	MRData res = expression(e,false);
-	try {
-	    query_type = make_persistent_type(query_type);
-	    if (Config.hadoop_mode && res != null) 
-		Plan.dump(file,query_type,res);
-	    else MapReduceAlgebra.dump(file,query_type,res);
-	} catch (Exception x) {
-	    throw new Error(x);
-	}
-    }
-
-    final static void dump_text ( String file, Tree e ) {
-	MRData res = expression(e,false);
-	if (res != null)
-	    try {
-		PrintStream out = (Config.hadoop_mode)
-		                   ? Plan.print_stream(file)
-		                   : new PrintStream(file);
-		if (res instanceof MR_dataset)
-		    res = Plan.collect(((MR_dataset)res).dataset());
-		int ps = Config.max_bag_size_print;
-		Config.max_bag_size_print = -1;
-		match query_type {
-		case `T(tuple(...ts)):
-		    for ( MRData x: (Bag)res ) {
-			Tuple t = (Tuple)x;
-			out.print(print(t.get((short)0),ts.nth(0)));
-			for ( short i = 1; i < t.size(); i++ )
-			    out.print(","+print(t.get(i),ts.nth(i)));
-			out.println();
-		    }
-		case `T(`tp):
-		    for ( MRData x: (Bag)res )
-			out.println(print(x,tp));
-		case _: out.println(print(res,query_type));
-		};
-		Config.max_bag_size_print = ps;
-		out.close();
-	    } catch (Exception x) {
-		throw new Error(x);
-	    }
-    }
-
-    final static void typedef ( String name, Tree type ) {
-	type_names.insert(name,normalize_type(type));
-    }
-
-    final static void datadef ( String name, Tree type ) {
-	int i = 0;
-	Trees as = #[];
-	match type {
-	case union(...nl):
-	    // needed for recursive datatypes
-	    global_datatype_env.insert(name,#<union(...nl)>);
-	    for ( Tree n: nl )
-		match n {
-		case `c(`t):
-		    if (data_constructors.lookup(c.toString()) == null)
-			data_constructors.insert(c.toString(),#<`name(`i,`t)>);
-		    else type_error(type,"Data constructor "+c+" has already been defined");
-		    as = as.append(#<`c(`(normalize_type(t)))>);
-		    i++;
-		}
-        };
-	global_datatype_env.remove(name);
-	global_datatype_env.insert(name,#<union(...as)>);
-    }
-
-    static void aggregation ( String name, Tree type, Tree plus, Tree zero, Tree unit ) {
-	reset();
-	zero = rename(zero);
-	plus = rename(plus);
-	unit = rename(unit);
-	type = normalize_type(type);
-	Tree ztp = type_inference2(zero);
-	Tree v1 = new_var();
-	type_env.insert(v1.toString(),ztp);
-	type_inference2(normalize_all(#<apply(`plus,tuple(`v1,`v1))>));
-	Tree v2 = new_var();
-	type_env.insert(v2.toString(),type);
-	Tree utp = type_inference2(normalize_all(#<apply(`unit,`v2)>));
-	if (unify(utp,ztp) == null)
-	    type_error(unit,"Wrong type in unit result (expected "+ztp+" found "+utp);
-	monoids = monoids.append(#<`name(`type,`plus,`zero,`unit)>);
-    }
-
-    final static void evaluate_top_level ( Tree expr ) {
-	if (expr == null)
-	    return;
-	match expr {
-	case expression(`e):
-	    long t = System.currentTimeMillis();
-	    if (expression(e) != null)
-		System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
-	case assign(`v,`e): assign(v.toString(),e);
-	case store(`v,`e):
-	    long t = System.currentTimeMillis();
-	    if (store(v.toString(),e) != null)
-		System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
-	case dump(`s,`e):
-	    long t = System.currentTimeMillis();
-	    dump(s.stringValue(),e);
-	    System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
-	case dump_text(`s,`e):
-	    long t = System.currentTimeMillis();
-	    dump_text(s.stringValue(),e);
-	    System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
-	case typedef(`v,`t): typedef(v.toString(),t);
-	case datadef(`v,`t): datadef(v.toString(),t);
-	case functiondef(`f,params(...p),`tp,`e):
-	    functiondef(f.toString(),p,tp,e);
-	case macrodef(`name,params(...p),`e):
-	    Translate.global_macros.insert(name.toString(),#<macro(params(...p),`e)>);
-	case aggregation(`aggr,`type,`plus,`zero,`unit):
-	    aggregation(aggr.toString(),type,plus,zero,unit);
-	case import(`c):
-	    ClassImporter.importClass(c.variableValue());
-	case import(`c,...l):
-	    for (Tree m: l)
-		ClassImporter.importMethod(c.variableValue(),m.variableValue());
-	case include(`file):
-	    Main.include_file(file.toString());
-	case parser(`n,`p):
-	    try {
-		Class<? extends Parser> c = Class.forName(p.toString()).asSubclass(Parser.class);
-		DataSource.parserDirectory.put(n.toString(),c);
-	    } catch (ClassNotFoundException e) {
-		throw new Error("Class "+p.toString()+" not found");
-	    }
-	case impure(`fn):    // not used
-	    impure_functions = impure_functions.append(fn);
-	case _: throw new Error("Unknown statement: "+expr);
-	}
-    }
-}
-
-
-final class MRQL extends Interpreter {
-    public static MRData query ( String query ) {
-	evaluate("store tt := "+query+";");
-	return variable_lookup(#<tt>.toString(),global_env);
-    }
-
-    public static void evaluate ( String command ) {
-	try {
-	    MRQLParser parser = new MRQLParser();
-	    parser.scanner = new MRQLLex(new StringReader(command));
-	    MRQLLex.reset();
-	    parser.setScanner(parser.scanner);
-	    parser.parse();
-	} catch (Exception x) {
-	    x.printStackTrace();
-	    throw new Error(x);
-	}
-    }
-
-    public static void clean () {
-	try {
-	    Plan.clean();
-	} catch (IOException ex) {
-	    throw new Error("Failed to clean-up temporary files");
 	}
     }
 }

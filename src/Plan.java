@@ -1,46 +1,40 @@
-/********************************************************************************
-   Copyright 2011-2012 Leonidas Fegaras, University of Texas at Arlington
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-   File: Plan.java
-   Prelude for physical plan evaluation (see MapReduceEvaluator.java and BSPEvaluator.java)
-   Programmer: Leonidas Fegaras, UTA
-   Date: 10/14/10 - 08/10/12
-
-********************************************************************************/
-
-package hadoop.mrql;
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.mrql;
 
 import Gen.*;
 import java.io.*;
-import java.util.*;
+import java.util.Random;
+import java.util.ArrayList;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.SequenceFile.Sorter;
 
 
+/** A physical plan (a superclass for both MapReduce and BSP plans) */
 public class Plan {
     public static Configuration conf;
-    static List<String> temporary_paths = new ArrayList<String>();
+    static ArrayList<String> temporary_paths = new ArrayList<String>();
     private static Random random_generator = new Random();
-
     final static int max_input_files = 100;
-    // the cache that holds all local data in memory
-    static Tuple cache;
 
-    // generate a new path name in HDFS to store intermediate results
+    /** generate a new path name in HDFS to store intermediate results */
     public static String new_path ( Configuration conf ) throws IOException {
 	String dir = (Config.local_hadoop_mode)
 	             ? Config.tmpDirectory
@@ -55,7 +49,7 @@ public class Plan {
 	return path;
     }
 
-    // remove all temporary files
+    /** remove all temporary files */
     public static void clean () throws IOException {
         for (String p: temporary_paths)
             try {
@@ -68,15 +62,20 @@ public class Plan {
 	DataSource.dataSourceDirectory.clear();
     }
 
-    // return the data set size in bytes
+    /** return the data set size in bytes */
     public final static long size ( DataSet s ) {
 	return s.size(conf);
     }
 
+    /** the cache that holds all local data in memory */
+    static Tuple cache;
+
+    /** return the cache element at location loc */
     public static synchronized MRData getCache ( int loc ) {
 	return cache.get(loc);
     }
 
+    /** set the cache element at location loc to value and return ret */
     public static synchronized MRData setCache ( int loc, MRData value, MRData ret ) {
 	if (value instanceof Bag)
 	    ((Bag)value).materialize();
@@ -84,7 +83,7 @@ public class Plan {
 	return ret;
     }
 
-    // put the jar file that contains the compiled MR functional parameters into the TaskTracker classpath
+    /** put the jar file that contains the compiled MR functional parameters into the TaskTracker classpath */
     final static void distribute_compiled_arguments ( Configuration conf ) {
 	try {
 	    if (!Config.compile_functional_arguments)
@@ -101,7 +100,7 @@ public class Plan {
 	}
     }
 
-    // retrieve the compiled functional argument
+    /** retrieve the compiled functional argument of code */
     final static Function functional_argument ( Configuration conf, Tree code ) {
 	Node n = (Node)code;
 	if (n.name().equals("compiled"))
@@ -126,7 +125,7 @@ public class Plan {
 	else return ((Lambda) Interpreter.evalE(code)).lambda();
     }
 
-    // comparator for MRData keys
+    /** comparator for MRData keys */
     public final static class MRContainerKeyComparator implements RawComparator<MRContainer> {
 	int[] container_size;
 
@@ -143,16 +142,17 @@ public class Plan {
         }
     }
 
-    // The source physical operator for binary files
+    /** The source physical operator for binary files */
     public final static DataSet binarySource ( int source_num, String file ) {
 	return new DataSet(new BinaryDataSource(source_num,file,conf),0,0);
     }
 
+    /** The source physical operator for binary files */
     public final static DataSet binarySource ( String file ) {
 	return new DataSet(new BinaryDataSource(-1,file,conf),0,0);
     }
 
-    // splits the range min..max into multiple ranges, one for each mapper
+    /** splits the range min..max into multiple ranges, one for each mapper */
     public final static DataSet generator ( int source_num, long min, long max, long split_length ) throws Exception {
 	if (min > max)
 	    throw new Error("Wrong range: "+min+"..."+max);
@@ -190,20 +190,22 @@ public class Plan {
 	return ds;
     }
 
+    /** splits the range min..max into multiple ranges, one for each mapper */
     public final static DataSet generator ( long min, long max, long split_length ) throws Exception {
 	return generator(-1,min,max,split_length);
     }
 
-    // The source physical operator for text files
+    /** The source physical operator for parsing text files */
     public final static DataSet parsedSource ( int source_num, Class<? extends Parser> parser, String file, Trees args ) {
 	return new DataSet(new ParsedDataSource(source_num,file,parser,args,conf),0,0);
     }
 
+    /** The source physical operator for parsing text files */
     public final static DataSet parsedSource ( Class<? extends Parser> parser, String file, Trees args ) {
 	return new DataSet(new ParsedDataSource(file,parser,args,conf),0,0);
     }
 
-    // merge the sorted files of the data source
+    /** merge the sorted files of the data source */
     public final static Bag merge ( final DataSource s ) throws Exception {
 	Path path = new Path(s.path);
 	final FileSystem fs = path.getFileSystem(conf);
@@ -290,16 +292,17 @@ public class Plan {
 	    });
     }
 
-    // The collect physical operator
+    /** The collect physical operator */
     public final static Bag collect ( final DataSet x, boolean strip ) throws Exception {
 	return MRQLFileInputFormat.collect(x,strip);
     }
 
+    /** The collect physical operator */
     public final static Bag collect ( final DataSet x ) throws Exception {
 	return MRQLFileInputFormat.collect(x,true);
     }
 
-    // the DataSet union physical operator
+    /** the DataSet union physical operator */
     public final static DataSet merge ( final DataSet x, final DataSet y ) throws IOException {
 	DataSet res = x;
 	res.source.addAll(y.source);
@@ -310,7 +313,7 @@ public class Plan {
     final static MRContainer counter_container = new MRContainer(counter_key);
     final static MRContainer value_container = new MRContainer(new MR_int(0));
 
-    // The cache operator that dumps a bag into an HDFS file
+    /** The cache operator that dumps a bag into an HDFS file */
     public final static DataSet fileCache ( Bag s ) throws IOException {
 	String newpath = new_path(conf);
 	Path path = new Path(newpath);
@@ -328,7 +331,7 @@ public class Plan {
  	return new DataSet(new BinaryDataSource(0,newpath,conf),0,0);
     }
 
-    // for dumped data to a file, return the MRQL type of the data
+    /** for dumped data to a file, return the MRQL type of the data */
     public final static Tree get_type ( String file ) {
 	try {
 	    Path path = new Path(file);
@@ -346,13 +349,14 @@ public class Plan {
 	}
     }
 
-    public final static PrintStream print_stream ( String file )  throws Exception {
+    /** create a new PrintStream from the file */
+    final static PrintStream print_stream ( String file )  throws Exception {
 	Path path = new Path(file);
 	FileSystem fs = path.getFileSystem(conf);
 	return new PrintStream(fs.create(path));
     }
 
-    // dump both the MRQL data and their MRQL type into files
+    /** dump both the MRQL data and their MRQL type into files */
     public final static void dump ( String file, Tree type, MRData data ) throws Exception {
 	Path path = new Path(file);
 	FileSystem fs = path.getFileSystem(conf);

@@ -29,4 +29,4 @@ important, data (both input and indermediate) can fit in the cluster
 memory, and data processing requires complex/repetitive steps.
 
 Installation Instructions:
-https://github.com/fegaras/mrql/wiki
+http://lambda.uta.edu/mrql/

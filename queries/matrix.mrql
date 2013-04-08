@@ -1,10 +1,10 @@
 // vectors with random data:
 
-store "V"
+store "tmp/V"
   from select (random(1000)/1000.0,i)
          from i in 1...20;
 
-store "W"
+store "tmp/W"
   from select (random(1000)/1000.0,i)
          from i in 1...20;
 
@@ -14,21 +14,21 @@ macro Mrandom ( m, n ) {
   select (random(1000)/1000.0 as double,i,j) from i in 1...m, j in 1..n
 };
 
-store "X" from Mrandom(10,20);
+store "tmp/X" from Mrandom(10,20);
 
-store "Y" from Mrandom(20,50);
+store "tmp/Y" from Mrandom(20,50);
 
 // inner product:
 
 sum(select v*w
-      from (v,i) in source(binary,"V"),
-           (w,i) in source(binary,"W"));
+      from (v,i) in source(binary,"tmp/V"),
+           (w,i) in source(binary,"tmp/W"));
 
 // matrix addition:
 
 select ( x+y, i, j )
-  from (x,i,j) in source(binary,"X"),
-       (y,i,j) in source(binary,"Y");
+  from (x,i,j) in source(binary,"tmp/X"),
+       (y,i,j) in source(binary,"tmp/Y");
 
 // matrix transpose:
 
@@ -37,12 +37,12 @@ macro transpose ( X ) {
     from (x,i,j) in X
 };
 
-transpose(source(binary,"X"));
+transpose(source(binary,"tmp/X"));
 
 // map to a vector:
 
 select (sum(x),i)
-  from (x,i,j) in source(binary,"X")
+  from (x,i,j) in source(binary,"tmp/X")
  group by i;
 
 // matrix multiplication #1:
@@ -53,13 +53,13 @@ macro multiply ( X, Y ) {
    group by (i,j)
 };
 
-multiply(source(binary,"X"),transpose(source(binary,"Y")));
+multiply(source(binary,"tmp/X"),transpose(source(binary,"tmp/Y")));
 
 // matrix multiplication #2:
 
 select (sum(select p.x*p.y from p in partition),i,j)
-  from (x,i,k) in source(binary,"X"),
-       (y,k,j) in source(binary,"Y")
+  from (x,i,k) in source(binary,"tmp/X"),
+       (y,k,j) in source(binary,"tmp/Y")
  group by (i,j);
 
 // matrix-vector product:
@@ -70,7 +70,7 @@ macro MVprod ( M, V ) {
    group by i
 };
 
-MVprod(source(binary,"X"),source(binary,"V"));
+MVprod(source(binary,"tmp/X"),source(binary,"tmp/V"));
 
 // cell-wise multiplication:
 
@@ -88,9 +88,9 @@ macro Cdiv ( X, Y ) {
 
 // Gaussian non-negative matrix factorization (from SystemML paper)
 
-store "M" from Mrandom(30,20);
-store "H" from Mrandom(100,30);
-store "W" from Mrandom(20,100);
+store "tmp/M" from Mrandom(30,20);
+store "tmp/H" from Mrandom(100,30);
+store "tmp/W" from Mrandom(20,100);
 
 macro factorize ( V, Hinit, Winit ) {
   repeat (H,W) = (Hinit,Winit)
@@ -99,4 +99,4 @@ macro factorize ( V, Hinit, Winit ) {
    limit 3
 };
 
-factorize(source(binary,"M"),source(binary,"H"),source(binary,"W"));
+factorize(source(binary,"tmp/M"),source(binary,"tmp/H"),source(binary,"tmp/W"));
