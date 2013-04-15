@@ -28,5 +28,11 @@ of a cluster. BSP is a good choice when fault tolerance is less
 important, data (both input and indermediate) can fit in the cluster
 memory, and data processing requires complex/repetitive steps.
 
-Installation Instructions:
-http://lambda.uta.edu/mrql/
+For the latest information about MRQL, please visit our website at:
+
+   http://mrql.incubator.apache.org/
+
+and our wiki, at:
+
+   http://wiki.apache.org/mrql/
+
