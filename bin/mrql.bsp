@@ -23,7 +23,7 @@
 #--------------------------------------------------------------------------------
 
 # the MRQL installation directory
-MRQL=$HOME/mrql
+MRQL=$HOME/incubator-mrql
 
 # the Hama installation directory
 HAMA=$HOME/hama-0.5.0

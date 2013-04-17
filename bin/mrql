@@ -23,7 +23,7 @@
 #--------------------------------------------------------------------------------
 
 # the MRQL installation directory
-MRQL=$HOME/mrql
+MRQL=$HOME/incubator-mrql
 
 # choose the Hadoop installation:
 #   tarball  (Hadoop tarball or Cloudera CDH3 tarball -- preferred)

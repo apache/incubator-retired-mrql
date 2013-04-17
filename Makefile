@@ -89,13 +89,5 @@ json_parser:
 	@${CUP} -parser JSONParser -symbols jsym src/JSON.cup
 	@mv jsym.java JSONParser.java tmp/
 
-tgz: clean
-	@cd ..; tar cfz q.tgz mrql/lib mrql/Makefile mrql/NOTICE mrql/LICENCE mrql/README mrql/src \
-			mrql/queries mrql/bin mrql/conf mrql/conf-hama; cd mrql
-
-tgz-all: clean
-	@rm -rf lib/mrql.jar lib/mrql-bsp.jar
-	@cd ..; tar cfz q.tgz mrql; cd mrql
-
 clean: 
 	@/bin/rm -rf *~ */*~ */*/*~ classes mrql tmp
