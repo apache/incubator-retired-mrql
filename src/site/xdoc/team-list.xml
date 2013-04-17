@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties></properties>
+  <title>Team List</title>
+  <body>
+
+    <section name="Who We Are"></section>
+    <p>
+    A successful project requires many people to play many roles. 
+    Some members write code or documentation, while others are valuable as testers, submitting patches and suggestions.
+    The team is comprised of Members and Contributors.<br/><br/>
+    Members have direct access to the source of a project and actively evolve the code-base. 
+    Contributors improve the project through submission of patches and suggestions to the Members. 
+    The number of Contributors to the project is unbounded. Get involved today. 
+    All contributions to the project are greatly appreciated.
+    </p>
+    
+    <subsection name="Members"></subsection>
+    <p>The following is a list of developers with commit privileges that have directly contributed 
+    to the project in one way or another.</p>
+    
+    <table align="center" border="0">
+      <tr valign="top">
+        <th align="center">
+          <b>username</b>
+        </th>
+        <th align="center">
+          <b>name</b>
+        </th>
+        <th align="center">
+          <b>organization</b>
+        </th>
+        <th align="center">
+          <b>roles</b>
+        </th>
+       </tr>
+       <tr valign="top">
+          <td align="center">kmensah</td>
+          <td align="center">Kuassi Mensah</td>
+          <td align="center">Oracle</td>
+          <td align="center">committer</td>
+        </tr>
+       <tr valign="top">
+          <td align="center">ugupta</td>
+          <td align="center">Upa Gupta</td>
+          <td align="center">University of Texas at Arlington</td>
+          <td align="center">committer</td>
+        </tr>
+       <tr valign="top">
+          <td align="center">akarasulu</td>
+          <td align="center">Alex Karasulu</td>
+          <td align="center"></td>
+          <td align="center">mentor, committer</td>
+        </tr>
+       <tr valign="top">
+          <td align="center">fegaras</td>
+          <td align="center">Leonidas Fegaras</td>
+          <td align="center">University of Texas at Arlington</td>
+          <td align="center">committer</td>
+        </tr>
+       <tr valign="top">
+          <td align="center">edwardyoon</td>
+          <td align="center"><a href="http://blog.udanax.org/">Edward J. Yoon</a></td>
+          <td align="center">Oracle</td>
+          <td align="center">committer</td>
+        </tr>
+       <tr valign="top">
+          <td align="center">adc</td>
+          <td align="center">Alan Cabrera</td>
+          <td align="center"></td>
+          <td align="center">mentor, committer</td>
+        </tr>
+       <tr valign="top">
+          <td align="center">maqsoodalam</td>
+          <td align="center">Maqsood Alam</td>
+          <td align="center">Oracle</td>
+          <td align="center">committer</td>
+        </tr>
+       <tr valign="top">
+          <td align="center">antelder</td>
+          <td align="center">Anthony Elder</td>
+          <td align="center"></td>
+          <td align="center">mentor, committer</td>
+        </tr>
+       <tr valign="top">
+          <td align="center">kasha</td>
+          <td align="center">Karthik Kambatla</td>
+          <td align="center">Cloudera</td>
+          <td align="center">committer</td>
+        </tr>
+       <tr valign="top">
+          <td align="center">johnshope</td>
+          <td align="center">John S. Hope</td>
+          <td align="center">Oracle</td>
+          <td align="center">committer</td>
+        </tr>
+       <tr valign="top">
+          <td align="center">mnour</td>
+          <td align="center">Mohammad Nour</td>
+          <td align="center"></td>
+          <td align="center">mentor, committer</td>
+        </tr>
+       <tr valign="top">
+          <td align="center">ambreeshkhanna</td>
+          <td align="center">Ambreesh Khanna</td>
+          <td align="center">Oracle</td>
+          <td align="center">committer</td>
+        </tr>
+       <tr valign="top">
+          <td align="center">msw</td>
+          <td align="center">Mark Wall</td>
+          <td align="center">Oracle</td>
+          <td align="center">committer</td>
+        </tr>
+
+
+
+    </table>
+
+  </body>
+</document>
