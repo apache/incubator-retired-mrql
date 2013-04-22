@@ -78,10 +78,8 @@ public class JsonParser implements Parser {
 
     public Bag parse ( String s ) {
 	try {
-	    JSONParser parser = new JSONParser();
 	    JSONLex scanner = new JSONLex(new StringReader(s));
-	    MRQLLex.reset();
-	    parser.setScanner(scanner);
+	    JSONParser parser = new JSONParser(scanner);
 	    parser.parse();
 	    return new Bag(parser.top_level);
 	} catch (Exception e) {

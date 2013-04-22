@@ -57,6 +57,7 @@ final public class Main extends Configured implements Tool {
     public int run ( String args[] ) throws Exception {
 	Config.parse_args(args,conf);
 	Evaluator.init(conf);
+	new TopLevel();
 	System.out.print("Apache MRQL version "+version+" (");
 	if (Config.compile_functional_arguments)
 	    System.out.print("compiled ");

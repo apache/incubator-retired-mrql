@@ -83,6 +83,8 @@ final public class JsonSplitter implements Iterator<DataOutputBuffer> {
     public void remove () { }
 
     boolean is_start_tag ( String tagname ) {
+	if (tags == null)
+	    return true;
 	for (String tag: tags)
 	    if (tag.contentEquals(tagname))
 		return true;

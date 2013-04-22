@@ -24,7 +24,7 @@ import java.io.PrintStream;
 /** Provides the API for compilation/code-generation */
 final public class TopLevel extends Interpreter {
 
-    static {
+    public TopLevel () {
 	// XML and JSON are user-defined types:
 	datadef("XML",#<union(Node(tuple(string,bag(tuple(string,string)),list(XML))),
 			      CData(string))>);
