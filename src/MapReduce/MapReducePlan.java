@@ -43,7 +43,7 @@ public class MapReducePlan extends Plan {
      * @param acc_fnc  the accumulator function from (T,T) to T
      * @param zero  the zero element of type T
      * @param S the dataset that contains the bag of values {T}
-     * @returns the aggregation result of type T
+     * @return the aggregation result of type T
      */
     public final static MRData aggregate ( final Tree acc_fnc,
 					   final Tree zero,

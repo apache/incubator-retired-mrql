@@ -145,7 +145,7 @@ public class Bag implements MRData, Iterable<MRData> {
     }
 
     /** add a new value to a Bag (cache it in memory if necessary)
-     * @param value the new value
+     * @param x the new value
      */
     public void add ( final MRData x ) {
 	materialize();
@@ -169,7 +169,7 @@ public class Bag implements MRData, Iterable<MRData> {
     }
 
     /** add a new value to a Bag (cache it in memory if necessary)
-     * @param value the new value
+     * @param x the new value
      * @return the Bag
      */
     public Bag add_element ( final MRData x ) {
@@ -377,7 +377,7 @@ public class Bag implements MRData, Iterable<MRData> {
     /** if this Bag is a Map from keys to values (a Bag of (key,value) pairs),
      * find the value with the given key; raise an error if not found
      * @param key the search key
-     * @returns the value associated with the key
+     * @return the value associated with the key
      */
     public MRData map_find ( final MRData key ) {
 	if (streamed() && consumed)

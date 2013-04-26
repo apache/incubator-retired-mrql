@@ -1,6 +1,0 @@
-/* DBLP data from http://dblp.uni-trier.de/xml/ */
-
-select text(t)
-from x in source(xml,"/home/fegaras/data/dblp.xml",{"inproceedings"}),
-     t in x.title
-where some a in x.author: text(a) = "Leonidas Fegaras";

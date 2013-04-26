@@ -32,6 +32,7 @@ final public class Main extends Configured implements Tool {
     public static PrintStream print_stream;
     public static Configuration conf;
     static MRQLParser parser = new MRQLParser();
+    public static String query_file = "";
 
     public static void include_file ( String file ) {
 	try {
@@ -120,6 +121,14 @@ final public class Main extends Configured implements Tool {
 	} else try {
 		if (Config.hadoop_mode && Config.bsp_mode)
 		    Config.write(Plan.conf);
+		try {
+		    parser = new MRQLParser(new MRQLLex(new FileInputStream(query_file)));
+		} catch (Exception e) {
+		    // when the query file is in HDFS
+		    Path path = new Path(query_file);
+		    FileSystem fs = path.getFileSystem(conf);
+		    parser = new MRQLParser(new MRQLLex(fs.open(path)));
+		};
 		parser.parse();
 	    } finally {
 		if (Config.hadoop_mode)

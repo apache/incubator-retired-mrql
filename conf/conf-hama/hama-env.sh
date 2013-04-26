@@ -21,8 +21,8 @@
 
 # Set environment variables here.
 
-# The java implementation to use.  Required.
-export JAVA_HOME=/root/jdk
+# The java implementation to use.  Default is from mrql-env.sh
+# export JAVA_HOME=/root/jdk
 
 # Where log files are stored.  $HAMA_HOME/logs by default.
 # export HAMA_LOG_DIR=${HAMA_HOME}/logs

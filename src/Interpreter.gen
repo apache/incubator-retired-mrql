@@ -724,7 +724,8 @@ public class Interpreter extends TypeInference {
 	    if (Config.trace)
 		System.out.println("Query at line "+Main.parser.line_pos()+": "+print_query(e));
 	    Tree qt = TypeInference.type_inference(e);
-	    System.out.println("Query type: "+print_type(qt));
+	    if (!Config.quiet_execution)
+		System.out.println("Query type: "+print_type(qt));
 	    query_type = qt;
 	    Tree ne = Normalization.remove_groupby(e);
 	    if (Config.trace)
@@ -766,7 +767,7 @@ public class Interpreter extends TypeInference {
 		    System.out.println("BSP plan:\n"+plan.pretty(0));
 		else {
 		    String splan = print_plan(plan,0,false);
-		    if (!splan.equals(""))
+		    if (!splan.equals("") && !Config.quiet_execution)
 			System.out.println("BSP plan:\n"+splan);
 		}
 	    } else {
@@ -777,7 +778,7 @@ public class Interpreter extends TypeInference {
 		    System.out.println("Physical plan:\n"+plan.pretty(0));
 		else {
 		    String splan = print_plan(plan,0,false);
-		    if (!splan.equals(""))
+		    if (!splan.equals("") && !Config.quiet_execution)
 			System.out.println("Physical plan:\n"+splan);
 		}
 	    };
@@ -785,6 +786,8 @@ public class Interpreter extends TypeInference {
 		plan = Compiler.compile(plan);
 	    return plan;
 	} catch (Error x) {
+	    if (Config.testing)
+		throw new Error(x);
 	    if (!Config.trace && x.toString().endsWith("Type Error"))
 		return null;
 	    if (x.getMessage() != null) // system error

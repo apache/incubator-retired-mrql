@@ -72,6 +72,10 @@ final public class Config {
     public static boolean trace_execution = false;
     // true for extensive run-time trace of expressions & plans
     public static boolean trace_exp_execution = false;
+    // true if you don't want to print statistics
+    public static boolean quiet_execution = false;
+    // true if this is during testing
+    public static boolean testing = false;
 
     /** store the configuration parameters */
     public static void write ( Configuration conf ) {
@@ -96,6 +100,8 @@ final public class Config {
 	conf.setBoolean("mrql.self.join.opt",selfJoinOpt);
 	conf.setBoolean("mrql.trace.execution",trace_execution);
 	conf.setBoolean("mrql.trace.exp.execution",trace_exp_execution);
+	conf.setBoolean("mrql.quiet.execution",quiet_execution);
+	conf.setBoolean("mrql.testing",testing);
     }
 
     /** load the configuration parameters */
@@ -124,13 +130,17 @@ final public class Config {
 	selfJoinOpt = conf.getBoolean("mrql.self.join.opt",selfJoinOpt);
 	trace_execution = conf.getBoolean("mrql.trace.execution",trace_execution);
 	trace_exp_execution = conf.getBoolean("mrql.trace.exp.execution",trace_exp_execution);
+	quiet_execution = conf.getBoolean("mrql.quiet.execution",quiet_execution);
+	testing = conf.getBoolean("mrql.testing",testing);
     }
+
+    public static ArrayList<String> extra_args = new ArrayList<String>();
 
     /** read configuration parameters from the Main args */
     public static Bag parse_args ( String args[], Configuration conf ) throws Exception {
 	int i = 0;
 	int iargs = 0;
-	ArrayList<String> extra_args = new ArrayList<String>();
+	extra_args = new ArrayList<String>();
 	ClassImporter.load_classes();
 	hadoop_mode = false;
 	interactive = true;
@@ -209,6 +219,9 @@ final public class Config {
 	    } else if (args[i].equals("-P")) {
 		trace_execution = true;
 		i++;
+	    } else if (args[i].equals("-quiet")) {
+		quiet_execution = true;
+		i++;
 	    } else if (args[i].equals("-trace_execution")) {
 		trace_execution = true;
 		trace_exp_execution = true;
@@ -225,14 +238,7 @@ final public class Config {
 		throw new Error("Unknown MRQL parameter: "+args[i]);
 	    else {
 		if (interactive) {
-		    try {
-			Main.parser = new MRQLParser(new MRQLLex(new FileInputStream(args[i])));
-		    } catch (Exception e) {
-			Path path = new Path(args[i]);
-			FileSystem fs = path.getFileSystem(conf);
-			Main.parser = new MRQLParser(new MRQLLex(fs.open(path)));
-		    };
-		    i++;
+		    Main.query_file = args[i++];
 		    interactive = false;
 		} else extra_args.add(args[i++]);
 	    }

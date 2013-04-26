@@ -1,0 +1,59 @@
+Xvector = source(line,"tests/data/Xvector.txt",",",type( (double,long) ));
+Yvector = source(line,"tests/data/Yvector.txt",",",type( (double,long) ));
+Xmatrix = source(line,"tests/data/Xmatrix.txt",",",type( (double,long,long) ));
+Ymatrix = source(line,"tests/data/Ymatrix.txt",",",type( (double,long,long) ));
+
+
+// inner product:
+
+sum(select v*w
+      from (v,i) in Xvector,
+           (w,i) in Yvector);
+
+// matrix addition:
+
+select ( x+y, i, j )
+  from (x,i,j) in Xmatrix,
+       (y,i,j) in Ymatrix;
+
+// matrix transpose:
+
+macro transpose ( X ) {
+  select (x,j,i)
+    from (x,i,j) in X
+};
+
+transpose(Xmatrix);
+
+// map to a vector:
+
+select (sum(x),i)
+  from (x,i,j) in Xmatrix
+ group by i;
+
+// matrix multiplication #1:
+
+macro multiply ( X, Y ) {
+  select (sum(z),i,j)
+    from (x,i,k) in X, (y,k,j) in Y, z = x*y
+   group by (i,j)
+};
+
+multiply(Xmatrix,transpose(Ymatrix));
+
+// matrix multiplication #2:
+
+select (sum(select p.x*p.y from p in partition),i,j)
+  from (x,i,k) in Xmatrix,
+       (y,k,j) in Ymatrix
+ group by (i,j);
+
+// matrix-vector product:
+
+macro MVprod ( M, V ) {
+  select ( sum(z), i )
+    from (m,i,j) in M, (v,j) in V, z = m*v
+   group by i
+};
+
+MVprod(Xmatrix,Xvector);

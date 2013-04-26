@@ -467,15 +467,15 @@ final public class BSPPlan extends Plan {
 	job.waitForCompletion(true);
 	FileSystem fs = outpath.getFileSystem(conf);
 	FileStatus[] files = fs.listStatus(outpath);
-	for ( int i = 0; i < files.length; i++ )
-	    if (files[i].getLen() > 74) {
-		SequenceFile.Reader sreader = new SequenceFile.Reader(fs,files[i].getPath(),conf);
-		MRContainer key = new MRContainer();
-		MRContainer value = new MRContainer();
-		sreader.next(key,value);
-		sreader.close();
+	for ( int i = 0; i < files.length; i++ ) {
+	    SequenceFile.Reader sreader = new SequenceFile.Reader(fs,files[i].getPath(),conf);
+	    MRContainer key = new MRContainer();
+	    MRContainer value = new MRContainer();
+	    sreader.next(key,value);
+	    sreader.close();
+	    if (value.data() != null)
 		return value.data();
-	    };
+	};
 	return null;
     }
  }

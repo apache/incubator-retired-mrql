@@ -1,0 +1,15 @@
+E = source(line,"tests/data/employee.txt",",",type(<name:string,dno:int,address:string>));
+
+aggregation aggr(\(x:int,y:int):int.x+y,0):int;
+
+aggr(select e.dno from e in E);
+
+select (k,aggr(e.dno)) from e in E group by k: e.dno;
+
+function ff (x:int,y:int):int { x+y };
+
+aggregation aggr2(ff,0):int;
+
+aggr2(select e.dno from e in E);
+
+select (k,aggr2(e.dno)) from e in E group by k: e.dno;

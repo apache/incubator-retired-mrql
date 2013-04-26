@@ -82,6 +82,8 @@ parser code {:
 
     public void syntax_error ( Symbol token ) {
 	System.err.println("*** Syntax Error: " + print(token) + " (line: " + line_pos() + ", position: " + char_pos() + ")");
+        if (Config.testing)
+           throw new Error("Syntax Error");
     }
 
 :};

@@ -90,7 +90,7 @@ public class Plan {
 		return;
 	    Path local_path = new Path("file://"+Compiler.jar_path);
 	    // distribute the jar file with the compiled arguments to all clients
-	    Path hdfs_path = new Path("mrql/class"+random_generator.nextInt(1000000)+".jar");
+	    Path hdfs_path = new Path("mrql-tmp/class"+random_generator.nextInt(1000000)+".jar");
 	    FileSystem fs = hdfs_path.getFileSystem(conf);
 	    fs.copyFromLocalFile(false,true,local_path,hdfs_path);
 	    temporary_paths.add(hdfs_path.toString());

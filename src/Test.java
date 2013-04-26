@@ -1,0 +1,115 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.mrql;
+
+import java.io.*;
+import org.apache.hadoop.util.*;
+import org.apache.hadoop.conf.*;
+
+/** Test all the MRQL test queries */
+final public class Test extends Configured implements Tool {
+    public static PrintStream print_stream;
+    public static Configuration conf;
+    static MRQLParser parser = new MRQLParser();
+    String result_directory;
+    static PrintStream test_out;
+
+    private int compare ( String file1, String file2 ) throws Exception {
+	FileInputStream s1 = new FileInputStream(file1);
+	FileInputStream s2 = new FileInputStream(file2);
+	int b1, b2;
+	int i = 1;
+	while ((b1 = s1.read()) == (b2 = s2.read()) && b1 != -1 && b2 != -1)
+	    i++;
+	return (b1 == -1 && b2 == -1) ? 0 : i;
+    }
+
+    private void query ( File query ) throws Exception {
+	String path = query.getPath();
+	if (!path.endsWith(".mrql"))
+	    return;
+	Translator.global_reset();
+	String qname = query.getName();
+	qname = qname.substring(0,qname.length()-5);
+	test_out.print("   Testing "+qname+" ... ");
+	String result_file = result_directory+"/"+qname+".txt";
+	boolean exists = new File(result_file).exists();
+	if (exists)
+	    System.setOut(new PrintStream(result_directory+"/result.txt"));
+	else System.setOut(new PrintStream(result_file));
+	try {
+	    parser = new MRQLParser(new MRQLLex(new FileInputStream(query)));
+	    parser.parse();
+	    int i;
+	    if (exists && (i = compare(result_file,result_directory+"/result.txt")) > 0)
+		test_out.println("MISMATCH AT "+(i-1));
+	    else if (exists)
+		test_out.println("OK matched");
+	    else test_out.println("OK created");
+	} catch (Error ex) {
+	    System.err.println(qname+": "+ex);
+	    ex.printStackTrace(System.err);
+	    test_out.println("FAILED");
+	    if (!exists)
+		new File(result_file).delete();
+	} catch (Exception ex) {
+	    System.err.println(qname+": "+ex);
+	    ex.printStackTrace(System.err);
+	    test_out.println("FAILED");
+	    if (!exists)
+		new File(result_file).delete();
+	} finally {
+	    if (Config.hadoop_mode)
+		Plan.clean();
+	    if (Config.compile_functional_arguments)
+		Compiler.clean();
+	}
+    }
+
+    public int run ( String args[] ) throws Exception {
+	Config.parse_args(args,conf);
+	Evaluator.init(conf);
+	new TopLevel();
+	Config.testing = true;
+	if (Config.hadoop_mode && Config.bsp_mode)
+	    Config.write(Plan.conf);
+	if (Main.query_file.equals("") || Config.extra_args.size() != 2)
+	    throw new Error("Must provide a query directory, a result directory, and an error log file");
+	File query_dir = new File(Main.query_file);
+	result_directory = Config.extra_args.get(0);
+	System.setErr(new PrintStream(Config.extra_args.get(1)));
+	test_out = System.out;
+	for ( File f: query_dir.listFiles() )
+	    query(f);
+	return 0;
+    }
+
+    public static void main ( String[] args ) throws Exception {
+	boolean hadoop = args.length > 0 && (args[0].equals("-local") || args[0].equals("-dist"));
+	Config.quiet_execution = true;
+	if (!hadoop)
+	    new Test().run(args);
+	else {
+	    conf = Evaluator.new_configuration();
+	    GenericOptionsParser gop = new GenericOptionsParser(conf,args);
+	    conf = gop.getConfiguration();
+	    args = gop.getRemainingArgs();
+	    ToolRunner.run(conf,new Test(),args);
+	}
+    }
+}

@@ -77,6 +77,18 @@ public class Translator extends Printer {
 	repeat_variables = #[];
     }
 
+    static void global_reset () {
+	reset();
+	global_type_env = new SymbolTable();
+	global_datatype_env = new SymbolTable();
+	global_vars = new SymbolTable();
+	global_functions = new SymbolTable();
+	global_macros = new SymbolTable();
+	type_names = new SymbolTable();
+	data_constructors = new SymbolTable();
+	new TopLevel();
+    }
+
     static void error ( String msg ) {
 	System.err.println("*** MRQL error at line "+Main.parser.line_pos()+": "+msg);
 	throw new Error();

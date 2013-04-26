@@ -16,27 +16,34 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<project name="MRQL" basedir="." default="mr">
-  <property name="HADOOP" location="${user.home}/hadoop-1.0.3"/>
-  <property name="HAMA" location="${user.home}/hama-0.5.0"/>
-  <property name="CUPJAR" location="/usr/share/java/cup.jar"/>
+<!--
 
-  <property name="package" value="org.apache.mrql"/>
-  <property name="GENJAR" location="lib/gen.jar"/>
-  <property name="JLINEJAR" location="lib/jline-1.0.jar"/>
+ Ant build file for MRQL
+ Requires: jflex, cup  (they can be install as Linux packages)
+
+-->
+
+<project name="MRQL"
+	 basedir="."
+	 default="mapreduce">
+
+  <property name="HOME" value="${user.home}"/>
+
+  <property file="conf/mrql-env.sh"/>
+
+  <property name="GEN_JAR" location="lib/gen.jar"/>
+  <property name="JLINE_JAR" location="lib/jline-1.0.jar"/>
 
   <path id="classpath">
-    <pathelement location="${GENJAR}"/>
-    <pathelement location="${JLINEJAR}"/>
-    <pathelement location="${CUPJAR}"/>
-    <fileset dir="${HADOOP}" includes="hadoop-core-*.jar"/>
-    <fileset dir="${HADOOP}/lib" includes="commons-cli-*jar"/>
-    <fileset dir="${HAMA}" includes="hama-core-*jar"/>
+    <pathelement location="${GEN_JAR}"/>
+    <pathelement location="${JLINE_JAR}"/>
+    <pathelement location="${CUP_JAR}"/>
+    <pathelement path="${MRQL_CLASSPATH}"/>
   </path>
 
-  <target name="mr"
+  <target name="mapreduce"
 	  depends="common"
-	  description="build the MRQL MapReduce jar">
+	  description="Build the MRQL MapReduce jar">
     <fileset id="mr.gen.path" dir="src/MapReduce" includes="*.gen"/>
     <pathconvert pathsep=" " property="mr.gen.files" refid="mr.gen.path"/>
     <java classname="Gen.Main">
@@ -50,15 +57,15 @@
       <exclude name="BSP/*"/>
     </javac>
     <jar destfile="lib/mrql.jar" basedir="classes">
-      <zipfileset includes="**/*.class" src="${GENJAR}"/>
-      <zipfileset includes="**/*" src="${JLINEJAR}"/>
-      <zipfileset includes="**/*.class" src="${CUPJAR}"/>
+      <zipfileset includes="**/*.class" src="${GEN_JAR}"/>
+      <zipfileset includes="**/*" src="${JLINE_JAR}"/>
+      <zipfileset includes="**/*.class" src="${CUP_JAR}"/>
     </jar>
   </target>
 
   <target name="bsp"
 	  depends="common"
-	  description="build the MRQL BSP jar">
+	  description="Build the MRQL BSP jar">
     <fileset id="bsp.gen.path" dir="src/BSP" includes="*.gen"/>
     <pathconvert pathsep=" " property="bsp.gen.files" refid="bsp.gen.path"/>
     <java classname="Gen.Main">
@@ -72,14 +79,15 @@
       <exclude name="MapReduce/*"/>
     </javac>
     <jar destfile="lib/mrql-bsp.jar" basedir="classes">
-      <zipfileset includes="**/*.class" src="${GENJAR}"/>
-      <zipfileset includes="**/*" src="${JLINEJAR}"/>
-      <zipfileset includes="**/*.class" src="${CUPJAR}"/>
+      <zipfileset includes="**/*.class" src="${GEN_JAR}"/>
+      <zipfileset includes="**/*" src="${JLINE_JAR}"/>
+      <zipfileset includes="**/*.class" src="${CUP_JAR}"/>
     </jar>
   </target>
 
   <target name="common"
-	  depends="clean_build,mrql_parser,json_parser">
+	  depends="clean_build,mrql_parser,json_parser"
+	  description="Translate the GEN files and generate the parsers">
     <fileset id="gen.path" dir="src" includes="*.gen"/>
     <pathconvert pathsep=" " property="gen.files" refid="gen.path"/>
     <java classname="Gen.Main">
@@ -90,14 +98,16 @@
     </java>
   </target>
 
-  <target name="clean_build" >
+  <target name="clean_build"
+	  description="Clean the build directories">
     <delete dir="classes"/>
     <delete dir="tmp"/>
     <mkdir dir="classes"/>
     <mkdir dir="tmp"/>
   </target>
 
-<target name="mrql_parser">
+  <target name="mrql_parser"
+	  description="Generate the MRQL scanner and parser">
     <exec executable="jflex">
       <arg line="--quiet --nobak"/>
       <arg file="src/mrql.lex"/>
@@ -123,7 +133,8 @@
     </move>
   </target>
 
-  <target name="json_parser">
+  <target name="json_parser"
+          description="Generate the JSON scanner and parser">
     <exec executable="jflex">
       <arg line="--quiet --nobak"/>
       <arg file="src/JSON.lex"/>
@@ -144,10 +155,80 @@
     </move>
   </target>
 
-  <target name="clean">
+  <path id="mrql-classpath">
+    <pathelement location="lib/mrql.jar"/>
+    <path refid="classpath"/>
+  </path>
+
+  <path id="bsp-classpath">
+    <pathelement location="lib/mrql-bsp.jar"/>
+    <path refid="classpath"/>
+  </path>
+
+  <target name="validate"
+          description="Validate all test queries"
+	  depends="validate_hadoop,validate_hama"/>
+
+  <target name="validate_hadoop"
+          description="Validate all test queries on Hadoop">
+    <echo message="Evaluating test queries in memory (Map-Reduce mode):"/>
+    <java classname="org.apache.mrql.Test" fork="yes">
+      <classpath refid="mrql-classpath"/>
+      <jvmarg line="-ms256m -mx1024m"/>
+      <arg file="tests/queries"/>
+      <arg file="tests/results/memory"/>
+      <arg file="tests/error_log.txt"/>
+    </java>
+    <echo message="Evaluating test queries in Hadoop local mode:"/>
+    <exec executable="${HADOOP_HOME}/bin/hadoop" error="/dev/null">
+      <env key="JAVA_HOME" value="${JAVA_HOME}"/>
+      <arg line="--config"/>
+      <arg file="conf"/>
+      <arg line="jar"/>
+      <arg file="lib/mrql.jar"/>
+      <arg line="org.apache.mrql.Test -local"/>
+      <arg file="tests/queries"/>
+      <arg file="tests/results/hadoop"/>
+      <arg file="tests/error_log.txt"/>
+    </exec>
+  </target>
+
+  <target name="validate_hama"
+          description="Validate all test queries on Hama">
+    <echo message="Evaluating test queries in memory (BSP mode):"/>
+    <java classname="org.apache.mrql.Test" fork="yes">
+      <classpath refid="bsp-classpath"/>
+      <jvmarg line="-ms256m -mx1024m"/>
+      <arg file="tests/queries"/>
+      <arg file="tests/results/memory"/>
+      <arg file="tests/error_log.txt"/>
+    </java>
+    <echo message="Evaluating test queries in Hama local mode:"/>
+    <exec executable="${HAMA_HOME}/bin/hama" error="/dev/null">
+      <env key="JAVA_HOME" value="${JAVA_HOME}"/>
+      <arg line="--config"/>
+      <arg file="conf"/>
+      <arg line="jar"/>
+      <arg file="lib/mrql-bsp.jar"/>
+      <arg line="org.apache.mrql.Test -local"/>
+      <arg file="tests/queries"/>
+      <arg file="tests/results/bsp"/>
+      <arg file="tests/error_log.txt"/>
+    </exec>
+  </target>
+
+  <target name="clean_tests"
+          description="Clean test results">
+    <delete>
+      <fileset dir="tests/results" includes="*/*"/>
+    </delete>
+  </target>
+
+  <target name="clean"
+	  description="Clean build artifacts">
     <delete dir="classes"/>
     <delete dir="tmp"/>
-    <delete dir="mrql"/>
+    <delete dir="mrql-tmp"/>
     <delete>
       <fileset dir="." includes="**/*~"/>
     </delete>

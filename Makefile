@@ -20,37 +20,20 @@
 #--------------------------------------------------------------------------------
 #
 # Makefile for MRQL
-# Requires: jflex, cup  (these are standard packages in Linux)
+# Requires: jflex, cup  (they can be install as Linux packages)
 #
 #--------------------------------------------------------------------------------
 
-# choose the Hadoop installation:
-#   tarball  (Hadoop tarball or Cloudera CDH3 tarball -- preferred)
-#   package  (Cloudera CDH3 package-based 0.20.2)
-INSTALLATION=tarball
+MRQL_HOME=$(shell readlink -f .)
 
-# the jar of the CUP parser (you may download it from http://www2.cs.tum.edu/projects/cup/ )
-CUPJAR=/usr/share/java/cup.jar
+include conf/mrql-env.sh
 
-# optional: the Hama jar for BSP processing
-HAMAJAR=${HOME}/hama-0.5.0/hama-core-0.5.0.jar
+export CLASSPATH=${MRQL_CLASSPATH}:${CUP_JAR}:lib/gen.jar:lib/jline-1.0.jar
+export JAVA_HOME
 
-MRQL_CLASSPATH=classes:lib/gen.jar:lib/jline-1.0.jar:${CUPJAR}
-
-ifeq (${INSTALLATION},tarball)
-  VERSION=1.0.3
-  HADOOP=${HOME}/hadoop-${VERSION}
-  CLASSPATH=${MRQL_CLASSPATH}:${HADOOP}/hadoop-core-${VERSION}.jar:${HADOOP}/lib/commons-cli-1.2.jar:${HAMAJAR}
-else
-  HADOOP=/usr/lib/hadoop-0.20
-  CLASSPATH=${MRQL_CLASSPATH}:/usr/lib/hadoop-0.20/hadoop-core.jar:/usr/lib/hadoop-0.20/lib/commons-cli-1.2.jar:${HAMAJAR}
-endif
-
-export CLASSPATH
-
-JAVAC = javac -g:none -d classes
-JAVA = java
-JAR = jar
+JAVAC = ${JAVA_HOME}/bin/javac -g:none -d classes
+JAVA = ${JAVA_HOME}/bin/java
+JAR = ${JAVA_HOME}/bin/jar
 JFLEX = jflex --quiet --nobak
 CUP = cup -nosummary
 GEN = ${JAVA} Gen.Main
@@ -71,7 +54,7 @@ bsp: common
 	@${JAR} cf lib/mrql-bsp.jar -C classes/ .
 
 common: clean_build mrql_parser json_parser
-	@cd classes; ${JAR} xf ../lib/gen.jar; ${JAR} xf ${CUPJAR}; ${JAR} xf ../lib/jline-1.0.jar; cd ..
+	@cd classes; ${JAR} xf ../lib/gen.jar; ${JAR} xf ${CUP_JAR}; ${JAR} xf ../lib/jline-1.0.jar; cd ..
 	@${GEN} src/*.gen -o tmp
 
 clean_build:
@@ -89,5 +72,25 @@ json_parser:
 	@${CUP} -parser JSONParser -symbols jsym src/JSON.cup
 	@mv jsym.java JSONParser.java tmp/
 
+validate: validate_hadoop validate_hama
+
+validate_hadoop:
+	@echo "Evaluating test queries in memory (Map-Reduce mode):"
+	@${JAVA} -ms256m -mx1024m -classpath ${MRQL_HOME}/lib/mrql.jar:${MRQL_CLASSPATH} org.apache.mrql.Test tests/queries tests/results/memory tests/error_log.txt
+	@echo "Evaluating test queries in Hadoop local mode:"
+	@${HADOOP_HOME}/bin/hadoop --config conf jar ${MRQL_HOME}/lib/mrql.jar org.apache.mrql.Test -local tests/queries tests/results/hadoop tests/error_log.txt 2>/dev/null
+
+validate_hama:
+	@echo "Evaluating test queries in memory (BSP mode):"
+	@${JAVA} -ms256m -mx1024m -classpath ${MRQL_HOME}/lib/mrql-bsp.jar:${MRQL_CLASSPATH} org.apache.mrql.Test tests/queries tests/results/memory tests/error_log.txt
+	@echo "Evaluating test queries in Hama local mode:"
+	@${HAMA_HOME}/bin/hama --config conf-hama jar ${MRQL_HOME}/lib/mrql-bsp.jar org.apache.mrql.Test -local tests/queries tests/results/bsp tests/error_log.txt 2>/dev/null
+
+javadoc: all
+	@${JAVA_HOME}/bin/javadoc ${mr_sources} tmp/*.java -d /tmp/web-mrql
+
+clean_tests:
+	@/bin/rm -rf tests/results/*/*
+
 clean: 
-	@/bin/rm -rf *~ */*~ */*/*~ classes mrql tmp
+	@/bin/rm -rf *~ */*~ */*/*~ classes mrql-tmp tmp tests/error_log.txt

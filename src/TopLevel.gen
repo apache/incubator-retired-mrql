@@ -60,11 +60,13 @@ final public class TopLevel extends Interpreter {
 	    if (plan == null)
 		return null;
 	    MRData res = evalE(plan,null);
-	    if (print)
+	    if (print) {
+		if (!Config.quiet_execution)
+		    System.out.println("Result:");
 		if (!Config.hadoop_mode && Config.bsp_mode && memory_parsed_source(plan))
-		    System.out.println("Result:\n"+print(((Tuple)((Bag)res).get(0)).second(),query_type));
-		else System.out.println("Result:\n"+print(res,query_type));
-	    return res;
+		    System.out.println(print(((Tuple)((Bag)res).get(0)).second(),query_type));
+		else System.out.println(print(res,query_type));
+	    } return res;
 	} catch (Exception x) {
 	    if (x.getMessage() != null)
 		System.err.println("*** MRQL System Error at line "+Main.parser.line_pos()+": "+x);
@@ -164,9 +166,10 @@ final public class TopLevel extends Interpreter {
 	MRData res = expression(e,false);
 	try {
 	    query_type = make_persistent_type(query_type);
-	    if (Config.hadoop_mode && res != null) 
-		Plan.dump(file,query_type,res);
-	    else MapReduceAlgebra.dump(file,query_type,res);
+	    if (res != null)
+		if (Config.hadoop_mode) 
+		    Plan.dump(file,query_type,res);
+		else MapReduceAlgebra.dump(file,query_type,res);
 	} catch (Exception x) {
 	    throw new Error(x);
 	}
@@ -258,21 +261,23 @@ final public class TopLevel extends Interpreter {
 	match expr {
 	case expression(`e):
 	    long t = System.currentTimeMillis();
-	    if (expression(e) != null)
+	    if (expression(e) != null && !Config.quiet_execution)
 		System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
 	case assign(`v,`e): assign(v.toString(),e);
 	case store(`v,`e):
 	    long t = System.currentTimeMillis();
-	    if (store(v.toString(),e) != null)
+	    if (store(v.toString(),e) != null && !Config.quiet_execution)
 		System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
 	case dump(`s,`e):
 	    long t = System.currentTimeMillis();
 	    dump(s.stringValue(),e);
-	    System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
+	    if (!Config.quiet_execution)
+		System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
 	case dump_text(`s,`e):
 	    long t = System.currentTimeMillis();
 	    dump_text(s.stringValue(),e);
-	    System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
+	    if (!Config.quiet_execution)
+		System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
 	case typedef(`v,`t): typedef(v.toString(),t);
 	case datadef(`v,`t): datadef(v.toString(),t);
 	case functiondef(`f,params(...p),`tp,`e):

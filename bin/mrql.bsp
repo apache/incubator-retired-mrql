@@ -22,36 +22,16 @@
 #
 #--------------------------------------------------------------------------------
 
-# the MRQL installation directory
-MRQL=$HOME/incubator-mrql
+MRQL_HOME=$(dirname $(readlink -f $0))/..
 
-# the Hama installation directory
-HAMA=$HOME/hama-0.5.0
-HAMAJAR=$HAMA/hama-core-0.5.0.jar
+. $MRQL_HOME/conf/mrql-env.sh
 
-# your Hama configuration directory
-CONF=$MRQL/conf-hama
-
-# choose the Hadoop installation:
-#   tarball  (Hadoop tarball or Cloudera CDH3 tarball -- preferred)
-#   package  (Cloudera CDH3 package-based 0.20.2)
-INSTALLATION=tarball
-
-if [ "$INSTALLATION" == "tarball" ]; then
-  VERSION=1.0.3
-  HADOOP=$HOME/hadoop-$VERSION
-  CLASSPATH=$MRQL/lib/mrql-bsp.jar:$HAMAJAR:$HADOOP/hadoop-core-$VERSION.jar:$HADOOP/lib/commons-cli-1.2.jar
-else 
-  HADOOP=/usr/lib/hadoop-0.20
-  CLASSPATH=$MRQL/lib/mrql-bsp.jar:$HAMAJAR:/usr/lib/hadoop-0.20/hadoop-core.jar:/usr/lib/hadoop-0.20/lib/commons-cli-1.2.jar
-fi
-
-export CLASSPATH
+export JAVA_HOME
 
 if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
-   EXEC="$HAMA/bin/hama --config $CONF jar $MRQL/lib/mrql-bsp.jar"
+   EXEC="$HAMA_HOME/bin/hama --config $HAMA_CONF jar $MRQL_HOME/lib/mrql-bsp.jar"
 else
-   EXEC="java -ms256m -mx1024m"
+   EXEC="$JAVA_HOME/bin/java -ms256m -mx1024m -classpath $MRQL_HOME/lib/mrql-bsp.jar:$MRQL_CLASSPATH"
 fi
 
-${EXEC} org.apache.mrql.Main $*
+$EXEC org.apache.mrql.Main $*

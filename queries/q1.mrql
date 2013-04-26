@@ -1,7 +1,0 @@
-emp = source(line,"queries/employee.txt",",",type(<name:string,dno:int,address:string>));
-dept = source(line,"queries/department.txt",",",type(<name:string,dno:int>));
-
-select (e.name,d.name)
-from e in emp,
-     d in dept
-where e.dno=d.dno;

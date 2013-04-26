@@ -1,9 +1,0 @@
-type point = < X: double, Y: double >;
-
-function distance ( x: point, y: point ): double {
-   sqrt(pow(x.X-y.X,2)+pow(x.Y-y.Y,2))
-};
-
-
-select ( x, select y from y in source(binary,"points.bin") order by distance(x,y) limit 3 )
-from x in source(binary,"points.bin");

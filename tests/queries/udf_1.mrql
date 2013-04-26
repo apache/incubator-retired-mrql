@@ -1,0 +1,15 @@
+function fact ( n: int ): long {
+   if n <= 0
+   then 1
+   else n*fact(n-1)
+};
+
+fact(10);
+
+store x := [xml| <a A="2"><b>1</b><b>2</b></a> |];
+
+function children ( tag: string, s: list(XML) ) : list(XML) {
+  select c from Node(t,*,cs) in s, c in cs where t=tag order by c
+};
+
+children("b",x.b);

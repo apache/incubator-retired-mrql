@@ -1,0 +1,1 @@
+source(xml,"tests/data/cs.xml",{"gradstudent"},xpath(name[firstname="Leonidas"]));

@@ -34,7 +34,7 @@ final public class Evaluator extends Interpreter {
 	    conf.set("bsp.master.address","local");
 	    conf.set("mapred.job.tracker","local");
 	    conf.set("hama.zookeeper.quorum","localhost");
-	    conf.set("bsp.local.tasks.maximum","2");     // BSP local mode uses a max of 2 cores
+	    conf.set("bsp.local.tasks.maximum","4");     // BSP local mode uses a max of 4 cores
 	    conf.set("fs.default.name","file:///");
 	}
     }

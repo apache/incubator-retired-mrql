@@ -5,11 +5,11 @@
 # set JAVA_HOME in this file, so that it is correctly defined on
 # remote nodes.
 
-# The java implementation to use.  Required.
-export JAVA_HOME=/root/jdk
+# The java implementation to use.  Default is from mrql-env.sh
+#export JAVA_HOME=/root/jdk
 
 # Extra Java CLASSPATH elements.  Optional.
-export HADOOP_CLASSPATH=$HOME/hadoop-0.21.0
+# export HADOOP_CLASSPATH=$HOME/hadoop-0.21.0
 
 # The maximum amount of heap to use, in MB. Default is 1000.
 # export HADOOP_HEAPSIZE=2000

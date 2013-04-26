@@ -1,3 +1,0 @@
-/* DBLP data from http://dblp.uni-trier.de/xml/ */
-
-source(xml,"/home/fegaras/data/dblp.xml",{"inproceedings"},xpath(.[author="Leonidas Fegaras"]/title));

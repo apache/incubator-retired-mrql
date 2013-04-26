@@ -73,6 +73,8 @@ import Gen.Tree;
 
   public void error ( String msg ) {
     System.err.println("*** Scanner Error: " + msg + " (line: " + line_pos() + ", position: " + char_pos() + ")");
+    if (Config.testing)
+      throw new Error("Scanner Error");
   }
 
   public String format ( String s ) {
