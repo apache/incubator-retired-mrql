@@ -20,7 +20,7 @@
 #--------------------------------------------------------------------------------
 #
 # Makefile for MRQL
-# Requires: jflex, cup  (they can be install as Linux packages)
+# Requires: jflex  (it can be installed as a Linux package)
 #
 #--------------------------------------------------------------------------------
 
@@ -35,7 +35,7 @@ JAVAC = ${JAVA_HOME}/bin/javac -g:none -d classes
 JAVA = ${JAVA_HOME}/bin/java
 JAR = ${JAVA_HOME}/bin/jar
 JFLEX = jflex --quiet --nobak
-CUP = cup -nosummary
+CUP = ${JAVA} -jar ${CUP_JAR} -nosummary
 GEN = ${JAVA} Gen.Main
 
 sources := src/*.java
@@ -59,7 +59,7 @@ common: clean_build mrql_parser json_parser
 
 clean_build:
 	@rm -rf classes tmp
-	@mkdir -p classes tmp
+	@mkdir -p classes tmp tests/results tests/results/memory tests/results/hadoop tests/results/bsp
 
 mrql_parser:
 	@${JFLEX} src/mrql.lex -d tmp

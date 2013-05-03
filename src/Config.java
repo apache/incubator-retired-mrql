@@ -225,6 +225,7 @@ final public class Config {
 	    } else if (args[i].equals("-trace_execution")) {
 		trace_execution = true;
 		trace_exp_execution = true;
+		compile_functional_arguments = false;
 		i++;
 	    } else if (args[i].equals("-methods")) {
 		System.out.print("\nImported methods: ");

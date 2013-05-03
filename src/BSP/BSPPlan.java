@@ -57,8 +57,6 @@ final public class BSPPlan extends Plan {
 	Bag msg_cache;
 	// the cache that holds all local data in memory
 	Tuple local_cache;
-	// syncronization point for local_cache
-	final static Integer cache_sync = new Integer(0);
 
 	/** shuffle values to BSP peers based on uniform hashing on key */
 	private static String shuffle ( MRData key ) {
@@ -76,7 +74,7 @@ final public class BSPPlan extends Plan {
 	    try {
 		// this case is only used for checking the exit condition of repeat/closure
 		boolean exit = mr_exit.get();
-		if (!exit)
+		if (!exit && all_peers.length > 1)
 		    // this peer is not ready to exit, so no peer should exit
 		    for ( String p: this_peer.getAllPeerNames() )
 			this_peer.send(p,new MRContainer(more_supersteps));
@@ -227,12 +225,10 @@ final public class BSPPlan extends Plan {
 		};
 		pair.set(0,msg_cache);
 		pair.set(1,state);
-		synchronized (cache_sync) {
-		    this_peer = peer;
-		    cache = local_cache;
-		    // evaluate one superstep
-		    result = (Tuple)superstep_fnc.eval(pair);
-		};
+		this_peer = peer;
+		cache = local_cache;
+		// evaluate one superstep
+		result = (Tuple)superstep_fnc.eval(pair);
 		Bag msgs = (Bag)result.get(0);
 		exit = ((MR_bool)result.get(2)).get();
 		state = result.get(1);

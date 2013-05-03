@@ -19,7 +19,7 @@
 <!--
 
  Ant build file for MRQL
- Requires: jflex, cup  (they can be install as Linux packages)
+ Requires: jflex  (it can be installed as a Linux package)
 
 -->
 
@@ -104,6 +104,10 @@
     <delete dir="tmp"/>
     <mkdir dir="classes"/>
     <mkdir dir="tmp"/>
+    <mkdir dir="tests/results"/>
+    <mkdir dir="tests/results/memory"/>
+    <mkdir dir="tests/results/hadoop"/>
+    <mkdir dir="tests/results/bsp"/>
   </target>
 
   <target name="mrql_parser"
@@ -120,11 +124,11 @@
       <arg line="-o"/>
       <arg file="tmp/mrql.cup"/>
     </java>
-    <exec executable="cup">
+    <java jar="${CUP_JAR}" fork='true'>
       <arg line="-nosummary"/>
       <arg line="-parser MRQLParser"/>
       <arg file="tmp/mrql.cup"/>
-    </exec>
+    </java>
     <move todir="tmp">
       <filelist dir=".">
 	<file name="sym.java"/>
@@ -141,12 +145,12 @@
       <arg line="-d"/>
       <arg file="tmp"/>
     </exec>
-    <exec executable="cup">
+    <java jar="${CUP_JAR}" fork='true'>
       <arg line="-nosummary"/>
       <arg line="-parser JSONParser"/>
       <arg line="-symbols jsym"/>
       <arg file="src/JSON.cup"/>
-    </exec>
+    </java>
     <move todir="tmp">
       <filelist dir=".">
 	<file name="jsym.java"/>

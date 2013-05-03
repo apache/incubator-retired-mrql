@@ -47,10 +47,12 @@ HAMA_CONF=${MRQL_HOME}/conf/conf-hama
 CUP_JAR=/usr/share/java/cup.jar
 
 # Hadoop libraries are from a Hadoop tarball
-MRQL_CLASSPATH=classes:${HAMA_JAR}:${HADOOP_HOME}/hadoop-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/lib/commons-cli-1.2.jar
+HADOOP_JARS=${HADOOP_HOME}/hadoop-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/lib/commons-cli-1.2.jar
 
 # Hadoop libraries are from a YARN tarball
-# MRQL_CLASSPATH=classes:$HAMA_JAR:$HADOOP_HOME/share/hadoop/common/hadoop-common-$HADOOP_VERSION.jar:$HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-client-core-$HADOOP_VERSION.jar:$HADOOP_HOME/share/hadoop/hdfs/hadoop-hdfs-$HADOOP_VERSION.jar:$HADOOP_HOME/share/hadoop/common/lib/hadoop-annotations-$HADOOP_VERSION.jar:$HADOOP_HOME/share/hadoop/common/lib/commons-cli-1.2.jar
+#HADOOP_JARS=${HADOOP_HOME}/share/hadoop/common/hadoop-common-$HADOOP_VERSION.jar:${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-core-$HADOOP_VERSION.jar:${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs-$HADOOP_VERSION.jar:${HADOOP_HOME}/share/hadoop/common/lib/hadoop-annotations-$HADOOP_VERSION.jar:${HADOOP_HOME}/share/hadoop/common/lib/commons-cli-1.2.jar
 
 # Hadoop libraries are from a Cloudera package
-#MRQL_CLASSPATH=classes:$HAMA_JAR:/usr/lib/hadoop-0.20/hadoop-core.jar:/usr/lib/hadoop-0.20/lib/commons-cli-1.2.jar
+#HADOOP_JARS=/usr/lib/hadoop-0.20/hadoop-core.jar:/usr/lib/hadoop-0.20/lib/commons-cli-1.2.jar
+
+MRQL_CLASSPATH=classes:${HAMA_JAR}:${HADOOP_JARS}
