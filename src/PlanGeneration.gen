@@ -345,12 +345,7 @@ final public class PlanGeneration extends AlgebraicOptimization {
 	   match tp {
 	   case XML:
 	       return makePlan(#<call(XMLchildren,`(new StringLeaf(a.toString())),`x)>);
-	   case persistent(XML):
-	       return makePlan(#<call(XMLchildren,`(new StringLeaf(a.toString())),`x)>);
 	   case `S(XML):
-	       if (is_collection(S))
-		   return makePlan(#<call(XMLchildren,`(new StringLeaf(a.toString())),`x)>);
-	   case `S(persistent(XML)):
 	       if (is_collection(S))
 		   return makePlan(#<call(XMLchildren,`(new StringLeaf(a.toString())),`x)>);
 	   };
@@ -365,11 +360,6 @@ final public class PlanGeneration extends AlgebraicOptimization {
 		       else fail
 		   case _: i++;
 		   };
-	   case `T(tuple(string,`tv)):
-	       if (is_collection(T))
-		   return #<map_index(`(makePlan(x)),
-				      `(new StringLeaf(a.toString())))>;
-	       else fail
 	   case union(...tl):
 	       for ( Tree t: tl )
 		   match TypeInference.expand(t) {
@@ -388,6 +378,51 @@ final public class PlanGeneration extends AlgebraicOptimization {
 					  `(new StringLeaf(a.toString())))>;
 		   case `tt: error("wrong projection: "+e+" ("+tt+")");
 		   };
+	   case `S(`ttp):
+	       if (!is_collection(S))
+		   fail;
+	       match TypeInference.expand(ttp) {
+	       case tuple(string,`tv):
+		   return #<map_index(`(makePlan(x)),
+				      `(new StringLeaf(a.toString())))>;
+	       case record(...bl):
+		   Tree nv = new_var();
+		   int i = 0;
+		   for ( Tree b: bl )
+		       match b {
+		       case bind(`c,_):
+			   if (a.equals(c))
+			       return makePlan(#<cmap(lambda(`nv,nth(`nv,`i)),`x)>);
+			   else fail
+		       case _: i++;
+		       };
+	       case union(...tl):
+		   Tree nv = new_var();
+		   int j = 0;
+		   for ( Tree t: tl ) {
+		       match t {
+		       case `c(record(...bl)):
+			   int i = 0;
+			   for ( Tree b: bl )
+			       match b {
+			       case bind(`w,_):
+				   if (a.equals(w))
+				       return makePlan(#<cmap(lambda(`nv,if(call(eq,union_tag(`nv),`j),
+									    bag(nth(union_value(`nv),`i)),
+									    bag())),`x)>);
+				   else fail
+			       case _: i++;
+			       };
+		       case `c(bag(tuple(string,`tv))):
+			   return makePlan(#<cmap(lambda(`nv,if(call(eq,union_tag(`nv),`j),
+								bag(map_index(union_value(`nv),
+									      `(new StringLeaf(a.toString())))),
+								bag())),`x)>);
+		       case `tt: error("wrong projection: "+e+" ("+tt+")");
+		       };
+		       j++;
+		   }
+	       };
 	   case `t: error("wrong projection: "+e+" ("+t+")");
 	   };
        case typed(`x,`tp):

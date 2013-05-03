@@ -654,17 +654,11 @@ public class TypeInference extends Translator {
 	    match ta {
 	    case XML:
 		return #<list(XML)>;
-	    case persistent(XML):
-		return #<List(XML)>;
 	    case `S(XML):
 		if (is_collection(S))
 		    return #<`S(XML)>;
-	    case `S(persistent(XML)):
-		if (is_collection(S))
-		    return #<`S(persistent(XML))>;
 	    };
-	    ta = expand(ta);
-	    match ta {
+	    match expand(ta) {
 	    case record(...ts):
 		for ( Tree t: ts )
 		    match t {
@@ -673,19 +667,6 @@ public class TypeInference extends Translator {
 			    return tp;
 		    };
 		type_error(e,"Record "+print_query(a)+" does not have a component "+v);
-	    case `S(record(...ts)):
-		if (!is_collection(S))
-		    fail;
-		for ( Tree t: ts )
-		    match t {
-		    case bind(`w,`tp):
-			if (equal_types(w,v))
-			    return #<`S(`tp)>;
-		    };
-		type_error(e,"The record collection "+print_query(a)
-			   +" does not have a component "+v);
-	    case bag(tuple(string,`tv)):
-		return tv;
 	    case union(...tl):
 		Trees s = #[];
 		for ( Tree t: tl )
@@ -707,6 +688,43 @@ public class TypeInference extends Translator {
 		    type_error(e,"Ambiguous record projection "+print_query(e)
 			       + " over the union "+print_type(ta));
 		return s.head();
+	    case `S(`ttp):
+		if (!is_collection(S))
+		    fail;
+		match expand(ttp) {
+		case record(...ts):
+		    for ( Tree t: ts )
+			match t {
+			case bind(`w,`tp):
+			    if (equal_types(w,v))
+				return #<`S(`tp)>;
+			};
+		    type_error(e,"The record collection "+print_query(a)
+			       +" does not have a component "+v);
+		case tuple(string,`tv):
+		    return tv;
+		case union(...tl):
+		    Trees s = #[];
+		    for ( Tree t: tl )
+			match t {
+			case `c(record(...ts)):
+			    for ( Tree tn: ts )
+				match tn {
+				case bind(`w,`tp):
+				    if (equal_types(w,v))
+					s = s.append(tp);
+				};
+			case `c(bag(tuple(string,`tv))):
+			    s = s.append(tv);
+			};
+		    if (s.length() == 0)
+			type_error(e,"Wrong record projection "+print_query(e)
+				   + " over the union "+print_type(ta));
+		    else if (s.length() > 1)
+			type_error(e,"Ambiguous record projection "+print_query(e)
+				   + " over the union "+print_type(ta));
+		    return #<`S(...s)>;
+		};
 	    case `t:
 		type_error(e,"The record projection "+print_query(e)
 			   + " cannot apply to the type "+print_type(t));
