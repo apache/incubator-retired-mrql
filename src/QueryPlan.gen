@@ -647,12 +647,30 @@ private final static class SingleQueryPlan {
 		      `(plan[j]))>;
     }
 
+    private static Tree top_pattern_variables ( Tree pat ) {
+	match pat {
+	case _(...ts):
+	    Trees ps = #[];
+	    for ( Tree t: ts )
+		match t {
+		case `f(...): ps = ps.append(#<`f>);
+		case _: ps = ps.append(t);
+		};
+	    if (ps.length() > 1)
+		return #<tuple(...ps)>;
+	    else return ps.head();
+	};
+	return pat;
+    }
+
     static Tree make_unnest ( int i, int j ) {
 	Tree body = null;
 	if (Config.trace)
 	    System.out.print("unnest "+pattern[i]+" -> "+pattern[j]);
 	if (!no_grouping && depth[i] < depth[j]) {
-	    body = subst_expr(pattern_head(pattern[j],false),plan[j],plan[i]);
+	    // Changed 6/13/13: must rearrange binding variables in nested queries based on join order
+	    //body = subst_expr(pattern_head(pattern[j],false),plan[j],plan[i]);
+	    body = subst_header(pattern_head(pattern[j],false),top_pattern_variables(pattern[j]),plan[j],plan[i]);
 	    // new pattern[i] is the old pattern[i]
 	} else {
 	    body = join_body(pattern[j],pattern[i],predicate[i][j]);

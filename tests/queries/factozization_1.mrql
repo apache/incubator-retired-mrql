@@ -1,0 +1,38 @@
+Mmatrix = source(line,"tests/data/Xmatrix.txt",",",type( (double,long,long) ));
+Hmatrix = source(line,"tests/data/Ymatrix.txt",",",type( (double,long,long) ));
+Wmatrix = source(line,"tests/data/Ymatrix.txt",",",type( (double,long,long) ));
+
+
+macro transpose ( X ) {
+  select (x,j,i)
+    from (x,i,j) in X
+};
+
+// matrix multiplication:
+macro multiply ( X, Y ) {
+  select (sum(z),i,j)
+    from (x,i,k) in X, (y,k,j) in Y, z = x*y
+   group by (i,j)
+};
+
+// cell-wise multiplication:
+macro Cmult ( X, Y ) {
+  select ( x*y, i, j )
+    from (x,i,j) in X, (y,i,j) in Y
+};
+
+// cell-wise division:
+macro Cdiv ( X, Y ) {
+  select ( x/y, i, j )
+    from (x,i,j) in X, (y,i,j) in Y
+};
+
+// Gaussian non-negative matrix factorization (from SystemML paper)
+macro factorize ( V, Hinit, Winit ) {
+  repeat (H,W) = (Hinit,Winit)
+    step ( Cmult(H,Cdiv(multiply(transpose(W),V),multiply(transpose(W),multiply(W,H)))),
+           Cmult(W,Cdiv(multiply(V,transpose(H)),multiply(W,multiply(H,transpose(H))))) )
+   limit 2
+};
+
+//factorize(Mmatrix,Hmatrix,Wmatrix);

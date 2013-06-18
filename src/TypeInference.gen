@@ -654,10 +654,12 @@ public class TypeInference extends Translator {
 	    match ta {
 	    case XML:
 		return #<list(XML)>;
-	    case `S(XML):
-		if (is_collection(S))
+	    case `S(`tp):
+		if (is_collection(S) && (tp.equals(#<XML>) || tp.equals(TopLevel.xml_type)))
 		    return #<`S(XML)>;
 	    };
+	    if (ta.equals(TopLevel.xml_type))
+		return #<list(XML)>;
 	    match expand(ta) {
 	    case record(...ts):
 		for ( Tree t: ts )

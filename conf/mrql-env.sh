@@ -37,10 +37,10 @@ HAMA_HOME=${HOME}/hama-${HAMA_VERSION}
 HAMA_JAR=${HAMA_HOME}/hama-core-${HAMA_VERSION}.jar
 
 # The Hadoop configuration directory.  Required.
-HADOOP_CONF=${MRQL_HOME}/conf/conf-hadoop
+HADOOP_CONF=${MRQL_HOME}/conf
 
 # Optional: the Hama configuration directory
-HAMA_CONF=${MRQL_HOME}/conf/conf-hama
+HAMA_CONF=${MRQL_HOME}/conf-hama
 
 # The CUP parser library.
 # You may install it as a linux package or download it from http://www2.cs.tum.edu/projects/cup/

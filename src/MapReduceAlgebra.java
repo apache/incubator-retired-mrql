@@ -724,12 +724,6 @@ final public class MapReduceAlgebra {
     /** the cache that holds all local data in memory */
     private static Tuple cache;
 
-    private static void cleanCache () {
-	cache = new Tuple(100);
-	for ( int i = 0; i < 100; i++ )
-	    cache.set(i,new Bag());
-    }
-
     /** return the cache element at location loc */
     public static MRData getCache ( int loc ) {
 	return cache.get(loc);
@@ -763,7 +757,9 @@ final public class MapReduceAlgebra {
 	boolean skip = false;
 	String tabs = "";
 	int step = 0;
-	cleanCache();
+	cache = new Tuple(100);
+	for ( int i = 0; i < 100; i++ )
+	    cache.set(i,new Bag());
 	for ( Bag x: inputs ) {
 	    Tuple p = (Tuple)(x.get(0));
 	    cache.set(((MR_int)p.first()).get(),
@@ -781,7 +777,7 @@ final public class MapReduceAlgebra {
 		    if (cache.get(i) instanceof Bag && ((Bag)cache.get(i)).size() > 0)
 			System.out.println(tabs+"      cache "+i+": "+cache.get(i));
 	    };
-	    result = (Tuple)superstep.eval(new Tuple(msgs,state));
+	    result = (Tuple)superstep.eval(new Tuple(cache,msgs,state));
 	    Bag new_msgs = (Bag)result.get(0);
 	    state = result.get(1);
 	    exit = ((MR_bool)result.get(2)).get();

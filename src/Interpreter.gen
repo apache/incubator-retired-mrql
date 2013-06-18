@@ -203,6 +203,8 @@ public class Interpreter extends TypeInference {
 	    return new Lambda(evalf(v.toString(),body,env));
 	case nth(`x,`n):
 	    return ((Tuple)evalE(x,env)).get((int)n.longValue());
+	case setNth(`x,`n,`v,`ret):
+	    return ((Tuple)evalE(x,env)).set((int)n.longValue(),evalE(v,env),evalE(ret,env));
 	case materialize(`u):
 	    return MapReduceAlgebra.materialize(evalE(u,env));
 	case let(`v,`u,`body):
@@ -295,14 +297,6 @@ public class Interpreter extends TypeInference {
 	    return Evaluator.synchronize((MR_bool)evalE(b,env));
 	case distribute(`s):
 	    return Evaluator.distribute((Bag)evalE(s,env));
-	case getCache(`n):
-	    int loc = ((MR_int)evalE(n,env)).get();
-	    return (Config.hadoop_mode) ? Plan.getCache(loc) : MapReduceAlgebra.getCache(loc);
-	case setCache(`n,`v,`rv):
-	    int loc = ((MR_int)evalE(n,env)).get();
-	    return (Config.hadoop_mode)
-		   ? Plan.setCache(loc,evalE(v,env),evalE(rv,env))
-		   : MapReduceAlgebra.setCache(loc,evalE(v,env),evalE(rv,env));
 	case mapReduce(`m,`r,`s,_):
 	    return MapReduceAlgebra.mapReduce(evalF(m,env),
 					      evalF(r,env),
@@ -467,7 +461,8 @@ public class Interpreter extends TypeInference {
 	    msg.printStackTrace();
 	    throw new Error("Evaluation error in: "+print_query(e));
 	} catch (Exception ex) {
-	    System.err.println(ex.getMessage());
+	    if (Config.trace)
+		System.err.println(ex.getMessage());
 	    throw new Error("Evaluation error in: "+print_query(e));
 	}
     }
@@ -743,6 +738,7 @@ public class Interpreter extends TypeInference {
 	    ne = Simplification.rename(Translator.translate_select(ne));
 	    if (Config.trace)
 		System.out.println("After removing select-queries:\n"+ne.pretty(0));
+	    type_inference(ne);
 	    ne = Simplification.simplify_all(ne);
 	    if (Config.trace)
 		System.out.println("Algebra expression:\n"+ne.pretty(0));
@@ -757,7 +753,8 @@ public class Interpreter extends TypeInference {
 	    if (Config.trace)
 		System.out.println("Physical plan type: "+print_type(et));
 	    repeat_variables = #[];
-	    Tree plan = PlanGeneration.makePlan(Simplification.simplify_all(ne));
+	    ne = Simplification.simplify_all(ne);
+	    Tree plan = PlanGeneration.makePlan(ne);
 	    if (Config.bsp_mode) {
 		BSPTranslator.reset();
 		if (Config.trace)

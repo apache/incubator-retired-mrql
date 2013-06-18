@@ -55,9 +55,14 @@ final public class Tuple implements MRData {
     /** the second element of the tuple */
     public MRData second () { return tuple[1]; }
 
+    /** replace the i'th element of a tuple with new data and return a new value */
+    public MRData set ( int i, MRData data, MRData ret ) {
+	tuple[i] = data;
+	return ret;
+    }
+
     /** replace the i'th element of a tuple with new data */
     public Tuple set ( int i, MRData data ) {
-	assert(i >= 0 && i < tuple.length);
 	tuple[i] = data;
 	return this;
     }

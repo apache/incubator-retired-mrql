@@ -23,7 +23,7 @@ import Gen.*;
 /** normalize algebraic expressions to more efficient forms using heuristic rules */
 public class Normalization extends Translator {
 
-    /** given that patter=e, find the bindings of the pattern variables */
+    /** given that pattern=e, find the bindings of the pattern variables */
     static Trees bind_pattern ( Tree pattern, Tree e ) {
         Trees args = #[];
 	match pattern {

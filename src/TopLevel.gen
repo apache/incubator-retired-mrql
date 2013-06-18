@@ -23,6 +23,7 @@ import java.io.PrintStream;
 
 /** Provides the API for compilation/code-generation */
 final public class TopLevel extends Interpreter {
+    static Tree xml_type;
 
     public TopLevel () {
 	// XML and JSON are user-defined types:
@@ -36,6 +37,7 @@ final public class TopLevel extends Interpreter {
 			       Jbool(bool),
 			       Jnull(tuple()))>);
 	constant(#<PI>,#<double>,new MR_double(Math.PI));
+	xml_type = global_datatype_env.lookup("XML");
 	DataSource.loadParsers();
     }
 

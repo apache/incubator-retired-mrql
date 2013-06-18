@@ -185,6 +185,69 @@ final public class PlanGeneration extends AlgebraicOptimization {
      */
     public static Tree makePlan ( Tree e ) {
        match e {
+       // combine groupBy with Join (experimental)
+       case mapReduce(lambda(`vm,`bm),lambda(`vr,`br),`s,`o):
+	   if (!Config.use_combiner || !is_dataset_expr(s))
+	       fail;
+	   Tree splan = makePlan(s);
+	   match splan {
+	   case MapReduce2(lambda(`mvx,bag(tuple(`kx,`mx))),
+			   lambda(`mvy,bag(tuple(`ky,`my))),
+			   lambda(`v,cmap(lambda(`x,cmap(lambda(`y,bag(tuple(tuple(`gx,`gy),`b))),
+							 nth(`vx,1))),
+					  nth(`vy,0))),
+			   `X,`Y,`o2):
+	       if (!vx.equals(v) || !vy.equals(v) || !mx.equals(mvx) || !my.equals(mvy))
+		   fail;
+	       Tree gxx = gx;
+	       Tree gyy = gy;
+	       if (free_variables(gx,#[]).equals(#[`y]) && free_variables(gy,#[]).equals(#[`x])) {
+		   gxx = gy;
+		   gyy = gx;
+	       } else if (!free_variables(gx,#[]).equals(#[`x]) || !free_variables(gy,#[]).equals(#[`y]))
+		   fail;
+	       Aggregates.clear();
+	       Tree nv = new_var();
+	       match TypeInference.type_inference(bm) {
+	       case `S(`tp):
+		   if (!is_collection(S))
+		       fail;
+		   type_env.insert(nv.toString(),tp);
+	       };
+	       Tree rd = Aggregates.derive_combiner(br,#<lambda(`vm,`bm)>,vm,vr);
+	       if (Aggregates.reduces.is_empty())
+		   fail;
+	       Tree vr2 = new_var();
+	       Tree m = simplify_all(#<lambda(`vm,cmap(lambda(`nv,bag(tuple(nth(`nv,0),
+	       					    tuple(...(Aggregates.maps))))),`bm))>);
+	       Tree c = subst(vr,vr2,#<bag(tuple(...(Aggregates.combines)))>);
+	       c = simplify_all(#<lambda(`vr2,`c)>);
+	       Tree r = simplify_all(#<lambda(`vr,`rd)>);
+	       Tree mtp = TypeInference.type_inference(#<bag(tuple(...(Aggregates.maps)))>);
+	       Tree rtp = #<tuple(`(TypeInference.type_inference(#<nth(`vr,0)>)),`mtp)>;
+	       type_env.insert(vr.toString(),rtp);
+	       type_env.insert(vr2.toString(),rtp);
+	       TypeInference.type_inference(m);
+	       TypeInference.type_inference(c);
+	       TypeInference.type_inference(r);
+	       Tree combiner = makePlan(c);
+	       Tree reducer = makePlan(r);
+	       Tree nm = simplify_all(subst(x,#<nth(`vx,0)>,
+					    subst(y,#<nth(`vy,1)>,
+						  #<cmap(lambda(x,bag(nth(x,1))),
+							 cmap(`m,bag(tuple(tuple(`gx,`gy),`b))))>)));
+	       type_env.insert(v.toString(),TypeInference.type_inference(#<tuple(`mvx,`mvy)>));
+	       nm = makePlan(nm);
+	       return #<GroupByJoin(lambda(`mvx,`kx),
+				    lambda(`mvy,`ky),
+				    lambda(`x,`gxx),
+				    lambda(`y,`gyy),
+				    lambda(`v,`nm),
+				    `combiner,
+				    `reducer,
+				    `X,`Y,`o)>;
+	   };
+	   fail
        // extract the mapReduce combiner
        case mapReduce(lambda(`vm,`bm),lambda(`vr,`br),`s,`o):
 	   if (!Config.use_combiner || !is_dataset_expr(s))
@@ -199,54 +262,31 @@ final public class PlanGeneration extends AlgebraicOptimization {
 		  type_env.insert(nv.toString(),tp);
 	   };
 	   Tree rd = Aggregates.derive_combiner(br,#<lambda(`vm,`bm)>,vm,vr);
-	   if (Aggregates.can_use_combiner) {
-	       Tree vr2 = new_var();
-	       Tree m = simplify_all(#<lambda(`vm,cmap(lambda(`nv,bag(tuple(nth(`nv,0),
-							      tuple(...(Aggregates.maps))))),`bm))>);
-	       Tree c = subst(vr,vr2,#<bag(tuple(...(Aggregates.combines)))>);
-	       c = simplify_all(#<lambda(`vr2,`c)>);
-	       Tree r = simplify_all(#<lambda(`vr,`rd)>);
-	       Tree mtp = TypeInference.type_inference(#<bag(tuple(...(Aggregates.maps)))>);
-	       Tree rtp = #<tuple(`(TypeInference.type_inference(#<nth(`vr,0)>)),`mtp)>;
-	       type_env.insert(vr.toString(),rtp);
-	       type_env.insert(vr2.toString(),rtp);
-	       TypeInference.type_inference(m);
-	       TypeInference.type_inference(c);
-	       TypeInference.type_inference(r);
-	       Tree combiner = makePlan(c);
-	       Tree reducer = makePlan(r);
-	       match splan {
-	       // combine groupBy with Join (experimental)
-	       case MapReduce2(lambda(`mvx,bag(tuple(`kx,`mx))),
-			       lambda(`mvy,bag(tuple(`ky,`my))),
-			       lambda(`v,cmap(lambda(`x,cmap(lambda(`y,bag(tuple(tuple(`gx,`gy),`b))),
-							     nth(`vx,1))),
-					      nth(`vy,0))),
-			       `X,`Y,`o2):
-		   if (!vx.equals(v) || !vy.equals(v) || !mx.equals(mvx) || !my.equals(mvy))
-		       fail;
-		   Tree nm = simplify_all(subst(x,#<nth(`vx,0)>,
-					  subst(y,#<nth(`vy,1)>,
-						#<cmap(lambda(x,bag(nth(x,1))),
-						       cmap(`m,bag(tuple(tuple(`gx,`gy),`b))))>)));
-		   type_env.insert(v.toString(),TypeInference.type_inference(#<tuple(`mvx,`mvy)>));
-		   nm = makePlan(nm);
-		   return #<GroupByJoin(lambda(`mvx,`kx),
-					lambda(`mvy,`ky),
-					lambda(`x,`gx),
-					lambda(`y,`gy),
-					lambda(`v,`nm),
-					`combiner,
-					`reducer,
-					`X,`Y,`o)>;
-	       // if the MapCombineReduce input is a join, push the combiner to the join
-	       case MapReduce2(`mx,`my,lambda(`rv,`rb),`x,`y,`o2):
-		   Tree nr = makePlan(simplify_all(#<lambda(`rv,cmap(`m,`rb))>));
-		   return #<MapReduce(lambda(`vm,bag(`vm)),`reducer,
-				      MapCombineReduce2(`mx,`my,`combiner,`nr,`x,`y,`o2),`o)>;
-	       case `input:
-		   return #<MapCombineReduce(`(makePlan(m)),`combiner,`reducer,`input,`o)>;
-	       }
+	   if (!Aggregates.can_use_combiner || Aggregates.reduces.is_empty())
+	       fail;
+	   Tree vr2 = new_var();
+	   Tree m = simplify_all(#<lambda(`vm,cmap(lambda(`nv,bag(tuple(nth(`nv,0),
+					       tuple(...(Aggregates.maps))))),`bm))>);
+	   Tree c = subst(vr,vr2,#<bag(tuple(...(Aggregates.combines)))>);
+	   c = simplify_all(#<lambda(`vr2,`c)>);
+	   Tree r = simplify_all(#<lambda(`vr,`rd)>);
+	   Tree mtp = TypeInference.type_inference(#<bag(tuple(...(Aggregates.maps)))>);
+	   Tree rtp = #<tuple(`(TypeInference.type_inference(#<nth(`vr,0)>)),`mtp)>;
+	   type_env.insert(vr.toString(),rtp);
+	   type_env.insert(vr2.toString(),rtp);
+	   TypeInference.type_inference(m);
+	   TypeInference.type_inference(c);
+	   TypeInference.type_inference(r);
+	   Tree combiner = makePlan(c);
+	   Tree reducer = makePlan(r);
+	   match splan {
+	   // if the MapCombineReduce input is a join, push the combiner to the join
+	   case MapReduce2(`mx,`my,lambda(`rv,`rb),`x,`y,`o2):
+	       Tree nr = makePlan(simplify_all(#<lambda(`rv,cmap(`m,`rb))>));
+	       return #<MapReduce(lambda(`vm,bag(`vm)),`reducer,
+				  MapCombineReduce2(`mx,`my,`combiner,`nr,`x,`y,`o2),`o)>;
+	   case `input:
+	       return #<MapCombineReduce(`(makePlan(m)),`combiner,`reducer,`input,`o)>;
 	   };
 	   fail
        case mapReduce(`m,`r,`s,`o):
@@ -481,7 +521,7 @@ final public class PlanGeneration extends AlgebraicOptimization {
 		       };
 		       plus = makePlan(simplify_all(#<lambda(`np,apply(`plus,`np))>));
 		       Tree acc = makePlan(simplify_all(#<lambda(`na,apply(`plus,tuple(nth(`na,0),
-										       apply(`unit,nth(`na,1)))))>));
+								    apply(`unit,nth(`na,1)))))>));
 		       zero = makePlan((f.equals(#<avg>)) ? zero : #<typed(`zero,`tp)>);
 		       match plan {
 		       case MapCombineReduce(`m,`c,`r,`s,_):

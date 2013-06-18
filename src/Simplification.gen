@@ -53,25 +53,18 @@ public class Simplification extends Normalization {
 	return e.equals(v);
     }
 
-    private static Tree get_accessor ( Tree v, Tree d, Tree e ) {
-	match d {
-	case nth(`u,`n):
-	    int nn = (int)((LongLeaf)n).value();
-	    Trees bl = #[];
-	    for ( int i = 0; i < 2; i++ )
-		bl = bl.append(i == nn ? get_accessor(#<nth(`v,`i)>,u,e) : #<nth(`v,`i)>);
-	    return #<tuple(...bl)>;
-	case project(`u,`a): return v;
-	};
-	return e;
-    }
-
     private static Trees factor_out_aggr ( Tree e, Tree v ) {
 	match e {
 	case call(`g,cmap(`f,`d)):
 	    if (!simple_accessor(v,d) || !free_variables(f,#[]).is_empty())
 		fail;
-	    return #[bind(`e,`d)];
+	    for ( Tree monoid: monoids )
+		match monoid {
+		case `aggr(...):
+		    if (aggr.equals(g.toString()))
+			return #[bind(`e,`d)];
+		};
+	    fail
        case `f(...al):
 	   Trees bl = #[];
 	   for ( Tree a: al )
@@ -97,7 +90,7 @@ public class Simplification extends Normalization {
 		    for ( Tree b: bl )
 			match b {
 			case bind(`uu,`dd):
-			    if (d.equals(dd))
+			    if (d.equals(dd) && !u.equals(uu))
 				if (alpha_equivalent(u,uu))
 				    exists = true;
 			};
@@ -158,43 +151,53 @@ public class Simplification extends Normalization {
 	case cmap(`f,if(`p,`x,`y)):
 	    return simplify(#<if(`p,cmap(`f,`x),cmap(`f,`y))>);
 	// if the join reducer contains an independent aggregation push it to the input
-	// NOT USED YET
-	case xxxjoin(`kx,`ky,lambda(`v,cmap(lambda(`v1,cmap(lambda(`v2,bag(tuple(`k,`b))),
-							 nth(`vy,1))),
-					 nth(`vx,0))),
+	case join(`kx,`ky,
+		  lambda(`v,cmap(lambda(`v1,cmap(lambda(`v2,bag(tuple(`k,`b))),
+						 nth(`vy,1))),
+				 nth(`vx,0))),
 		  `X,`Y):
 	    if (!vx.equals(v) || !vy.equals(v))
 		fail;
 	    Trees l1 = factor_out_aggregations(b,v1);
-	    Trees dl = #[];
-	    if (!l1.is_empty())
-		for ( Tree a: l1 )
-		    match a {
-		    case bind(`u,`d):
-			Tree nv = new_var();
-			b = subst(u,d,b);
-			if (!dl.member(d))
-			    X = #<cmap(lambda(`nv,bag(`(subst(v1,nv,get_accessor(v1,d,u))))),`X)>;
-			dl = dl.append(d);
-		    };
 	    Trees l2 = factor_out_aggregations(b,v2);
-	    dl = #[];
-	    if (!l2.is_empty())
-		for ( Tree a: l2 )
-		    match a {
-		    case bind(`u,`d):
-			Tree nv = new_var();
-			b = subst(u,d,b);
-			if (!dl.member(d))
-			    Y = #<cmap(lambda(`nv,bag(`(subst(v2,nv,get_accessor(v2,d,u))))),`Y)>;
-			dl = dl.append(d);
-		    };
 	    if (l1.is_empty() && l2.is_empty())
 		fail;
-	    return simplify(#<join(`kx,`ky,lambda(`v,cmap(lambda(`v1,cmap(lambda(`v2,bag(tuple(`k,`b))),
-									  nth(`vy,1))),
-							  nth(`vx,0))),
-				   `X,`Y)>);
+	    Tree px = v1;
+	    Trees dl = #[];
+	    for ( Tree a: l1 )
+		match a {
+		case bind(`u,`d):
+		    Tree nv = new_var();
+		    b = subst(u,nv,b);
+		    if (true || !dl.member(d)) {
+			Tree vv = new_var();
+			X = #<cmap(lambda(`px,bag(tuple(`px,`u))),`X)>;
+			px = #<tuple(`px,`nv)>;
+		    }
+		    dl = dl.append(d);
+		};
+	    Tree py = v2;
+	    dl = #[];
+	    for ( Tree a: l2 )
+		match a {
+		case bind(`u,`d):
+		    Tree nv = new_var();
+		    b = subst(u,nv,b);
+		    if (true || !dl.member(d)) {
+			Tree vv = new_var();
+			Y = #<cmap(lambda(`py,bag(tuple(`py,`u))),`Y)>;
+			py = #<tuple(`py,`nv)>;
+		    };
+		    dl = dl.append(d);
+		};
+	    Tree res = #<join(lambda(`px,apply(`kx,`v1)),
+			      lambda(`py,apply(`ky,`v2)),
+			      lambda(`v,cmap(lambda(`px,cmap(lambda(`py,bag(tuple(`k,`b))),
+							     nth(`vy,1))),
+					     nth(`vx,0))),
+			      `X,`Y)>;
+	    res = rename(res);
+	    return simplify(res);
         // if the reducer of a join generates pairs (k,v), where k is functional dependent
         // on a join key, then the outer groupBy just groups the v values
 	case groupBy(join(lambda(`vx,`bx),`ky,

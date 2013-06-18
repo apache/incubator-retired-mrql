@@ -74,7 +74,9 @@ final public class BSPPlan extends Plan {
 	    try {
 		// this case is only used for checking the exit condition of repeat/closure
 		boolean exit = mr_exit.get();
-		if (!exit && all_peers.length > 1)
+		if (all_peers.length <= 1)
+		    return (exit) ? SystemFunctions.bsp_true_value : SystemFunctions.bsp_false_value;
+		if (!exit)
 		    // this peer is not ready to exit, so no peer should exit
 		    for ( String p: this_peer.getAllPeerNames() )
 			this_peer.send(p,new MRContainer(more_supersteps));
@@ -204,7 +206,7 @@ final public class BSPPlan extends Plan {
 	@Override
 	public void bsp ( BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer )
 	       throws IOException, SyncException, InterruptedException {
-	    final Tuple pair = new Tuple(2);
+	    final Tuple triple = new Tuple(3);
 	    Tuple result;
 	    boolean skip = false;
 	    String tabs = "";
@@ -221,14 +223,14 @@ final public class BSPPlan extends Plan {
 		    System.err.println(tabs+"      state ["+peer.getPeerName()+"]: "+state);
 		    for ( int i = 0; i < local_cache.size(); i++)
 			if (local_cache.get(i) instanceof Bag && ((Bag)local_cache.get(i)).size() > 0)
-			    System.out.println(tabs+"      cache "+i+": "+local_cache.get(i));
+			    System.out.println(tabs+"      cache ["+peer.getPeerName()+"] "+i+": "+local_cache.get(i));
 		};
-		pair.set(0,msg_cache);
-		pair.set(1,state);
+		triple.set(0,local_cache);
+		triple.set(1,msg_cache);
+		triple.set(2,state);
 		this_peer = peer;
-		cache = local_cache;
 		// evaluate one superstep
-		result = (Tuple)superstep_fnc.eval(pair);
+		result = (Tuple)superstep_fnc.eval(triple);
 		Bag msgs = (Bag)result.get(0);
 		exit = ((MR_bool)result.get(2)).get();
 		state = result.get(1);

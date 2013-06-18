@@ -348,6 +348,8 @@ final public class Compiler extends Translator {
 	    return "new Lambda("+compilef(v.toString(),body)+")";
 	case nth(`x,`n):
 	    return "(((Tuple)("+compileE(x)+")).get("+((LongLeaf)n).value()+"))";
+	case setNth(`x,`n,`v,`ret):
+	    return "(((Tuple)("+compileE(x)+")).set("+((LongLeaf)n).value()+","+compileE(v)+","+compileE(ret)+"))";
 	case materialize(`u):
 	    return "MapReduceAlgebra.materialize("+compileE(u)+")";
 	case let(`v,`u,`body):
@@ -409,14 +411,6 @@ final public class Compiler extends Translator {
 	    return "SystemFunctions.synchronize((MR_bool)"+compileE(b)+")";
 	case distribute(`s):
 	    return "SystemFunctions.distribute((Bag)"+compileE(s)+")";
-	case getCache(`n):
-	    String loc = "((MR_int)"+compileE(n)+").get()";
-	    return (Config.hadoop_mode) ? "Plan.getCache("+loc+")" : "MapReduceAlgebra.getCache("+loc+")";
-	case setCache(`n,`v,`rv):
-	    String loc = "((MR_int)"+compileE(n)+").get()";
-	    return (Config.hadoop_mode)
-		   ? "Plan.setCache("+loc+","+compileE(v)+","+compileE(rv)+")"
-		   : "MapReduceAlgebra.setCache("+loc+","+compileE(v)+","+compileE(rv)+")";
 	case mapReduce(`mx,`my,`s,_):
 	    return "MapReduceAlgebra.mapReduce("+compileF(mx)+","+compileF(my)+",(Bag)("+compileE(s)+"))";
 	case mapReduce2(`mx,`my,`r,`x,`y,_):

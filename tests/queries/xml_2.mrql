@@ -1,1 +1,2 @@
-source(xml,"tests/data/cs.xml",{"gradstudent"},xpath(name[firstname="Leonidas"]));
+select n.lastname
+from n in source(xml,"tests/data/cs.xml",{"gradstudent"},xpath(name[firstname="Leonidas"]));

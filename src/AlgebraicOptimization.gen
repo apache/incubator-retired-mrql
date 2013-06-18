@@ -92,9 +92,6 @@ public class AlgebraicOptimization extends Simplification {
 	    res = simplify_all(rename(res));
 	    TypeInference.type_inference(res);
 	    return translate(res);
-	case mapReduce2(`mx,`my,`r,cmap(lambda(`vx,`bx),`X),cmap(lambda(`vy,`by),`Y),`o):
-	    return translate(#<mapReduce2(lambda(`vx,cmap(`mx,`bx)),
-					  lambda(`vy,cmap(`my,`by)),`r,`X,`Y,`o)>);
 	case mapReduce2(`mx,`my,`r,cmap(lambda(`v,`b),`X),`Y,`o):
 	    match X {
 	    case groupBy(...): ;
