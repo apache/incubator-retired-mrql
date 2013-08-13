@@ -17,9 +17,11 @@
  */
 package org.apache.mrql;
 
+import java.io.*;
+import org.apache.mrql.gen.Tree;
 
 /** the run-time environment for in-memory evaluation (binds variables to MRData) */
-final public class Environment {
+final public class Environment implements Serializable {
     public String name;
     public MRData value;
     public Environment next;
@@ -28,5 +30,14 @@ final public class Environment {
 	name = n;
 	value = v;
 	this.next = next;
+    }
+
+    private void writeObject(ObjectOutputStream out) throws IOException {
+	out.defaultWriteObject();
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+	in.defaultReadObject();
+	name = Tree.add(name);
     }
 }

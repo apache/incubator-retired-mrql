@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.Trees;
+import org.apache.mrql.gen.Trees;
 import java.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;

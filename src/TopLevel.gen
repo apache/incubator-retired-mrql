@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.io.PrintStream;
 
 
@@ -61,6 +61,8 @@ final public class TopLevel extends Interpreter {
 	    tab_count = -3;
 	    if (plan == null)
 		return null;
+	    if (Config.hadoop_mode)
+		Evaluator.initialize_query();
 	    MRData res = evalE(plan,null);
 	    if (print) {
 		if (!Config.quiet_execution)
@@ -97,7 +99,7 @@ final public class TopLevel extends Interpreter {
     public final static void assign ( String v, Tree e ) {
 	if (variable_lookup(v,global_env) != null) {
 	    global_type_env.remove(v);
-	    remove_binding(v);
+	    remove_global_binding(v);
 	};
 	global_vars.insert(v,e);
     }
@@ -118,7 +120,7 @@ final public class TopLevel extends Interpreter {
 	global_type_env.insert(v,query_type);
 	if (res instanceof Bag)
 	    ((Bag)res).materialize();
-	global_binding(v,res);
+	new_global_binding(v,res);
 	return query_plan;
     }
 
@@ -128,7 +130,7 @@ final public class TopLevel extends Interpreter {
 	if (global_vars.lookup(var) != null)
 	    global_vars.remove(var);
 	global_type_env.insert(var,type);
-	global_binding(var,value);
+	new_global_binding(var,value);
     }
 
     /** define a new function

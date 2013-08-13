@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.io.*;
 import javax.tools.*;
 import javax.tools.JavaCompiler.CompilationTask;
@@ -99,7 +99,7 @@ final public class Compiler extends Translator {
 	match e {
 	case repeat(lambda(`v,`body),`s,`n):
 	    in_memory_repeat_vars = in_memory_repeat_vars.cons(v);
-	    return #<repeat(lambda(`v,`body),`(compile(s,out)),`n)>;
+	    return #<repeat(lambda(`v,`(compile(body,out))),`(compile(s,out)),`n)>;
 	case `f(...al):
 	    if (!plans_with_distributed_lambdas.member(#<`f>))
 		fail;
@@ -187,7 +187,8 @@ final public class Compiler extends Translator {
 	    boolean success = task.call();
 	    if (!success)
 		for ( Diagnostic d: diagnostics.getDiagnostics() )
-		    System.err.println("*** "+d.getMessage(Locale.US));
+		    System.err.println("*** Compilation error at line "+d.getLineNumber()+" position "
+				       +d.getColumnNumber()+": "+d.getMessage(Locale.US));
 	    Manifest manifest = new Manifest();
 	    manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION,"1.0");
 	    JarOutputStream target = new JarOutputStream(new FileOutputStream(jar_path),manifest);
@@ -319,7 +320,7 @@ final public class Compiler extends Translator {
 	    return "(new MR_byte(0))";
 	else if (e.is_variable())
 	    if (in_memory_repeat_vars.member(e))
-		return "Interpreter.variable_lookup(\""+e+"\",Interpreter.global_env)";
+		return "Interpreter.lookup_global_binding(\""+e.toString()+"\")";
 	    else return e.toString();
 	else if (e.is_long())
 	    return "(new MR_int("+((LongLeaf)e).value()+"))";
@@ -407,10 +408,10 @@ final public class Compiler extends Translator {
 	    return ret+"))";
 	case if(`c,`x,`y):
 	    return "((((MR_bool)"+compileE(c)+").get())?"+compileE(x)+":"+compileE(y)+")";
-	case synchronize(`b):
-	    return "SystemFunctions.synchronize((MR_bool)"+compileE(b)+")";
-	case distribute(`s):
-	    return "SystemFunctions.distribute((Bag)"+compileE(s)+")";
+	case synchronize(`peer,`b):
+	    return "SystemFunctions.synchronize(((MR_string)"+compileE(peer)+"),(MR_bool)"+compileE(b)+")";
+	case distribute(`peer,`s):
+	    return "SystemFunctions.distribute(((MR_string)"+compileE(peer)+"),(Bag)"+compileE(s)+")";
 	case mapReduce(`mx,`my,`s,_):
 	    return "MapReduceAlgebra.mapReduce("+compileF(mx)+","+compileF(my)+",(Bag)("+compileE(s)+"))";
 	case mapReduce2(`mx,`my,`r,`x,`y,_):
@@ -458,7 +459,21 @@ final public class Compiler extends Translator {
 		return ret+")";
 	    };
 	case apply(`f,`arg):
-	    if (f.is_variable())
+	    if (!f.is_variable())
+		fail;
+	    match global_functions.lookup(f.toString()) {
+	    case function(tuple(...params),`otp,`body):
+		String ac = compileE(arg);
+		String ret = "UserFunctions."+f+"(";
+		for ( int i = 0; i < params.length(); i++ )
+		    match params.nth(i) {
+		    case bind(_,`tp):
+			ret += ((i==0)?"":",")+"("+get_MR_type(tp)+")((Tuple)"+ac+").get("+i+")";
+		    };
+		return ret+")";
+	    };
+	case apply(`f,`arg):
+	    if (!f.is_variable())
 		return "("+compileF(f)+").eval("+compileE(arg)+")";
 	    else return "(((Lambda)"+compileE(f)+").lambda().eval("+compileE(arg)+"))";
 	case Collect(`s):
@@ -532,7 +547,7 @@ final public class Compiler extends Translator {
 	    Class<? extends Parser> p = DataSource.parserDirectory.get(parser.toString());
 	    if (p == null)
 		throw new Error("Unknown parser: "+parser);
-	    return "Plan.parsedSource("+p+".class,((MR_string)"+compileE(file)+").get(),"
+	    return "Plan.parsedSource("+p.getName()+".class,((MR_string)"+compileE(file)+").get(),"
 		   +reify(args)+")";
 	case ParsedSource(`parser,`file,...args):
 	    if (!Config.hadoop_mode)
@@ -541,7 +556,7 @@ final public class Compiler extends Translator {
 	    Class<? extends Parser> p = DataSource.parserDirectory.get(parser.toString());
 	    if (p == null)
 		throw new Error("Unknown parser: "+parser);
-	    return "Plan.parsedSource("+p+".class,((MR_string)"+compileE(file)+").get(),"
+	    return "Plan.parsedSource("+p.getName()+".class,((MR_string)"+compileE(file)+").get(),"
 		   +reify(args)+")";
 	case Merge(`x,`y):
 	    return "((Bag)"+compileM(x)+").union((Bag)"+compileM(y)+")";

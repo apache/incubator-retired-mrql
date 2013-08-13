@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.util.Iterator;
 import java.io.PrintStream;
 
@@ -27,32 +27,48 @@ public class Interpreter extends TypeInference {
 
     public final static Tree identity_mapper = #<lambda(x,bag(x))>;
 
-    static Environment global_env = null;
+    protected static Environment global_env = null;
 
     /** retrieve variable binding */
     public final static MRData variable_lookup ( final String v, final Environment environment ) {
 	for ( Environment env = environment; env != null; env = env.next ) {
-	    if (v == env.name)  // doesn't need equals()
+	    if (v.equals(env.name))
 		return env.value;
 	};
 	return null;
     }
 
     /** insert a new global variable binding */
-    public final static void global_binding ( final String var, final MRData value ) {
+    public final static void new_global_binding ( final String var, final MRData value ) {
+	if (value instanceof Bag)
+	    ((Bag)value).materialize();
 	global_env = new Environment(var,value,global_env);
     }
 
     /** remove a global variable binding */
-    public static void remove_binding ( String v ) {
+    public static void remove_global_binding ( String v ) {
+	if (global_env == null)
+	    return;
 	for ( Environment env = global_env; env.next != null; env = env.next )
-	    if (v == env.next.name)  // doesn't need equals()
+	    if (v.equals(env.next.name))
 		env.next = env.next.next;
 	if (global_env.name == v)
 	    global_env = global_env.next;
     }
 
-    static int coerce_method = ClassImporter.find_method_number("coerce",#[any,int]);
+    /** retrieve a global variable binding */
+    public static MRData lookup_global_binding ( String v ) {
+	for ( Environment env = global_env; env != null; env = env.next )
+	    if (v.equals(env.name))
+		return env.value;
+	return null;
+    }
+
+    public static void set_global_bindings ( Environment env ) {
+	global_env = env;
+    }
+
+    final static int coerce_method = ClassImporter.find_method_number("coerce",#[any,int]);
 
     /** untyped reify: not type-correct but will not crash the run-time system */
     private final static Tree reify ( final MRData x ) {
@@ -97,7 +113,7 @@ public class Interpreter extends TypeInference {
     /** evaluate an MRQL function in memory */
     public final static Function evalF ( Tree fnc, Environment env ) {
 	match fnc {
-	case compiled(`ln,`lm):
+	case compiled(`ln,`lm,...vars):
 	    try {
 		return Compiler.compiled(Thread.currentThread().getContextClassLoader(),ln.toString());
 	    } catch (Exception ex) {
@@ -177,7 +193,7 @@ public class Interpreter extends TypeInference {
 		MRData x = variable_lookup(v,env);
 		if (x != null)
 		    return x;
-		x = variable_lookup(v,global_env);
+		x = lookup_global_binding(v);
 		if (x == null)
 		    throw new Error("Variable "+v+" is not bound");
 		return x;
@@ -197,7 +213,7 @@ public class Interpreter extends TypeInference {
 	    for ( int i = 0; i < args.length(); i++ )
 		as[i] = evalE(args.nth(i),env);
 	    return ClassImporter.call((int)n.longValue(),as);
-	case compiled(`ln,_):
+	case compiled(`ln,_,...vars):
 	    return new Lambda(Compiler.compiled(Thread.currentThread().getContextClassLoader(),ln.toString()));
 	case lambda(`v,`body):
 	    return new Lambda(evalf(v.toString(),body,env));
@@ -224,14 +240,15 @@ public class Interpreter extends TypeInference {
 	    if (Config.hadoop_mode) {
 		Function loop_fnc = new Function () {
 			public MRData eval ( MRData s ) {
+			    new_global_binding(nm,s);
 			    MRData val = new MR_dataset(Evaluator.eval(body,new Environment(nm,s,env),nm));
-			    global_binding(nm,val);
 			    return val;
 			}; };
 		return MapReduceAlgebra.repeat(loop_fnc,(Bag)evalE(s,env),((MR_int)evalE(n,env)).get());
 	    } else {
 		Function loop_fnc = new Function () {
 			public MRData eval ( MRData s ) {
+			    new_global_binding(nm,s);
 			    return evalM(body,new Environment(nm,s,env));
 			}; };
 		return MapReduceAlgebra.repeat(loop_fnc,(Bag)evalE(s,env),((MR_int)evalE(n,env)).get());
@@ -293,10 +310,10 @@ public class Interpreter extends TypeInference {
 	    } catch (Exception ex) { throw new Error(ex); }
 	case dataset_size(`x):
 	    return new MR_long(Plan.size(Evaluator.eval(x,env,"-")) / (1024*1024));
-	case synchronize(`b):
-	    return Evaluator.synchronize((MR_bool)evalE(b,env));
-	case distribute(`s):
-	    return Evaluator.distribute((Bag)evalE(s,env));
+	case synchronize(`peer,`b):
+	    return Evaluator.synchronize(((MR_string)evalE(peer,env)),(MR_bool)evalE(b,env));
+	case distribute(`peer,`s):
+	    return Evaluator.distribute(((MR_string)evalE(peer,env)),(Bag)evalE(s,env));
 	case mapReduce(`m,`r,`s,_):
 	    return MapReduceAlgebra.mapReduce(evalF(m,env),
 					      evalF(r,env),
@@ -419,7 +436,7 @@ public class Interpreter extends TypeInference {
 	case apply(`f,`arg):
 	    if (!f.is_variable())
 		return evalF(f,env).eval(evalE(arg,env));
-	    MRData fnc = variable_lookup(f.toString(),global_env);
+	    MRData fnc = lookup_global_binding(f.toString());
 	    if (fnc == null) {
 		String s = Plan.conf.get("mrql.global."+f);
 		if (s != null)
@@ -427,7 +444,7 @@ public class Interpreter extends TypeInference {
 			Tree ft = Tree.parse(s);
 			TopLevel.store(f.toString(),ft);
 			fnc = evalE(ft,env);
-			global_binding(f.toString(),fnc);
+			new_global_binding(f.toString(),fnc);
 		    } catch (Exception ex) {
 			throw new Error(ex);
 		    }
@@ -461,8 +478,10 @@ public class Interpreter extends TypeInference {
 	    msg.printStackTrace();
 	    throw new Error("Evaluation error in: "+print_query(e));
 	} catch (Exception ex) {
-	    if (Config.trace)
+	    if (Config.trace) {
 		System.err.println(ex.getMessage());
+		ex.printStackTrace();
+	    }
 	    throw new Error("Evaluation error in: "+print_query(e));
 	}
     }
@@ -622,7 +641,7 @@ public class Interpreter extends TypeInference {
 	    case apply(`f,`arg):
 		if (!f.is_variable())
 		    return (Bag)evalF(f,env).eval(evalE(arg));
-		MRData fnc = variable_lookup(f.toString(),global_env);
+		MRData fnc = lookup_global_binding(f.toString());
 		if (fnc == null)
 		    throw new Error("Unknown function: "+f);
 		MRData t = evalE(arg,env);
@@ -652,7 +671,7 @@ public class Interpreter extends TypeInference {
 		MRData x = variable_lookup(v.toString(),env);
 		if (x != null)
 		    return (Bag)x;
-		x = variable_lookup(v.toString(),global_env);
+		x = lookup_global_binding(v.toString());
 		if (x != null)
 		    return (Bag)x;
 		throw new Error("Variable "+v+" is not bound");
@@ -696,7 +715,7 @@ public class Interpreter extends TypeInference {
 	    if (x != null)
 		if (!(x instanceof MR_dataset))
 		    return reify(x);
-	    x = variable_lookup(v.toString(),global_env);
+	    x = lookup_global_binding(v.toString());
 	    if (x != null)
 		if (!(x instanceof MR_dataset))
 		    return reify(x);

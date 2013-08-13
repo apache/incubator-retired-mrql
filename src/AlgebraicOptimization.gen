@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 
 /**
  * Optimize MRQL algebra expressions using normalization rules and heuristic optimizations

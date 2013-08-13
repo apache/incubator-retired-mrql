@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.util.Iterator;
 
 
@@ -267,7 +267,7 @@ public class Printer {
 	    };
 	    return x.toString();
 	} catch (Exception ex) {
-	    return x.toString();
+	    throw new Error(ex);
 	}
     }
 

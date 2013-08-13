@@ -23,7 +23,7 @@ import java.io.DataOutput;
 
 
 /** used for BSP synchronization */
-final public class MR_sync implements MRData {
+final public class MR_sync extends MRData {
     MR_sync () {}
 
     public void materializeAll () {};

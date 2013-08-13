@@ -18,7 +18,7 @@
 package org.apache.mrql;
 
 import java_cup.runtime.*;
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.util.*;
 import java.io.*;
 import org.apache.hadoop.io.*;
@@ -30,22 +30,29 @@ final public class Evaluator extends Interpreter {
 
     /** initialize the MapReduce evaluator */
     final static void init ( Configuration conf ) {
-	Config.bsp_mode = false;
-	if (Config.hadoop_mode && Config.local_hadoop_mode) {
+	Config.map_reduce_mode = true;
+	if (Config.local_mode) {
 	    conf.set("mapred.job.tracker","local");
 	    conf.set("fs.default.name","file:///");
 	}
+    }
+
+    /** shutdown the MapReduce evaluator */
+    final static void shutdown ( Configuration conf ) {
+    }
+
+    final static void initialize_query () {
     }
 
     final static Configuration new_configuration () {
 	return new Configuration();
     }
 
-    public static MR_bool synchronize ( MR_bool mr_exit ) {
+    public static MR_bool synchronize ( MR_string peerName, MR_bool mr_exit ) {
 	throw new Error("You can only synchronize BSP tasks");
     }
 
-    public static Bag distribute ( Bag s ) {
+    public static Bag distribute ( MR_string peerName, Bag s ) {
 	throw new Error("You can only distribute bags among BSP tasks");
     }
 
@@ -137,20 +144,20 @@ final public class Evaluator extends Interpreter {
 		return MapReduceOperation.mapReduce(closure(m,env),#<null>,closure(r,env),
 						    null,null,
 						    eval(s,env,"-"),
-						    Config.reduce_tasks,counter,
+						    Config.nodes,counter,
 						    o.equals(#<true>));
 	    case MapAggregateReduce(`m,`r,`acc,`zero,`s,`o):
 		return MapReduceOperation.mapReduce(closure(m,env),null,closure(r,env),
 						    closure(acc,env),
 						    (zero.equals(#<null>))?null:zero,
 						    eval(s,env,"-"),
-						    Config.reduce_tasks,counter,
+						    Config.nodes,counter,
 						    o.equals(#<true>));
 	    case MapCombineReduce(`m,`c,`r,`s,`o):
 		return MapReduceOperation.mapReduce(closure(m,env),closure(c,env),closure(r,env),
 						    null,null,
 						    eval(s,env,"-"),
-						    Config.reduce_tasks,counter,
+						    Config.nodes,counter,
 						    o.equals(#<true>));
 	    case CrossProduct(`mx,`my,`r,`x,`y):
 		return CrossProductOperation.crossProduct(closure(mx,env),closure(my,env),closure(r,env),
@@ -174,7 +181,7 @@ final public class Evaluator extends Interpreter {
 						null,null,
 						eval(x,env,"-"),
 						eval(y,env,"-"),
-						Config.reduce_tasks,counter,
+						Config.nodes,counter,
 						o.equals(#<true>));
 	    case MapAggregateReduce2(`mx,`my,`r,`acc,`zero,`x,`y,`o):
 		return JoinOperation.mapReduce2(closure(mx,env),closure(my,env),
@@ -183,7 +190,7 @@ final public class Evaluator extends Interpreter {
 						(zero.equals(#<null>))?null:zero,
 						eval(x,env,"-"),
 						eval(y,env,"-"),
-						Config.reduce_tasks,counter,
+						Config.nodes,counter,
 						o.equals(#<true>));
 	    case GroupByJoin(`kx,`ky,`gx,`gy,`mp,`c,`r,`x,`y,`o):
 		DataSet X = eval(x,env,"-");
@@ -195,7 +202,7 @@ final public class Evaluator extends Interpreter {
 						   closure(gx,env),closure(gy,env),
 						   closure(mp,env),closure(c,env),closure(r,env),
 						   X,Y,
-						   Config.reduce_tasks,
+						   Config.nodes,
 						   n,m,counter);
 	    case MapJoin(`mx,`my,`r,`x,`y):
 		return MapJoinOperation.mapJoin(closure(mx,env),closure(my,env),closure(r,env),

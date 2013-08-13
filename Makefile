@@ -20,7 +20,6 @@
 #--------------------------------------------------------------------------------
 #
 # Makefile for MRQL
-# Requires: jflex  (it can be installed as a Linux package)
 #
 #--------------------------------------------------------------------------------
 
@@ -28,19 +27,20 @@ MRQL_HOME=$(shell readlink -f .)
 
 include conf/mrql-env.sh
 
-export CLASSPATH=${MRQL_CLASSPATH}:${CUP_JAR}:lib/gen.jar:lib/jline-1.0.jar
+export CLASSPATH=${MRQL_CLASSPATH}:${JFLEX_JAR}:${CUP_JAR}:lib/jline-1.0.jar
 export JAVA_HOME
 
 JAVAC = ${JAVA_HOME}/bin/javac -g:none -d classes
 JAVA = ${JAVA_HOME}/bin/java
 JAR = ${JAVA_HOME}/bin/jar
-JFLEX = jflex --quiet --nobak
+JFLEX = ${JAVA} -jar ${JFLEX_JAR} --quiet --nobak
 CUP = ${JAVA} -jar ${CUP_JAR} -nosummary
-GEN = ${JAVA} Gen.Main
+GEN = ${JAVA} org.apache.mrql.gen.Main
 
 sources := src/*.java
 mr_sources := ${sources} src/MapReduce/*.java
 bsp_sources := ${sources} src/BSP/*.java
+spark_sources := ${sources} src/spark/*.java
 
 
 all: common
@@ -53,13 +53,24 @@ bsp: common
 	@${JAVAC} ${bsp_sources} tmp/*.java
 	@${JAR} cf lib/mrql-bsp.jar -C classes/ .
 
-common: clean_build mrql_parser json_parser
-	@cd classes; ${JAR} xf ../lib/gen.jar; ${JAR} xf ${CUP_JAR}; ${JAR} xf ../lib/jline-1.0.jar; cd ..
+spark: common
+	@${GEN} src/spark/*.gen -o tmp
+	@${JAVAC} ${spark_sources} tmp/*.java
+	@${JAR} cf lib/mrql-spark.jar -C classes/ .
+
+common: clean_build gen mrql_parser json_parser
+	@cd classes; ${JAR} xf ${CUP_JAR}; ${JAR} xf ../lib/jline-1.0.jar; cd ..
 	@${GEN} src/*.gen -o tmp
 
 clean_build:
 	@rm -rf classes tmp
-	@mkdir -p classes tmp tests/results tests/results/memory tests/results/hadoop tests/results/bsp
+	@mkdir -p classes tmp tests/results tests/results/mr-memory tests/results/bsp-memory tests/results/hadoop tests/results/bsp tests/results/spark
+
+gen:
+	@${JFLEX} src/gen/gen.lex -d tmp
+	@${CUP} -symbols GenSym -parser GenParser src/gen/gen.cup
+	@mv GenParser.java GenSym.java tmp/
+	@${JAVAC} src/gen/*java tmp/GenLex.java tmp/GenParser.java tmp/GenSym.java
 
 mrql_parser:
 	@${JFLEX} src/mrql.lex -d tmp
@@ -72,19 +83,23 @@ json_parser:
 	@${CUP} -parser JSONParser -symbols jsym src/JSON.cup
 	@mv jsym.java JSONParser.java tmp/
 
-validate: validate_hadoop validate_hama
+validate: validate_hadoop validate_hama validate_spark
 
 validate_hadoop:
 	@echo "Evaluating test queries in memory (Map-Reduce mode):"
-	@${JAVA} -ms256m -mx1024m -classpath ${MRQL_HOME}/lib/mrql.jar:${MRQL_CLASSPATH} org.apache.mrql.Test tests/queries tests/results/memory tests/error_log.txt
+	@${JAVA} -ms256m -mx1024m -classpath ${MRQL_HOME}/lib/mrql.jar:${MRQL_CLASSPATH} org.apache.mrql.Test tests/queries tests/results/mr-memory tests/error_log.txt
 	@echo "Evaluating test queries in Hadoop local mode:"
 	@${HADOOP_HOME}/bin/hadoop --config conf jar ${MRQL_HOME}/lib/mrql.jar org.apache.mrql.Test -local tests/queries tests/results/hadoop tests/error_log.txt 2>/dev/null
 
 validate_hama:
 	@echo "Evaluating test queries in memory (BSP mode):"
-	@${JAVA} -ms256m -mx1024m -classpath ${MRQL_HOME}/lib/mrql-bsp.jar:${MRQL_CLASSPATH} org.apache.mrql.Test tests/queries tests/results/memory tests/error_log.txt
+	@${JAVA} -ms256m -mx1024m -classpath ${MRQL_HOME}/lib/mrql-bsp.jar:${MRQL_CLASSPATH} org.apache.mrql.Test tests/queries tests/results/bsp-memory tests/error_log.txt
 	@echo "Evaluating test queries in Hama local mode:"
 	@${HAMA_HOME}/bin/hama --config conf-hama jar ${MRQL_HOME}/lib/mrql-bsp.jar org.apache.mrql.Test -local tests/queries tests/results/bsp tests/error_log.txt 2>/dev/null
+
+validate_spark:
+	@echo "Evaluating test queries in Spark local mode:"
+	@${JAVA} -ms256m -mx1024m -classpath ${MRQL_HOME}/lib/mrql-spark.jar:${MRQL_CLASSPATH} org.apache.mrql.Test -local tests/queries tests/results/spark tests/error_log.txt 2>/dev/null
 
 javadoc: all
 	@${JAVA_HOME}/bin/javadoc ${mr_sources} tmp/*.java -d /tmp/web-mrql

@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.*;
 
 
 /** a container for a char */
-final public class MR_char implements MRData {
+final public class MR_char extends MRData {
     private char value;
 
     public MR_char ( char i ) { value = i; }

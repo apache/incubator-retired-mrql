@@ -23,7 +23,7 @@ import java.io.DataOutput;
 
 
 /** used for BSP synchronization when a peer needs to do more steps */
-final public class MR_more_bsp_steps implements MRData {
+final public class MR_more_bsp_steps extends MRData {
     MR_more_bsp_steps () {}
 
     public void materializeAll () {};

@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.io.*;
 import java.util.Arrays;
 import org.apache.hadoop.fs.*;
@@ -37,7 +37,6 @@ final public class BSPPlan extends Plan {
 
     /** The BSP evaluator */
     final static class BSPop extends BSP<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> {
-	static BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> this_peer;
 	final static MRContainer null_key = new MRContainer(new MR_byte(0));
 	// special message for sub-sync()
 	final static MRData more_to_come = new MR_sync();
@@ -50,7 +49,8 @@ final public class BSPPlan extends Plan {
 	private MRData source;               // BSP input
 	private Function acc_fnc;            // aggregator
 	private MRData acc_result;           // aggregation result
-	private static String[] all_peers;   // all BSP peers
+	private static String[] all_peer_names;   // all BSP peer names
+	private static BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer>[] all_peers;   // all BSP peers
 	// a master peer that coordinates and collects results of partial aggregations
 	private String masterTask;
 	// buffer for received messages -- regularly in a vector, but can be spilled in a local file
@@ -58,13 +58,32 @@ final public class BSPPlan extends Plan {
 	// the cache that holds all local data in memory
 	Tuple local_cache;
 
+	private static BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> getPeer ( String name ) {
+	    for ( int i = 0; i < all_peer_names.length; i++ )
+		if (all_peer_names[i].equals(name))
+		    return all_peers[i];
+	    throw new Error("Unknown peer: "+name);
+	}
+
+	private static void setPeer ( BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer ) {
+	    String name = peer.getPeerName();
+	    for ( int i = 0; i < all_peer_names.length; i++ )
+		if (all_peer_names[i].equals(name))
+		    all_peers[i] = peer;
+	}
+
 	/** shuffle values to BSP peers based on uniform hashing on key */
 	private static String shuffle ( MRData key ) {
-	    return all_peers[Math.abs(key.hashCode()) % all_peers.length];
+	    return all_peer_names[Math.abs(key.hashCode()) % all_peer_names.length];
 	}
 
 	/** to exit a BSP loop, all peers must agree to exit (this is used in BSPTranslate.bspSimplify) */
-	public static MR_bool synchronize ( MR_bool mr_exit ) {
+	public static MR_bool synchronize ( MR_string peerName, MR_bool mr_exit ) {
+	    return synchronize(getPeer(peerName.get()),mr_exit);
+	}
+
+	/** to exit a BSP loop, all peers must agree to exit (this is used in BSPTranslate.bspSimplify) */
+	public static MR_bool synchronize ( BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer, MR_bool mr_exit ) {
 	    if (!Config.hadoop_mode)
 		return mr_exit;
 	    // shortcut: if we know for sure that all peers want to exit/continue, we don't have to poll
@@ -74,16 +93,16 @@ final public class BSPPlan extends Plan {
 	    try {
 		// this case is only used for checking the exit condition of repeat/closure
 		boolean exit = mr_exit.get();
-		if (all_peers.length <= 1)
+		if (all_peer_names.length <= 1)
 		    return (exit) ? SystemFunctions.bsp_true_value : SystemFunctions.bsp_false_value;
 		if (!exit)
 		    // this peer is not ready to exit, so no peer should exit
-		    for ( String p: this_peer.getAllPeerNames() )
-			this_peer.send(p,new MRContainer(more_supersteps));
-		this_peer.sync();
+		    for ( String p: peer.getAllPeerNames() )
+			peer.send(p,new MRContainer(more_supersteps));
+		peer.sync();
 		// now exit is true if no peer sent a "more_supersteps" message
-		exit = this_peer.getNumCurrentMessages() == 0;
-		this_peer.clear();
+		exit = peer.getNumCurrentMessages() == 0;
+		peer.clear();
 		return (exit) ? SystemFunctions.bsp_true_value : SystemFunctions.bsp_false_value;
 	    } catch (Exception ex) {
 		throw new Error(ex);
@@ -91,20 +110,21 @@ final public class BSPPlan extends Plan {
 	}
 
 	/** collect a bag from all peers by distributing the local copy s */
-	public static Bag distribute ( Bag s ) {
+	public static Bag distribute ( MR_string peerName, Bag s ) {
+	    BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer = getPeer(peerName.get());
 	    if (!Config.hadoop_mode)
 		return s;
 	    try {
 		for ( MRData e: s )
-		    for ( String p: all_peers )
-			this_peer.send(p,new MRContainer(e));
-		this_peer.sync();
+		    for ( String p: all_peer_names )
+			peer.send(p,new MRContainer(e));
+		peer.sync();
 		MRContainer msg;
 		Bag res = new Bag();
-		while ((msg = this_peer.getCurrentMessage()) != null)
+		while ((msg = peer.getCurrentMessage()) != null)
 		    if (!res.contains(msg.data()))
 			res.add(msg.data());
-		this_peer.clear();
+		peer.clear();
 		return res;
 	    } catch (Exception ex) {
 		throw new Error(ex);
@@ -185,7 +205,7 @@ final public class BSPPlan extends Plan {
 		// if there are too many messages to send, then sub-sync()
 		if ( Config.bsp_msg_size > 0 && size++ > Config.bsp_msg_size ) {
 		    // tell all peers that there is more to come after sync
-		    for ( String p: all_peers )
+		    for ( String p: all_peer_names )
 			if (!peer.getPeerName().equals(p))
 			    peer.send(p,new MRContainer(more_to_come));
 		    peer.sync();  // sub-sync()
@@ -206,13 +226,15 @@ final public class BSPPlan extends Plan {
 	@Override
 	public void bsp ( BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer )
 	       throws IOException, SyncException, InterruptedException {
-	    final Tuple triple = new Tuple(3);
+	    final Tuple stepin = new Tuple(4);
+	    stepin.set(3,new MR_string(peer.getPeerName()));
 	    Tuple result;
 	    boolean skip = false;
 	    String tabs = "";
 	    int step = 0;
 	    boolean exit;
 	    readLocalSources(peer);
+	    setPeer(peer);
 	    do {
 		if (!skip)
 		    step++;
@@ -225,12 +247,11 @@ final public class BSPPlan extends Plan {
 			if (local_cache.get(i) instanceof Bag && ((Bag)local_cache.get(i)).size() > 0)
 			    System.out.println(tabs+"      cache ["+peer.getPeerName()+"] "+i+": "+local_cache.get(i));
 		};
-		triple.set(0,local_cache);
-		triple.set(1,msg_cache);
-		triple.set(2,state);
-		this_peer = peer;
+		stepin.set(0,local_cache);
+		stepin.set(1,msg_cache);
+		stepin.set(2,state);
 		// evaluate one superstep
-		result = (Tuple)superstep_fnc.eval(triple);
+		result = (Tuple)superstep_fnc.eval(stepin);
 		Bag msgs = (Bag)result.get(0);
 		exit = ((MR_bool)result.get(2)).get();
 		state = result.get(1);
@@ -254,7 +275,7 @@ final public class BSPPlan extends Plan {
 		    continue;
 		if (Config.trace_execution)
 		    System.err.println(tabs+"      result ["+peer.getPeerName()+"]: "+result);
-		exit = synchronize((MR_bool)result.get(2)).get();
+		exit = synchronize(peer,(MR_bool)result.get(2)).get();
 		send_messages(msgs,peer);
 	    } while (!exit);
 	    if (acc_result == null) {
@@ -265,7 +286,7 @@ final public class BSPPlan extends Plan {
 		final MRContainer key_container = new MRContainer(key);
 		final MRContainer data_container = new MRContainer(new MR_int(0));
 		int loc = 0;
-		while ( loc < all_peers.length && peer.getPeerName().equals(all_peers[loc]) )
+		while ( loc < all_peer_names.length && peer.getPeerName().equals(all_peer_names[loc]) )
 		    loc++;
 		Configuration conf = peer.getConfiguration();
 		String[] out_paths = conf.get("mrql.output.paths").split(",");
@@ -302,6 +323,7 @@ final public class BSPPlan extends Plan {
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public void setup ( BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer ) {
 	    try {
 		super.setup(peer);
@@ -309,9 +331,9 @@ final public class BSPPlan extends Plan {
 		Config.read(conf);
 		if (Plan.conf == null)
 		    Plan.conf = conf;
-		this_peer = peer;
-		all_peers = peer.getAllPeerNames();
-		Arrays.sort(all_peers);  // is this necessary?
+		all_peer_names = peer.getAllPeerNames();
+		all_peers = new BSPPeerImpl[all_peer_names.length];
+		Arrays.sort(all_peer_names);  // is this necessary?
 		source_num = conf.getInt("mrql.output.tag",0);
 		Tree code = Tree.parse(conf.get("mrql.superstep"));
 		superstep_fnc = functional_argument(conf,code);
@@ -324,7 +346,7 @@ final public class BSPPlan extends Plan {
 		    acc_fnc = functional_argument(conf,code);
 		} else acc_result = null;
 		orderp = conf.getBoolean("mrql.orderp",false);
-		masterTask = all_peers[peer.getNumPeers()/2];
+		masterTask = all_peer_names[peer.getNumPeers()/2];
 		msg_cache = new Bag(1000);
 		local_cache = new Tuple(max_input_files);
 		for ( int i = 0; i < max_input_files; i++ )
@@ -337,7 +359,7 @@ final public class BSPPlan extends Plan {
 
 	@Override
 	public void cleanup ( BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer ) throws IOException {
-	    if (!Config.local_hadoop_mode)
+	    if (!Config.local_mode)
 		clean();
 	    local_cache = null;
 	    super.cleanup(peer);
@@ -347,25 +369,25 @@ final public class BSPPlan extends Plan {
     /** set Hama's min split size and number of BSP tasks (doesn't work with Hama 0.6.0) */
     public static void setupSplits ( BSPJob job, DataSet ds ) throws IOException {
 	long[] sizes = new long[ds.source.size()];
-	if (sizes.length > Config.bsp_tasks)
-	    throw new Error("Cannot distribute "+sizes.length+" files over "+Config.bsp_tasks+" BSP tasks");
+	if (sizes.length > Config.nodes)
+	    throw new Error("Cannot distribute "+sizes.length+" files over "+Config.nodes+" BSP tasks");
 	for ( int i = 0; i < sizes.length; i++ )
 	    sizes[i] = ds.source.get(i).size(Plan.conf);
 	long total_size = 0;
 	for ( long size: sizes )
 	    total_size += size;
-	long split_size = Math.max(total_size/Config.bsp_tasks,100000);
+	long split_size = Math.max(total_size/Config.nodes,100000);
 	int tasks = 0;
 	do {  // adjust split_size
 	    tasks = 0;
 	    for ( long size: sizes )
 		tasks += (int)Math.ceil(size/(double)split_size);
-	    if (tasks > Config.bsp_tasks)
+	    if (tasks > Config.nodes)
 		split_size = (long)Math.ceil((double)split_size*1.01);
-	} while (tasks > Config.bsp_tasks);
+	} while (tasks > Config.nodes);
 	job.setNumBspTask(tasks);
-	System.err.println("*** Using "+tasks+" BSP tasks (out of a max "+Config.bsp_tasks+")."
-			   +" Each task will handle about "+Math.min(total_size/Config.bsp_tasks,split_size)
+	System.err.println("*** Using "+tasks+" BSP tasks (out of a max "+Config.nodes+")."
+			   +" Each task will handle about "+Math.min(total_size/Config.nodes,split_size)
 			   +" bytes of input data.");
 	job.set("bsp.min.split.size",Long.toString(split_size));
     }

@@ -1,0 +1,179 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.mrql.gen;
+
+import java_cup.runtime.*;
+import java.util.Stack;
+
+parser code {:
+
+    static int[] tokens = {
+	GenSym.error, GenSym.CHAR, GenSym.ID, GenSym.CSTRING, GenSym.LONG, GenSym.DOUBLE,
+	GenSym.META, GenSym.MATCH, GenSym.CASE, GenSym.IS, GenSym.COLON, GenSym.COMMA,
+	GenSym.GT, GenSym.LP, GenSym.RP, GenSym.LB, GenSym.RB, GenSym.LSB, GenSym.RSB, 
+	GenSym.BQ, GenSym.BQP, GenSym.DOTSP, GenSym.ANY, GenSym.OPER, GenSym.FAIL
+    };
+
+    static String[] token_names = {
+	"error", "character", "identifier", "string", "integer", "float",
+	"#<", "match", "case", "is", ":", ",", ">", "(", ")", "[", "]", "{", "}",
+	 "`", "`(", "...(", "_", "operator", "fail"
+    };
+
+    public static String print ( Symbol s ) {
+	for (int i=0; i<tokens.length; i++)
+	    if (tokens[i]==s.sym)
+	    {  String res = token_names[i] + " ";
+	       if (s.value==null)
+		  return res;
+	       else if (s.value instanceof Long)
+		  return res + ((Long) s.value).longValue();
+	       else if (s.value instanceof Double)
+		  return res + ((Double) s.value).doubleValue();
+	       else if (s.value instanceof String)
+		  return res + (String) s.value;
+	    }
+	return "?";
+    }
+
+    public static java.io.PrintStream out;
+
+    public static GenLex scanner;
+
+    public static Tree parse_tree;
+
+    public static int newlines = 0;
+
+    public static int lcase = 0;
+
+    public static Stack<String> labels = new Stack<String>();
+
+    public void syntax_error ( Symbol token ) {
+	throw new Error("*** Syntax Error: " + print(token) + " (line: " + scanner.line_pos()
+			+ ", position: " + scanner.char_pos() + ")");
+    }
+
+:};
+
+/* Terminals (tokens returned by the scanner). */
+terminal META, METAL, MATCH, CASE, FAIL, IS, DOTS, COLON, COMMA, GT, LP, RP, LB, RB, LSB, RSB, BQ, BQP, DOTSP, ANY;
+
+terminal String		CHAR;
+terminal String		ID;
+terminal Long		LONG;
+terminal Double		DOUBLE;
+terminal String		CSTRING;
+terminal String		OPER;
+
+non terminal Tree	exp, name, variable, rest;
+non terminal Trees	expl;
+non terminal String     case, cases, schar, jcode, scode;
+non terminal		pcode, prog;
+
+precedence left         OPER;
+precedence nonassoc	META;
+precedence nonassoc	MATCH;
+precedence nonassoc	CASE;
+precedence nonassoc	CSTRING;
+precedence nonassoc	CHAR;
+
+start with prog;
+
+prog	::= pcode
+	;
+pcode	::= scode:s			{: parser.out.print(s); :}
+	| pcode scode:s			{: parser.out.print(s); :}
+	;
+jcode	::= scode:s			{: RESULT = s; :}
+	| jcode:c scode:s		{: RESULT = c+s; :}
+	;
+scode	::= schar:s			{: RESULT = s; :}
+        | LSB RSB               	{: RESULT = "{}"; :}
+        | LSB jcode:c RSB               {: RESULT = "{"+c+"}"; :}
+	| METAL RB			{: RESULT = "Trees.nil"; :}
+	| META exp:e GT			{: GenParser.parse_tree = e;
+	       	     			   RESULT = Meta.reify(e);
+					   for (int i=0; i < parser.newlines; i++)
+					       RESULT += "\n";
+					   parser.newlines = 0; :}
+	| METAL expl:r RB		{: RESULT = Meta.reify(new Node("Node",
+							new Trees(new VariableLeaf("F"),r)));
+					   RESULT = RESULT.substring(13,RESULT.length()-1);
+					   for (int i=0; i < parser.newlines; i++)
+					       RESULT += "\n";
+					   parser.newlines = 0; :}
+	| MATCH 			{: Meta.level++;
+	  				   GenLex.context.new_context();
+					   GenLex.context.in_match_body();
+					:}
+	  jcode:c LSB cases:el RSB	{: RESULT = "{ boolean FOUND_" + Meta.level + " = false; Tree E_"
+	  	      	       		   	     + Meta.level + " = " + c + "; " + el + " }";
+					   GenLex.context.close_context(GenParser.scanner);
+					   for (int i=0; i < parser.newlines; i++)
+					       RESULT += "\n";
+					   parser.newlines = 0;
+					   Meta.level--; :}
+        | FAIL				{: RESULT = "{ FOUND_" + Meta.level + "=false; break " + GenParser.labels.peek() + "; }"; :}
+	;
+schar	::= CHAR:c			{: RESULT = c; :}
+	| CSTRING:s			{: RESULT = Crypt.encrypt(s); :}
+	;
+cases	::= jcode:j case:c		{: RESULT = j+c; :}
+	| cases:cl case:c		{: RESULT = cl + " if (!FOUND_" + Meta.level + ") " + c; :}
+	;
+case	::= CASE 			{: GenParser.labels.push("LCASE_"+GenParser.lcase++); :}
+	    exp:e COLON jcode:j		{: Condition m = Meta.pattern(e,"E_" + Meta.level);
+	    	       	     		   RESULT = "{ " + GenParser.labels.pop() + ": ";
+					   RESULT += (m.pred.equals("true")) ? "" : "if (" + m.pred + ") ";
+					   for (int i=0; i < parser.newlines; i++)
+					       RESULT += "\n";
+					   parser.newlines = 0;
+					   RESULT += "{ " + m.stmt + " FOUND_" + Meta.level
+					             + "=true; " + j + " }";
+					   for (int i = 0; i <= m.unmatched_brackets; i++)
+					       RESULT += "}";
+					   RESULT += ";"; :}
+	;
+name	::= ID:s			{: RESULT = new VariableLeaf(s); :}
+	;
+variable ::= name:s			{: RESULT = s; :}
+	 | BQ name:s			{: RESULT = new Node("Escape",new Trees(s)); :}
+	 | BQP jcode:c RP		{: RESULT = new Node("Code",new Trees(new StringLeaf(c))); :}
+	 | ANY				{: RESULT = new VariableLeaf("_any_"); :}
+	 ;
+exp	::= LONG:n			{: RESULT = new LongLeaf(n.longValue()); :}
+	| DOUBLE:n			{: RESULT = new DoubleLeaf(n.doubleValue()); :}
+	| CSTRING:s			{: RESULT = new StringLeaf(s); :}
+	| variable:e			{: RESULT = e; :}
+	| variable:e LP RP		{: RESULT = new Node("Node",new Trees(e)); :}
+	| variable:e LP expl:el RP	{: RESULT = new Node("Node",new Trees(e,el)); :}
+	| BQ name:s LB exp:e RB		{: RESULT = new Node("Higher",new Trees(s,new Trees(e))); :}
+	| name:s IS exp:e		{: RESULT = new Node("IS",new Trees(s,new Trees(e))); :}
+	| LP exp:e RP			{: RESULT = e; :}
+	| exp:e1 OPER:o exp:e2		{: RESULT = new Node("Node",new Trees(new VariableLeaf(o),
+							new Trees(e1,new Trees(e2)))); :}
+	;
+expl 	::= exp:e			{: RESULT = new Trees(e); :}
+	| rest:e			{: RESULT = new Trees(e); :}
+	| expl:el COMMA rest:e		{: RESULT = el.append(e); :}
+	| expl:el COMMA exp:e		{: RESULT = el.append(e); :}
+	;
+rest	::= DOTS name:n			{: RESULT = new Node("Dots",new Trees(n)); :}
+	| DOTSP jcode:c RP		{: RESULT = new Node("Dots",new Trees(new StringLeaf(c))); :}
+	| DOTS				{: RESULT = new Node("Dots"); :}
+	;

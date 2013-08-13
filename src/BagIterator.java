@@ -18,11 +18,17 @@
 package org.apache.mrql;
 
 import java.util.Iterator;
+import java.io.*;
 
 
 /** an Iterator over Bags */
-abstract public class BagIterator implements Iterator<MRData> {
+abstract public class BagIterator implements Iterator<MRData>, Serializable {
     public void remove () {
 	throw new Error("Bag deletions are not permitted");
     }
+    public void writeObject(ObjectOutputStream out) throws IOException {}
+
+    public void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {}
+
+    public void readObjectNoData() throws ObjectStreamException {}
 }

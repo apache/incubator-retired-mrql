@@ -18,7 +18,7 @@
 package org.apache.mrql;
 
 import java_cup.runtime.Symbol;
-import Gen.Tree;
+import org.apache.mrql.gen.Tree;
 
 %%
 %class MRQLLex

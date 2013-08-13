@@ -31,12 +31,11 @@
 
   <property file="conf/mrql-env.sh"/>
 
-  <property name="GEN_JAR" location="lib/gen.jar"/>
   <property name="JLINE_JAR" location="lib/jline-1.0.jar"/>
 
   <path id="classpath">
-    <pathelement location="${GEN_JAR}"/>
     <pathelement location="${JLINE_JAR}"/>
+    <pathelement location="${JFLEX_JAR}"/>
     <pathelement location="${CUP_JAR}"/>
     <pathelement path="${MRQL_CLASSPATH}"/>
   </path>
@@ -46,7 +45,7 @@
 	  description="Build the MRQL MapReduce jar">
     <fileset id="mr.gen.path" dir="src/MapReduce" includes="*.gen"/>
     <pathconvert pathsep=" " property="mr.gen.files" refid="mr.gen.path"/>
-    <java classname="Gen.Main">
+    <java classname="org.apache.mrql.gen.Main">
       <classpath refid="classpath"/>
       <arg line="${mr.gen.files}"/>
       <arg line="-o"/>
@@ -55,11 +54,12 @@
     <javac srcdir="src:tmp" destdir="classes" classpathref="classpath"
 	   includeantruntime="false">
       <exclude name="BSP/*"/>
+      <exclude name="spark/*"/>
     </javac>
     <jar destfile="lib/mrql.jar" basedir="classes">
-      <zipfileset includes="**/*.class" src="${GEN_JAR}"/>
       <zipfileset includes="**/*" src="${JLINE_JAR}"/>
       <zipfileset includes="**/*.class" src="${CUP_JAR}"/>
+      <zipfileset includes="**/*.class" src="${JFLEX_JAR}"/>
     </jar>
   </target>
 
@@ -68,7 +68,7 @@
 	  description="Build the MRQL BSP jar">
     <fileset id="bsp.gen.path" dir="src/BSP" includes="*.gen"/>
     <pathconvert pathsep=" " property="bsp.gen.files" refid="bsp.gen.path"/>
-    <java classname="Gen.Main">
+    <java classname="org.apache.mrql.gen.Main">
       <classpath refid="classpath"/>
       <arg line="${bsp.gen.files}"/>
       <arg line="-o"/>
@@ -77,20 +77,44 @@
     <javac srcdir="src:tmp" destdir="classes" classpathref="classpath"
 	   includeantruntime="false">
       <exclude name="MapReduce/*"/>
+      <exclude name="spark/*"/>
     </javac>
     <jar destfile="lib/mrql-bsp.jar" basedir="classes">
-      <zipfileset includes="**/*.class" src="${GEN_JAR}"/>
       <zipfileset includes="**/*" src="${JLINE_JAR}"/>
       <zipfileset includes="**/*.class" src="${CUP_JAR}"/>
+      <zipfileset includes="**/*.class" src="${JFLEX_JAR}"/>
+    </jar>
+  </target>
+
+  <target name="spark"
+	  depends="common"
+	  description="Build the MRQL Spark jar">
+    <fileset id="spark.gen.path" dir="src/spark" includes="*.gen"/>
+    <pathconvert pathsep=" " property="spark.gen.files" refid="spark.gen.path"/>
+    <java classname="org.apache.mrql.gen.Main">
+      <classpath refid="classpath"/>
+      <arg line="${spark.gen.files}"/>
+      <arg line="-o"/>
+      <arg file="tmp"/>
+    </java>
+    <javac srcdir="src:tmp" destdir="classes" classpathref="classpath"
+	   includeantruntime="false">
+      <exclude name="MapReduce/*"/>
+      <exclude name="BSP/*"/>
+    </javac>
+    <jar destfile="lib/mrql-spark.jar" basedir="classes">
+      <zipfileset includes="**/*" src="${JLINE_JAR}"/>
+      <zipfileset includes="**/*.class" src="${CUP_JAR}"/>
+      <zipfileset includes="**/*.class" src="${JFLEX_JAR}"/>
     </jar>
   </target>
 
   <target name="common"
-	  depends="clean_build,mrql_parser,json_parser"
+	  depends="clean_build,gen,mrql_parser,json_parser"
 	  description="Translate the GEN files and generate the parsers">
     <fileset id="gen.path" dir="src" includes="*.gen"/>
     <pathconvert pathsep=" " property="gen.files" refid="gen.path"/>
-    <java classname="Gen.Main">
+    <java classname="org.apache.mrql.gen.Main">
       <classpath refid="classpath"/>
       <arg line="${gen.files}"/>
       <arg line="-o"/>
@@ -105,20 +129,47 @@
     <mkdir dir="classes"/>
     <mkdir dir="tmp"/>
     <mkdir dir="tests/results"/>
-    <mkdir dir="tests/results/memory"/>
+    <mkdir dir="tests/results/mr-memory"/>
+    <mkdir dir="tests/results/bsp-memory"/>
     <mkdir dir="tests/results/hadoop"/>
     <mkdir dir="tests/results/bsp"/>
+    <mkdir dir="tests/results/spark"/>
+  </target>
+
+  <target name="gen"
+	  description="Generate the Gen tool">
+    <java jar="${JFLEX_JAR}" fork='true'>
+      <arg line="--quiet --nobak"/>
+      <arg file="src/gen/gen.lex"/>
+      <arg line="-d"/>
+      <arg file="tmp"/>
+    </java>
+    <java jar="${CUP_JAR}" fork='true'>
+      <arg line="-nosummary"/>
+      <arg line=" -symbols GenSym"/>
+      <arg line="-parser GenParser"/>
+      <arg file="src/gen/gen.cup"/>
+    </java>
+    <move todir="tmp">
+      <filelist dir=".">
+	<file name="GenSym.java"/>
+	<file name="GenParser.java"/>
+      </filelist>
+    </move>
+    <javac srcdir="src/gen:tmp" destdir="classes" classpathref="classpath"
+	   includeantruntime="false">
+    </javac>
   </target>
 
   <target name="mrql_parser"
 	  description="Generate the MRQL scanner and parser">
-    <exec executable="jflex">
+    <java jar="${JFLEX_JAR}" fork='true'>
       <arg line="--quiet --nobak"/>
       <arg file="src/mrql.lex"/>
       <arg line="-d"/>
       <arg file="tmp"/>
-    </exec>
-    <java classname="Gen.Main">
+    </java>
+    <java classname="org.apache.mrql.gen.Main">
       <classpath refid="classpath"/>
       <arg file="src/mrql.cgen"/>
       <arg line="-o"/>
@@ -139,12 +190,12 @@
 
   <target name="json_parser"
           description="Generate the JSON scanner and parser">
-    <exec executable="jflex">
+    <java jar="${JFLEX_JAR}" fork='true'>
       <arg line="--quiet --nobak"/>
       <arg file="src/JSON.lex"/>
       <arg line="-d"/>
       <arg file="tmp"/>
-    </exec>
+    </java>
     <java jar="${CUP_JAR}" fork='true'>
       <arg line="-nosummary"/>
       <arg line="-parser JSONParser"/>
@@ -169,9 +220,14 @@
     <path refid="classpath"/>
   </path>
 
+  <path id="spark-classpath">
+    <pathelement location="lib/mrql-spark.jar"/>
+    <path refid="classpath"/>
+  </path>
+
   <target name="validate"
           description="Validate all test queries"
-	  depends="validate_hadoop,validate_hama"/>
+	  depends="validate_hadoop,validate_hama,validate_spark"/>
 
   <target name="validate_hadoop"
           description="Validate all test queries on Hadoop">
@@ -180,7 +236,7 @@
       <classpath refid="mrql-classpath"/>
       <jvmarg line="-ms256m -mx1024m"/>
       <arg file="tests/queries"/>
-      <arg file="tests/results/memory"/>
+      <arg file="tests/results/mr-memory"/>
       <arg file="tests/error_log.txt"/>
     </java>
     <echo message="Evaluating test queries in Hadoop local mode:"/>
@@ -204,7 +260,7 @@
       <classpath refid="bsp-classpath"/>
       <jvmarg line="-ms256m -mx1024m"/>
       <arg file="tests/queries"/>
-      <arg file="tests/results/memory"/>
+      <arg file="tests/results/bsp-memory"/>
       <arg file="tests/error_log.txt"/>
     </java>
     <echo message="Evaluating test queries in Hama local mode:"/>
@@ -219,6 +275,19 @@
       <arg file="tests/results/bsp"/>
       <arg file="tests/error_log.txt"/>
     </exec>
+  </target>
+
+  <target name="validate_spark"
+          description="Validate all test queries on Spark">
+    <echo message="Evaluating test queries in Spark local mode:"/>
+    <java classname="org.apache.mrql.Test" fork="yes" error="/dev/null">
+      <classpath refid="spark-classpath"/>
+      <jvmarg line="-ms256m -mx1024m"/>
+      <arg line="-local"/>
+      <arg file="tests/queries"/>
+      <arg file="tests/results/spark"/>
+      <arg file="tests/error_log.txt"/>
+    </java>
   </target>
 
   <target name="clean_tests"

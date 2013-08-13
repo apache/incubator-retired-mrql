@@ -17,16 +17,24 @@
  */
 package org.apache.mrql;
 
+import java.io.*;
+
 
 /**
  * An anonymous function from MRData to MRData (a lambda abstraction)
  * Must provide a concrete implementation for eval (the lambda body)
  */
-abstract public class Function {
+abstract public class Function implements Serializable {
     /**
      * Evaluate the anonymous function from MRData to MRData
      * @param arg the operand to be evaluated
      * @return the result of evaluating
      */
     abstract public MRData eval ( final MRData arg );
+
+    public void writeObject(ObjectOutputStream out) throws IOException {}
+
+    public void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {}
+
+    public void readObjectNoData() throws ObjectStreamException {}
 }

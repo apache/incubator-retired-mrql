@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.*;
 
 
 /** a container for float values */
-final public class MR_float implements MRData {
+final public class MR_float extends MRData {
     private float value;
 
     public MR_float ( float x ) { value = x; }

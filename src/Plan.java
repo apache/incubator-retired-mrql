@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.io.*;
 import java.util.Random;
 import java.util.ArrayList;
@@ -36,7 +36,7 @@ public class Plan {
 
     /** generate a new path name in HDFS to store intermediate results */
     public static String new_path ( Configuration conf ) throws IOException {
-	String dir = (Config.local_hadoop_mode)
+	String dir = (Config.local_mode)
 	             ? Config.tmpDirectory
 	             : "mrql";
 	Path p;
@@ -89,12 +89,16 @@ public class Plan {
 	    if (!Config.compile_functional_arguments)
 		return;
 	    Path local_path = new Path("file://"+Compiler.jar_path);
-	    // distribute the jar file with the compiled arguments to all clients
-	    Path hdfs_path = new Path("mrql-tmp/class"+random_generator.nextInt(1000000)+".jar");
-	    FileSystem fs = hdfs_path.getFileSystem(conf);
-	    fs.copyFromLocalFile(false,true,local_path,hdfs_path);
-	    temporary_paths.add(hdfs_path.toString());
-	    conf.set("mrql.jar.path",hdfs_path.toString());
+	    if (Config.spark_mode)
+		conf.set("mrql.jar.path",local_path.toString());
+	    else {
+		// distribute the jar file with the compiled arguments to all clients
+		Path hdfs_path = new Path("mrql-tmp/class"+random_generator.nextInt(1000000)+".jar");
+		FileSystem fs = hdfs_path.getFileSystem(conf);
+		fs.copyFromLocalFile(false,true,local_path,hdfs_path);
+		temporary_paths.add(hdfs_path.toString());
+		conf.set("mrql.jar.path",hdfs_path.toString());
+	    }
 	} catch (Exception ex) {
 	    throw new Error(ex);
 	}
@@ -116,7 +120,7 @@ public class Plan {
 		return Compiler.compiled(conf.getClassLoader(),n.children().nth(0).toString());
 	    } catch (Exception ex) {
 		System.err.println("*** Warning: Unable to retrieve the compiled lambda: "+code);
-		return ((Lambda) Interpreter.evalE(n.children().nth(2))).lambda();
+		return ((Lambda) Interpreter.evalE(n.children().nth(1))).lambda();
 	    }
 	else if (code.equals(Interpreter.identity_mapper))
 	    return new Function () {
@@ -158,7 +162,7 @@ public class Plan {
 	    throw new Error("Wrong range: "+min+"..."+max);
 	if (split_length < 1)
 	    if (Config.bsp_mode)
-		split_length = (max-min)/Config.bsp_tasks+1;
+		split_length = (max-min)/Config.nodes+1;
 	    else split_length = Config.range_split_size;
 	DataSet ds = new DataSet(0,0);
 	long i = min;

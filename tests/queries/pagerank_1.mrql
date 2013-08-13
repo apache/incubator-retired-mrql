@@ -3,7 +3,7 @@ graph = select (key,n#1)
           from n in source(line,"tests/data/graph.txt",",",type( (int,int) ))
          group by key: n#0;
 
-store graph_size := 1000;
+store graph_size := 100;
 
 // damping factor
 factor = 0.85;

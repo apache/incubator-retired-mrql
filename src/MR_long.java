@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.*;
 
 
 /** a container for long values */
-final public class MR_long implements MRData {
+final public class MR_long extends MRData {
     private long value;
 
     public MR_long ( long i ) { value = i; }

@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.*;
 
 
 /** a wrapper of a DataSet (stored in HDFS) as an MRData */
-final public class MR_dataset implements MRData {
+final public class MR_dataset extends MRData {
     public DataSet dataset;
 
     public MR_dataset ( DataSet d ) { dataset = d; }

@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.*;
 
 
 /** a container for double values */
-final public class MR_double implements MRData {
+final public class MR_double extends MRData {
     private double value;
 
     public MR_double ( double x ) { value = x; }

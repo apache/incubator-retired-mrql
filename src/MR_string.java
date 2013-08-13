@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.*;
 
 
 /** a container for strings */
-final public class MR_string implements MRData {
+final public class MR_string extends MRData {
     private String value;
 
     public MR_string ( String s ) { value = s; }

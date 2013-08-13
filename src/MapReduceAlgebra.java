@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.io.*;
 import java.util.*;
 
@@ -481,7 +481,7 @@ final public class MapReduceAlgebra {
     }
 
     /** repeat the loop until all termination conditions are true or until we reach the max num of steps
-     * @param loop a function from {a} to {(boolean,a)}
+     * @param loop a function from {a} to {(a,boolean)}
      * @param init the initial value of type {a}
      * @param max_num the maximum number of steps
      * @return a value of type {a}

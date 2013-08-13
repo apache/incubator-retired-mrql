@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.util.*;
 import java.io.*;
 
@@ -151,7 +151,8 @@ public class Simplification extends Normalization {
 	case cmap(`f,if(`p,`x,`y)):
 	    return simplify(#<if(`p,cmap(`f,`x),cmap(`f,`y))>);
 	// if the join reducer contains an independent aggregation push it to the input
-	case join(`kx,`ky,
+        // NOTE: This disables the self-join to MR transformation used in pagerank
+	case xxxjoin(`kx,`ky,
 		  lambda(`v,cmap(lambda(`v1,cmap(lambda(`v2,bag(tuple(`k,`b))),
 						 nth(`vy,1))),
 				 nth(`vx,0))),

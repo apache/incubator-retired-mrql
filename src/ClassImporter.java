@@ -18,7 +18,7 @@
 package org.apache.mrql;
 
 import java.lang.reflect.Method;
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.util.*;
 
 /** imports external Java methods into MRQL */

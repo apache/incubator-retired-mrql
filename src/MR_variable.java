@@ -23,7 +23,7 @@ import java.io.DataOutput;
 
 
 /** a template variable; should appear only in a template */
-final public class MR_variable implements MRData {
+final public class MR_variable extends MRData {
     public int var_num;
 
     MR_variable ( int n ) { var_num = n; }

@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.util.Iterator;
 import javax.xml.parsers.SAXParserFactory;
 import org.xml.sax.*;

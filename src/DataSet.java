@@ -22,7 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 
 
 /** The domain of the MRQL physical algebra is a set of DataSources */
-final public class DataSet {
+public class DataSet {
     public ArrayList<DataSource> source;  // multiple sources
     public long counter;  // a Hadoop user-defined counter used by the `repeat' operator
     public long records;  // total number of dataset records

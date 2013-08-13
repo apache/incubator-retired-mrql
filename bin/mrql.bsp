@@ -31,7 +31,7 @@ export JAVA_HOME
 if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
    EXEC="$HAMA_HOME/bin/hama --config $HAMA_CONF jar $MRQL_HOME/lib/mrql-bsp.jar"
 else
-   EXEC="$JAVA_HOME/bin/java -ms256m -mx1024m -classpath $MRQL_HOME/lib/mrql-bsp.jar:$MRQL_CLASSPATH"
+   EXEC="$JAVA_HOME/bin/java -ms256m -classpath $MRQL_HOME/lib/mrql-bsp.jar:$MRQL_CLASSPATH"
 fi
 
 $EXEC org.apache.mrql.Main $*

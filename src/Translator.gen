@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.util.*;
 import java.io.*;
 
@@ -176,7 +176,7 @@ public class Translator extends Printer {
     }
 
     static Trees plans_with_distributed_lambdas
-	= #[MapReduce,MapAggregateReduce,MapCombineReduce,FroupByJoin,
+	= #[MapReduce,MapAggregateReduce,MapCombineReduce,FroupByJoin,Aggregate,
 	    MapReduce2,MapCombineReduce2,MapAggregateReduce2,MapJoin,MapAggregateJoin,
 	    CrossProduct,CrossAggregateProduct,cMap,AggregateMap,BSP,repeat,closure];
 
@@ -184,7 +184,7 @@ public class Translator extends Printer {
 	= #[mapReduce,mapReduce2,cmap,join,groupBy,orderBy,aggregate,map,filter];
 
     static Trees plan_names = plans_with_distributed_lambdas.append(algebraic_operators)
-	                           .append(#[Aggregate,Repeat,Closure,Generator,Let,If]);
+	                           .append(#[Repeat,Closure,Generator,Let,If]);
 
     /** generates new variable names */
     public static Tree new_var () {
@@ -317,22 +317,22 @@ public class Translator extends Printer {
     /** convert Tree constructions to code that construct these Trees (used in the Compiler) */
     public static String reify ( Tree e ) {
 	if (e instanceof LongLeaf)
-	    return "new Gen.LongLeaf(" + e + ")";
+	    return "new org.apache.mrql.gen.LongLeaf(" + e + ")";
 	else if (e instanceof DoubleLeaf)
-	    return "new Gen.DoubleLeaf(" + e + ")";
+	    return "new org.apache.mrql.gen.DoubleLeaf(" + e + ")";
 	else if (e instanceof VariableLeaf)
-	    return "new Gen.VariableLeaf(\"" + e.variableValue() + "\")";
+	    return "new org.apache.mrql.gen.VariableLeaf(\"" + e.variableValue() + "\")";
 	else if (e instanceof StringLeaf)
-	    return "new Gen.StringLeaf(" + e.toString().replace("\\","\\\\") + ")";
+	    return "new org.apache.mrql.gen.StringLeaf(" + e.toString().replace("\\","\\\\") + ")";
 	else {
 	    Node n = (Node) e;
-	    return "new Gen.Node(\""+n.name()+"\","+reify(n.children())+")";
+	    return "new org.apache.mrql.gen.Node(\""+n.name()+"\","+reify(n.children())+")";
 	}
     }
 
     /** convert Tree constructions to code that construct these Trees (used in the Compiler) */
     public static String reify ( Trees ts ) {
-	String s = "Gen.Trees.nil";
+	String s = "org.apache.mrql.gen.Trees.nil";
 	for ( Tree c: ts )
 	    s += ".append("+reify(c)+")";
 	return s;

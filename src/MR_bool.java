@@ -24,7 +24,7 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 
 /** a container for boolean values */
-final public class MR_bool implements MRData {
+final public class MR_bool extends MRData {
     private boolean value;
 
     public MR_bool ( boolean i ) { value = i; }

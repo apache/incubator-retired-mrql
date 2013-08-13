@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.*;
 
 
 /** an anonymous function encapsulated as MRData */
-final public class Lambda implements MRData {
+final public class Lambda extends MRData {
     private Function lambda;
 
     public Lambda ( Function f ) { lambda = f; }

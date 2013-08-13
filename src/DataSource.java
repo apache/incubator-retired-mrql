@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.io.IOException;
 import java.util.Map;
 import java.util.HashMap;
@@ -45,6 +45,7 @@ public class DataSource {
      */
     final static class DataSourceDirectory extends HashMap<String,DataSource> {
 	public void read ( Configuration conf ) {
+	    clear();
 	    for ( String s: conf.get("mrql.data.source.directory").split("@@@") ) {
 		String[] p = s.split("===");
 		put(p[0],DataSource.read(p[1],conf));
@@ -72,6 +73,8 @@ public class DataSource {
 	}
     }
 
+    DataSource () {}
+
     DataSource ( int source_num,
 		 String path,
 		 Class<? extends MRQLFileInputFormat> inputFormat,
@@ -84,8 +87,9 @@ public class DataSource {
 	    Path p = new Path(path);
 	    FileSystem fs = p.getFileSystem(conf);
 	    String complete_path = fs.getFileStatus(p).getPath().toString();
+	    //String complete_path = "file:"+path;
 	    this.path = complete_path;
-	    dataSourceDirectory.put(complete_path,this);
+	    dataSourceDirectory.put(this.path,this);
 	} catch (IOException e) {
 	    throw new Error(e);
 	}

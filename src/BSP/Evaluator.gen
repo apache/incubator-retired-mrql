@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.io.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.Configuration;
@@ -30,25 +30,32 @@ final public class Evaluator extends Interpreter {
     /** initialize the BSP evaluator */
     final static void init ( Configuration conf ) {
 	Config.bsp_mode = true;
-	if (Config.hadoop_mode && Config.local_hadoop_mode) {
+	if (Config.local_mode) {
 	    conf.set("bsp.master.address","local");
 	    conf.set("mapred.job.tracker","local");
 	    conf.set("hama.zookeeper.quorum","localhost");
-	    conf.set("bsp.local.tasks.maximum","4");     // BSP local mode uses a max of 4 cores
+	    conf.setInt("bsp.local.tasks.maximum",Config.nodes);
 	    conf.set("fs.default.name","file:///");
 	}
+    }
+
+    final static void initialize_query () {
+    }
+
+    /** shutdown the BSP evaluator */
+    final static void shutdown ( Configuration conf ) {
     }
 
     final static Configuration new_configuration () {
 	return new HamaConfiguration();
     }
 
-    public static MR_bool synchronize ( MR_bool mr_exit ) {
-	return BSPPlan.BSPop.synchronize(mr_exit);
+    public static MR_bool synchronize ( MR_string peerName, MR_bool mr_exit ) {
+	return BSPPlan.BSPop.synchronize(peerName,mr_exit);
     }
 
-    public static Bag distribute ( Bag s ) {
-	return BSPPlan.BSPop.distribute(s);
+    public static Bag distribute ( MR_string peerName, Bag s ) {
+	return BSPPlan.BSPop.distribute(peerName,s);
     }
 
     /** Evaluate MRQL physical operators using BSP

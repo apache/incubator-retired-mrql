@@ -18,11 +18,13 @@
 package org.apache.mrql;
 
 import java.io.*;
+import java.util.Enumeration;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.commons.cli.Options;
+import org.apache.log4j.*;
 import jline.*;
 
 
@@ -57,6 +59,12 @@ final public class Main extends Configured implements Tool {
 
     public int run ( String args[] ) throws Exception {
 	Config.parse_args(args,conf);
+	Config.hadoop_mode = Config.local_mode || Config.distributed_mode;
+	if (!Config.info) {
+	    for ( Enumeration en = LogManager.getCurrentLoggers(); en.hasMoreElements(); )
+		((Logger)en.nextElement()).setLevel(Level.WARN);
+	    LogManager.getRootLogger().setLevel(Level.WARN);
+	};
 	Evaluator.init(conf);
 	new TopLevel();
 	System.out.print("Apache MRQL version "+version+" (");
@@ -64,15 +72,18 @@ final public class Main extends Configured implements Tool {
 	    System.out.print("compiled ");
 	else System.out.print("interpreted ");
 	if (Config.hadoop_mode) {
-	    if (Config.local_hadoop_mode)
+	    if (Config.local_mode)
 		System.out.print("local ");
-	    else System.out.print("distributed ");
-	    if (Config.bsp_mode)
-		System.out.println("Hama BSP mode over "+Config.bsp_tasks+" BSP tasks)");
-	    else if (Config.reduce_tasks > 0)
-		System.out.println("Hadoop MapReduce mode with "+Config.reduce_tasks+" reducers)");
-	    else if (!Config.local_hadoop_mode)
-		System.out.println("Hadoop MapReduce mode with 1 reducer, use -reducers to change it)");
+	    else if (Config.distributed_mode)
+		System.out.print("distributed ");
+	    if (Config.spark_mode)
+		System.out.println("Spark mode using "+Config.nodes+" workers)");
+	    else if (Config.bsp_mode)
+		System.out.println("Hama BSP mode over "+Config.nodes+" BSP tasks)");
+	    else if (Config.nodes > 0)
+		System.out.println("Hadoop MapReduce mode with "+Config.nodes+" reducers)");
+	    else if (!Config.local_mode)
+		System.out.println("Hadoop MapReduce mode with 1 reducer, use -nodes to change it)");
 	    else System.out.println("Hadoop MapReduce mode)");
 	} else if (Config.bsp_mode)
 	    System.out.println("in-memory BSP mode)");
@@ -113,8 +124,10 @@ final public class Main extends Configured implements Tool {
 		}
 		}
 	    } finally {
-		if (Config.hadoop_mode)
+		if (Config.hadoop_mode) {
 		    Plan.clean();
+		    Evaluator.shutdown(Plan.conf);
+		};
 		if (Config.compile_functional_arguments)
 		    Compiler.clean();
 	    }
@@ -131,8 +144,10 @@ final public class Main extends Configured implements Tool {
 		};
 		parser.parse();
 	    } finally {
-		if (Config.hadoop_mode)
+		if (Config.hadoop_mode) {
 		    Plan.clean();
+		    Evaluator.shutdown(Plan.conf);
+		};
 		if (Config.compile_functional_arguments)
 		    Compiler.clean();
 	    };

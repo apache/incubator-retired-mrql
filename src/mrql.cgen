@@ -18,7 +18,7 @@
 package org.apache.mrql;
 
 import java_cup.runtime.*;
-import Gen.*;
+import org.apache.mrql.gen.*;
 
 parser code {:
 

@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 
 
 /** Translates physical plans to BSP plans to be executed on Hama */
@@ -270,21 +270,21 @@ public class BSPTranslator extends TypeInference {
 	case Aggregate(`acc,`zero,`S):
 	    return #<Aggregate(`acc,`zero,`(mr2bsp(S)))>;
 	case cMap(`m,`S):
-	    return mkBSP(#<lambda(tuple(cache,ms,k),
+	    return mkBSP(#<lambda(tuple(cache,ms,k,peer),
 				  setCache(cache,o_,cmap(`m,i_),
 					   tuple(BAG(),tuple(),TRUE())))>,
 			 #<tuple()>,
 			 #<false>,
 			 mr2bsp(S));
 	case AggregateMap(`m,`acc,`zero,`S):
-	    return mkBSP(#<lambda(tuple(cache,ms,k),
+	    return mkBSP(#<lambda(tuple(cache,ms,k,peer),
 				  setCache(cache,o_,aggregate(`acc,`zero,cmap(`m,i_)),
 					   tuple(BAG(),tuple(),TRUE())))>,
 			 #<tuple()>,
 			 #<false>,
 			 mr2bsp(S));
 	case MapReduce(`m,`r,`S,`o):
-	    return mkBSP(#<lambda(tuple(cache,ms,map_step),
+	    return mkBSP(#<lambda(tuple(cache,ms,map_step,peer),
 				  if(map_step,
 				     tuple(cmap(lambda(tuple(k,c),
                                                        bag(tuple(k,tuple(k,c)))),
@@ -302,7 +302,7 @@ public class BSPTranslator extends TypeInference {
 			 o,
 			 mr2bsp(S));
         case MapAggregateReduce(`m,`r,`acc,`zero,`S,_):
-            return mkBSP(#<lambda(tuple(cache,ms,map_step),
+            return mkBSP(#<lambda(tuple(cache,ms,map_step,peer),
                                   if(map_step,
                                      tuple(cmap(lambda(tuple(k,c),
                                                        bag(tuple(k,tuple(k,c)))),
@@ -315,7 +315,7 @@ public class BSPTranslator extends TypeInference {
                          #<false>,
                          mr2bsp(S));
 	case MapCombineReduce(`m,`c,`r,`S,`o):
-	    return mkBSP(#<lambda(tuple(cache,ms,map_step),
+	    return mkBSP(#<lambda(tuple(cache,ms,map_step,peer),
 				  if(map_step,
 				     tuple(cmap(lambda(tuple(k,s),
 						       cmap(lambda(x,bag(tuple(k,tuple(k,x)))),
@@ -334,7 +334,7 @@ public class BSPTranslator extends TypeInference {
 			 o,
 			 mr2bsp(S));
 	case MapCombineReduce2(`mx,`my,`c,`r,`x,`y,`o):
-	    return mkBSP2(#<lambda(tuple(cache,ms,map_step),
+	    return mkBSP2(#<lambda(tuple(cache,ms,map_step,peer),
 				   if(map_step,
 				      tuple(callM(union,`unionM,
 						  cmap(lambda(tuple(kx,x),
@@ -367,7 +367,7 @@ public class BSPTranslator extends TypeInference {
 			  mr2bsp(x),
 			  mr2bsp(y));
 	case MapReduce2(`mx,`my,`r,`x,`y,`o):
-	    return mkBSP2(#<lambda(tuple(cache,ms,map_step),
+	    return mkBSP2(#<lambda(tuple(cache,ms,map_step,peer),
 				   if(map_step,
 				      tuple(callM(union,`unionM,
 						  cmap(lambda(tuple(kx,x),
@@ -398,7 +398,7 @@ public class BSPTranslator extends TypeInference {
 			  mr2bsp(x),
 			  mr2bsp(y));
 	case MapAggregateReduce2(`mx,`my,`r,`acc,`zero,`x,`y,_):
-	    return mkBSP2(#<lambda(tuple(cache,ms,map_step),
+	    return mkBSP2(#<lambda(tuple(cache,ms,map_step,peer),
 				   if(map_step,
 				      tuple(callM(union,`unionM,
 						  cmap(lambda(tuple(kx,x),
@@ -449,7 +449,7 @@ public class BSPTranslator extends TypeInference {
 	    type_inference(ykey);
 	    xkey = PlanGeneration.makePlan(xkey);
 	    ykey = PlanGeneration.makePlan(ykey);
-	    return mkBSP2(#<lambda(tuple(cache,ms,map_step),
+	    return mkBSP2(#<lambda(tuple(cache,ms,map_step,peer),
 				   if(map_step,
 				      tuple(callM(union,`unionM,
 						  cmap(lambda(`vx,`xkey),i_),
@@ -468,7 +468,7 @@ public class BSPTranslator extends TypeInference {
 			  mr2bsp(x),
 			  mr2bsp(y));
 	case CrossProduct(`mx,`my,`r,`x,`y):
-	    return mkBSP(#<lambda(tuple(cache,ms,ys),
+	    return mkBSP(#<lambda(tuple(cache,ms,ys,peer),
 				  tuple(BAG(),
 					setCache(cache,o_,
 						 cmap(lambda(x,
@@ -481,7 +481,7 @@ public class BSPTranslator extends TypeInference {
 			 #<false>,
 			 mr2bsp(x));
 	case CrossAggregateProduct(`mx,`my,`r,`acc,`zero,`x,`y):
-	    return mkBSP(#<lambda(tuple(cache,ms,ys),
+	    return mkBSP(#<lambda(tuple(cache,ms,ys,peer),
 				  tuple(BAG(),
 					setCache(cache,o_,
 						 aggregate(`acc,`zero,
@@ -515,9 +515,9 @@ public class BSPTranslator extends TypeInference {
 		    };
 		s = subst_getCache_num((int)((LongLeaf)step_input).value(),step_cache_num,s);
 		return mkBSPL(step_cache_num,
-			      #<lambda(tuple(cache,ms,tuple(k,steps)),
+			      #<lambda(tuple(cache,ms,tuple(k,steps),peer),
 				       let(tuple(ts,kk,step_end),
-					   apply(`s,tuple(cache,ms,k)),
+					   apply(`s,tuple(cache,ms,k,peer)),
 					   if(step_end,   // end of repeat step
 					      setCache(cache,`step_cache_num,
 						       map(lambda(tuple(x,bb),x),
@@ -549,14 +549,14 @@ public class BSPTranslator extends TypeInference {
 		for ( Tree x: as )
 		    if (!x.equals(v))
 			sources = sources.append(x);
-		Tree res = mkBSPL(#<lambda(tuple(cache,ms,tuple(k,steps,firstp,S)),
+		Tree res = mkBSPL(#<lambda(tuple(cache,ms,tuple(k,steps,firstp,S),peer),
 				      let(ignore,if(firstp,setCache(cache,`step_cache_num,S,0),0),
 					  let(tuple(ts,kk,step_end),
-					      apply(`s,tuple(cache,ms,k)),
+					      apply(`s,tuple(cache,ms,k,peer)),
 					      if(step_end,   // end of repeat step
 						 setCache(cache,o_,map(lambda(tuple(x,b),x),getCache(cache,`step_cache_num)),
 						    setCache(cache,`step_cache_num,
-						       distribute(getCache(cache,`step_cache_num)),
+							distribute(peer,getCache(cache,`step_cache_num)),
 							     tuple(bag(),
 								   tuple(`k0,callM(plus,`plusM,steps,1),false,bag()),
 								   if(callM(gt,`gtM,steps,`max),
@@ -594,9 +594,9 @@ public class BSPTranslator extends TypeInference {
 		    };
 		s = subst_getCache_num((int)((LongLeaf)step_input).value(),step_cache_num,s);
 		return mkBSPL(step_cache_num,
-			      #<lambda(tuple(cache,ms,tuple(k,steps,len)),
+			      #<lambda(tuple(cache,ms,tuple(k,steps,len),peer),
 				       let(tuple(ts,kk,step_end),
-					   apply(`s,tuple(cache,ms,k)),
+					   apply(`s,tuple(cache,ms,k,peer)),
 					   if(step_end,   // end of repeat step
 					      let(newLen,callM(count,`countM,getCache(cache,`step_cache_num)),
 						  tuple(bag(),
@@ -655,7 +655,7 @@ public class BSPTranslator extends TypeInference {
 	    for ( int i = 0; i < vs.length(); i++ )
 		code = #<if(callM(eq,`eqM,i,`i),
 			    let(tuple(ts,kk,step_end),
-				apply(`(steps[i]),tuple(cache,ms,k)),
+				apply(`(steps[i]),tuple(cache,ms,k,peer)),
 				if(step_end,   // end of repeat step
 				   `((i+1 < vs.length())
 				     ? #<tuple(bag(),tuple(`(k[i+1]),`(i+1),steps),FALSE())>
@@ -667,7 +667,7 @@ public class BSPTranslator extends TypeInference {
 				   tuple(ts,tuple(kk,i,steps),FALSE()))),
 			    `code)>;
 	    return mkBSPL(cache_num,
-			  #<lambda(tuple(cache,ms,tuple(k,i,steps)),`code)>,
+			  #<lambda(tuple(cache,ms,tuple(k,i,steps),peer),`code)>,
 			  #<tuple(`(k[0]),0,2)>,
 			  #<false>,
 			  sources);
@@ -702,16 +702,16 @@ public class BSPTranslator extends TypeInference {
 		case _: ns = ns.append(x);
 		};
 	    return bspSimplify(mkBSPL((int)((LongLeaf)n).value(),
-				      #<lambda(tuple(cache,ms,tuple(first,k)),
+				      #<lambda(tuple(cache,ms,tuple(first,k),peer),
 					       if(first,
-						  let(tuple(ts,kk,b),apply(`s1,tuple(cache,ms,k)),
+						  let(tuple(ts,kk,b),apply(`s1,tuple(cache,ms,k,peer)),
                                                       let(exit,
-							  synchronize(b),   // poll all peers: do you want to exit?
+							  synchronize(peer,b),   // poll all peers: do you want to exit?
 							  // all peers must aggree to exit the inner BSP
 							  //    and proceed to the outer BSP
 							  tuple(ts,tuple(callM(not,`notM,exit),
 									 if(exit,`k2,kk)),FALSE()))),
-						  let(tuple(ts,kk,bb),apply(`s2,tuple(cache,ms,k)),
+						  let(tuple(ts,kk,bb),apply(`s2,tuple(cache,ms,k,peer)),
 						      tuple(ts,tuple(false,kk),bb))))>,
 				      #<tuple(true,`k1)>,
 				      o,

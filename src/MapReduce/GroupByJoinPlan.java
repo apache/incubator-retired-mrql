@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.io.*;
 import java.util.*;
 import org.apache.hadoop.fs.*;
@@ -64,7 +64,7 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
  * </pre>
  *   mapper output key: (partition,joinkey,tag),  value: (tag,data) <br/>
  *   Partitioner: over partition                                    <br/>
- *   GroupingComperator: over partition and joinkey                 <br/>
+ *   GroupingComparator: over partition and joinkey                 <br/>
  *   SortComparator: major partition, minor joinkey, sub-minor tag  <br/>
  * <pre>
  *   reduce ( (p,_,_), s )

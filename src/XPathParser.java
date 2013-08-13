@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.util.Stack;
 import org.xml.sax.*;
 import org.xml.sax.helpers.DefaultHandler;

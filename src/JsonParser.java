@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java.io.StringReader;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.fs.FSDataInputStream;

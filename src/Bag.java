@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.*;
  *   2) stream-based: can be traversed only once; implemented as Java iterators;
  *   3) spilled to a local file: can be accessed multiple times
  */
-public class Bag implements MRData, Iterable<MRData> {
+public class Bag extends MRData implements Iterable<MRData> {
     enum Modes { STREAMED, MATERIALIZED, SPILLED };
     private Modes mode;
     private ArrayList<MRData> content;      // content of a materialized bag
@@ -461,6 +461,17 @@ public class Bag implements MRData, Iterable<MRData> {
 	};
 	for ( int i = 0; i < n; i++ )
 	    add(MRContainer.read(in));
+    }
+
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+	materialize();
+	WritableUtils.writeVInt(out,size());
+	for ( MRData e: this )
+	    e.write(out);
+    }
+
+    private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
+	readFields(in);
     }
 
     /** compare this Bag with a given Bag by comparing their associated elements */

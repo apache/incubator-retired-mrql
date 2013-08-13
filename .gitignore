@@ -3,4 +3,5 @@ tmp/*
 classes/*
 mrql/*
 mrql-bsp.jar
+mrql-spark.jar
 mrql.jar

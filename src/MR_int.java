@@ -17,15 +17,13 @@
  */
 package org.apache.mrql;
 
-import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 
 
 /** a container for int values */
-final public class MR_int implements MRData {
+final public class MR_int extends MRData {
     private int value;
 
     public MR_int ( int i ) { value = i; }

@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.*;
 
 
 /** a container for byte values */
-final public class MR_byte implements MRData {
+final public class MR_byte extends MRData {
     private byte value;
 
     public MR_byte ( byte i ) { value = i; }

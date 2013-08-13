@@ -22,7 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 
 
-final public class Inv implements MRData {
+final public class Inv extends MRData {
     private MRData value;
 
     Inv ( MRData v ) { value = v; }

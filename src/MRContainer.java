@@ -17,14 +17,12 @@
  */
 package org.apache.mrql;
 
-import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.*;
 import org.apache.hadoop.io.WritableComparable;
 
 
 /** A container for MRData that implements read (the deserializer) */
-final public class MRContainer implements WritableComparable<MRContainer> {
+final public class MRContainer implements WritableComparable<MRContainer>, Serializable {
     MRData data;
 
     public final static byte BOOLEAN = 0, BYTE = 1, SHORT = 2, INT = 3, LONG = 4,
@@ -121,7 +119,17 @@ final public class MRContainer implements WritableComparable<MRContainer> {
 	throw new Error("Unrecognized MRQL type tag: "+x[xs]);
     }
 
-    final static class MR_EOLB implements MRData {
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+	data.write(out);
+    }
+
+    private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
+	data = read(in);
+    }
+
+    private void readObjectNoData () throws ObjectStreamException {}
+
+    final static class MR_EOLB extends MRData {
 	MR_EOLB () {}
 
 	public void materializeAll () {};

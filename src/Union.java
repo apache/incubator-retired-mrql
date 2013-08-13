@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.*;
 
 
 /** union values are tagged values, where tag is the descriminator */
-public class Union implements MRData {
+public class Union extends MRData {
     private byte tag;
     private MRData value;
 

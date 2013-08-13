@@ -17,16 +17,14 @@
  */
 package org.apache.mrql;
 
-import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 
 
 /** a container for Tuples */
-final public class Tuple implements MRData {
-    final MRData[] tuple;
+final public class Tuple extends MRData {
+    MRData[] tuple;
 
     public Tuple ( int size ) {
 	tuple = new MRData[size];
@@ -105,6 +103,7 @@ final public class Tuple implements MRData {
 
     public void readFields ( DataInput in ) throws IOException {
 	int n = WritableUtils.readVInt(in);
+	tuple = new Tuple[n];
 	for ( short i = 0; i < n; i++ )
 	    tuple[i] = MRContainer.read(in);
     }

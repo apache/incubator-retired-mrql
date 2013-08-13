@@ -54,6 +54,8 @@ final public class Test extends Configured implements Tool {
 	else System.setOut(new PrintStream(result_file));
 	try {
 	    parser = new MRQLParser(new MRQLLex(new FileInputStream(query)));
+	    Main.parser = parser;
+	    MRQLLex.reset();
 	    parser.parse();
 	    int i;
 	    if (exists && (i = compare(result_file,result_directory+"/result.txt")) > 0)
@@ -83,6 +85,7 @@ final public class Test extends Configured implements Tool {
 
     public int run ( String args[] ) throws Exception {
 	Config.parse_args(args,conf);
+	Config.hadoop_mode = Config.local_mode || Config.distributed_mode;
 	Evaluator.init(conf);
 	new TopLevel();
 	Config.testing = true;

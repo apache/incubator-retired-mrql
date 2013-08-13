@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import Gen.*;
+import org.apache.mrql.gen.*;
 import java_cup.runtime.Symbol;
 import java.util.Iterator;
 import java.io.*;

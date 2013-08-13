@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.*;
 
 
 /** a container for short values */
-final public class MR_short implements MRData {
+final public class MR_short extends MRData {
     private short value;
 
     public MR_short ( short i ) { value = i; }
