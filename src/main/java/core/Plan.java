@@ -37,7 +37,7 @@ public class Plan {
     /** generate a new path name in HDFS to store intermediate results */
     public static String new_path ( Configuration conf ) throws IOException {
 	String dir = (Config.local_mode)
-	             ? Config.tmpDirectory
+	             ? ((Config.tmpDirectory == null) ? "/tmp/mrql" : Config.tmpDirectory)
 	             : "mrql";
 	Path p;
 	do {

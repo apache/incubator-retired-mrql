@@ -50,20 +50,20 @@ final public class Evaluator extends Interpreter implements Serializable {
     /** initialize the Spark evaluator */
     final static void init ( Configuration conf ) throws IOException {
 	Config.spark_mode = true;
-	if (Config.local_mode)
+	if (Config.hadoop_mode && Config.local_mode)
 	    spark_context = new JavaSparkContext("local["+Config.nodes+"]",
 						 "MRQL Local Spark Evaluator");
-	else {
+	else if (Config.hadoop_mode) {
 	    HashMap<String,String> env = new HashMap<String,String>();
-	    data_source_directory = System.getProperty("SPARK_DEFAULT_URI")+"/"+Plan.new_path(conf);
+	    data_source_directory = System.getenv("FS_DEFAULT_NAME")+"/"+Plan.new_path(conf);
 	    env.put("mrql.data.source.directory",data_source_directory);
-	    spark_context = new JavaSparkContext(System.getProperty("SPARK_MASTER"),
+	    spark_context = new JavaSparkContext(System.getenv("SPARK_MASTER"),
 						 "MRQL Spark Evaluator",
-						 System.getProperty("SPARK_HOME"),
+						 System.getenv("SPARK_HOME"),
 						 new String[]{mrql_jar},
 						 env);
 	    Plan.conf = spark_context.hadoopConfiguration();
-	    FileSystem.setDefaultUri(Plan.conf,System.getProperty("SPARK_DEFAULT_URI"));
+	    FileSystem.setDefaultUri(Plan.conf,System.getenv("FS_DEFAULT_NAME"));
 	}
     }
 

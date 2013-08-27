@@ -49,7 +49,7 @@ public class MapReducePlan extends Plan {
 					   final Tree zero,
 					   final DataSet S ) throws Exception {
 	MRData res = Interpreter.evalE(zero);
-	Function accumulator = functional_argument(null,acc_fnc);
+	Function accumulator = functional_argument(Plan.conf,acc_fnc);
 	Tuple pair = new Tuple(2);
 	for ( DataSource s: S.source )
 	    if (s.inputFormat != BinaryInputFormat.class) {

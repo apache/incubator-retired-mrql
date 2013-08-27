@@ -50,6 +50,8 @@ final public class Config {
     public static boolean trace = false;
     // number of worker nodes
     public static int nodes = 2;
+    // true, to disable mapJoin
+    public static boolean noMapJoin = false;
     // max distributed cache size for MapJoin (fragment-replicate join) in MBs
     public static int mapjoin_size = 50;
     // max entries for in-mapper combiner before they are flushed out
@@ -59,7 +61,7 @@ final public class Config {
     // max size of materialized vector before is spilled to a file:
     public static int max_materialized_bag = 500000;
     // max number of incoming messages before a sub-sync()
-    public static int bsp_msg_size = 0;
+    public static int bsp_msg_size = Integer.MAX_VALUE;
     // number of elements per mapper to process the range min...max
     public static long range_split_size = 100000;
     // max number of streams to merge simultaneously
@@ -157,13 +159,9 @@ final public class Config {
 	interactive = true;
 	while (i < args.length) {
 	    if (args[i].equals("-local")) {
-		if (i != 0)
-		    throw new Error("-local must be the first argument");
 		local_mode = true;
 		i++;
 	    } else if (args[i].equals("-dist")) {
-		if (i != 0)
-		    throw new Error("-dist must be the first argument");
 		distributed_mode = true;
 		i++;
 	    } else if (args[i].equals("-reducers")) {

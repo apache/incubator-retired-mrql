@@ -23,12 +23,11 @@ import org.apache.hadoop.util.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.commons.cli.Options;
 import org.apache.log4j.*;
 import jline.*;
 
 
-final public class Main extends Configured implements Tool {
+final public class Main {
     public final static String version = "0.9.0";
 
     public static PrintStream print_stream;
@@ -57,7 +56,16 @@ final public class Main extends Configured implements Tool {
 	}
     }
 
-    public int run ( String args[] ) throws Exception {
+    public static void main ( String[] args ) throws Exception {
+	boolean hadoop = false;
+	for ( String arg: args )
+	    hadoop |= arg.equals("-local") || arg.equals("-dist");
+	if (hadoop) {
+	    conf = Evaluator.new_configuration();
+	    GenericOptionsParser gop = new GenericOptionsParser(conf,args);
+	    conf = gop.getConfiguration();
+	    args = gop.getRemainingArgs();
+	};
 	Config.parse_args(args,conf);
 	Config.hadoop_mode = Config.local_mode || Config.distributed_mode;
 	if (!Config.info) {
@@ -65,13 +73,13 @@ final public class Main extends Configured implements Tool {
 		((Logger)en.nextElement()).setLevel(Level.WARN);
 	    LogManager.getRootLogger().setLevel(Level.WARN);
 	};
-	Evaluator.init(conf);
+        Evaluator.init(conf);
 	new TopLevel();
 	System.out.print("Apache MRQL version "+version+" (");
 	if (Config.compile_functional_arguments)
 	    System.out.print("compiled ");
 	else System.out.print("interpreted ");
-	if (Config.hadoop_mode) {
+	if (hadoop) {
 	    if (Config.local_mode)
 		System.out.print("local ");
 	    else if (Config.distributed_mode)
@@ -100,7 +108,7 @@ final public class Main extends Configured implements Tool {
 		String line = "";
 		String s = "";
 		try {
-		    if (Config.hadoop_mode && Config.bsp_mode)
+		    if (hadoop && Config.bsp_mode)
 			Config.write(Plan.conf);
 		    do {
 			s = reader.readLine("> ");
@@ -124,7 +132,7 @@ final public class Main extends Configured implements Tool {
 		}
 		}
 	    } finally {
-		if (Config.hadoop_mode) {
+		if (hadoop) {
 		    Plan.clean();
 		    Evaluator.shutdown(Plan.conf);
 		};
@@ -132,7 +140,7 @@ final public class Main extends Configured implements Tool {
 		    Compiler.clean();
 	    }
 	} else try {
-		if (Config.hadoop_mode && Config.bsp_mode)
+		if (hadoop && Config.bsp_mode)
 		    Config.write(Plan.conf);
 		try {
 		    parser = new MRQLParser(new MRQLLex(new FileInputStream(query_file)));
@@ -144,26 +152,12 @@ final public class Main extends Configured implements Tool {
 		};
 		parser.parse();
 	    } finally {
-		if (Config.hadoop_mode) {
+		if (hadoop) {
 		    Plan.clean();
 		    Evaluator.shutdown(Plan.conf);
 		};
 		if (Config.compile_functional_arguments)
 		    Compiler.clean();
-	    };
-	return 0;
-    }
-
-    public static void main ( String[] args ) throws Exception {
-	boolean hadoop = args.length > 0 && (args[0].equals("-local") || args[0].equals("-dist"));
-	if (!hadoop)
-	    new Main().run(args);
-	else {
-	    conf = Evaluator.new_configuration();
-	    GenericOptionsParser gop = new GenericOptionsParser(conf,args);
-	    conf = gop.getConfiguration();
-	    args = gop.getRemainingArgs();
-	    ToolRunner.run(conf,new Main(),args);
-	}
+	    }
     }
 }

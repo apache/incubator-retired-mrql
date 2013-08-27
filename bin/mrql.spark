@@ -26,9 +26,10 @@ MRQL_HOME=$(dirname $(readlink -f $0))/..
 
 . $MRQL_HOME/conf/mrql-env.sh
 
-export JAVA_HOME
+export SPARK_HOME FS_DEFAULT_NAME SPARK_MASTER
+export MRQL_JAR=$(readlink -f $MRQL_HOME/lib/mrql-spark-*.jar)
+export SPARK_MEM="1g"
 
-EXEC="$JAVA_HOME/bin/java -DSPARK_HOME="$SPARK_HOME" -DSPARK_MASTER="$SPARK_MASTER" -DSPARK_DEFAULT_URI="$SPARK_DEFAULT_URI" -classpath $MRQL_HOME/lib/mrql-spark.jar:$MRQL_CLASSPATH"
+SPARK_CLASSPATH=$MRQL_JAR:$SPARK_JARS:$HADOOP_JARS
 
-
-$EXEC org.apache.mrql.Main $*
+$JAVA_HOME/bin/java -classpath $SPARK_CLASSPATH org.apache.mrql.Main $*

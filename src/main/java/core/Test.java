@@ -21,15 +21,16 @@ import java.io.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.conf.*;
 
+
 /** Test all the MRQL test queries */
-final public class Test extends Configured implements Tool {
+final public class Test {
     public static PrintStream print_stream;
     public static Configuration conf;
     static MRQLParser parser = new MRQLParser();
-    String result_directory;
+    static String result_directory;
     static PrintStream test_out;
 
-    private int compare ( String file1, String file2 ) throws Exception {
+    private static int compare ( String file1, String file2 ) throws Exception {
 	FileInputStream s1 = new FileInputStream(file1);
 	FileInputStream s2 = new FileInputStream(file2);
 	int b1, b2;
@@ -39,7 +40,7 @@ final public class Test extends Configured implements Tool {
 	return (b1 == -1 && b2 == -1) ? 0 : i;
     }
 
-    private void query ( File query ) throws Exception {
+    private static void query ( File query ) throws Exception {
 	String path = query.getPath();
 	if (!path.endsWith(".mrql"))
 	    return;
@@ -83,10 +84,20 @@ final public class Test extends Configured implements Tool {
 	}
     }
 
-    public int run ( String args[] ) throws Exception {
+    public static void main ( String[] args ) throws Exception {
+	boolean hadoop = false;
+	for ( String arg: args )
+	    hadoop |= arg.equals("-local") || arg.equals("-dist");
+	Config.quiet_execution = true;
+	if (hadoop) {
+	    conf = Evaluator.new_configuration();
+	    GenericOptionsParser gop = new GenericOptionsParser(conf,args);
+	    conf = gop.getConfiguration();
+	    args = gop.getRemainingArgs();
+	};
 	Config.parse_args(args,conf);
 	Config.hadoop_mode = Config.local_mode || Config.distributed_mode;
-	Evaluator.init(conf);
+        Evaluator.init(conf);
 	new TopLevel();
 	Config.testing = true;
 	if (Config.hadoop_mode && Config.bsp_mode)
@@ -99,20 +110,5 @@ final public class Test extends Configured implements Tool {
 	test_out = System.out;
 	for ( File f: query_dir.listFiles() )
 	    query(f);
-	return 0;
-    }
-
-    public static void main ( String[] args ) throws Exception {
-	boolean hadoop = args.length > 0 && (args[0].equals("-local") || args[0].equals("-dist"));
-	Config.quiet_execution = true;
-	if (!hadoop)
-	    new Test().run(args);
-	else {
-	    conf = Evaluator.new_configuration();
-	    GenericOptionsParser gop = new GenericOptionsParser(conf,args);
-	    conf = gop.getConfiguration();
-	    args = gop.getRemainingArgs();
-	    ToolRunner.run(conf,new Test(),args);
-	}
     }
 }

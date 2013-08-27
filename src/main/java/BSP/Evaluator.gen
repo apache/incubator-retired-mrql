@@ -30,13 +30,18 @@ final public class Evaluator extends Interpreter {
     /** initialize the BSP evaluator */
     final static void init ( Configuration conf ) {
 	Config.bsp_mode = true;
-	if (Config.local_mode) {
-	    conf.set("bsp.master.address","local");
-	    conf.set("mapred.job.tracker","local");
-	    conf.set("hama.zookeeper.quorum","localhost");
-	    conf.setInt("bsp.local.tasks.maximum",Config.nodes);
-	    conf.set("fs.default.name","file:///");
-	}
+	if (Config.hadoop_mode)
+            if (Config.local_mode) {
+                conf.set("bsp.master.address","local");
+                conf.set("hama.zookeeper.quorum","localhost");
+                conf.setInt("bsp.local.tasks.maximum",Config.nodes);
+                conf.set("fs.default.name","file:///");
+            } else {
+                conf.set("bsp.master.address",System.getenv("BSP_MASTER_ADDRESS"));
+                conf.set("hama.zookeeper.quorum",System.getenv("HAMA_ZOOKEEPER_QUORUM"));
+                conf.setInt("bsp.local.tasks.maximum",Config.nodes);
+                conf.set("fs.default.name",System.getenv("FS_DEFAULT_NAME"));
+            }
     }
 
     final static void initialize_query () {
@@ -51,11 +56,15 @@ final public class Evaluator extends Interpreter {
     }
 
     public static MR_bool synchronize ( MR_string peerName, MR_bool mr_exit ) {
-	return BSPPlan.BSPop.synchronize(peerName,mr_exit);
+        if (Config.hadoop_mode)
+            return BSPPlan.BSPop.synchronize(peerName,mr_exit);
+        else return mr_exit;
     }
 
     public static Bag distribute ( MR_string peerName, Bag s ) {
-	return BSPPlan.BSPop.distribute(peerName,s);
+        if (Config.hadoop_mode)
+            return BSPPlan.BSPop.distribute(peerName,s);
+        else return s;
     }
 
     /** Evaluate MRQL physical operators using BSP

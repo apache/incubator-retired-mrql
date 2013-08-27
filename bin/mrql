@@ -26,12 +26,11 @@ MRQL_HOME=$(dirname $(readlink -f $0))/..
 
 . $MRQL_HOME/conf/mrql-env.sh
 
-export JAVA_HOME
+export JAVA_HOME MAPRED_JOB_TRACKER FS_DEFAULT_NAME
+
 
 if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
-   EXEC="$HADOOP_HOME/bin/hadoop --config $HADOOP_CONF jar $MRQL_HOME/lib/mrql.jar"
+   $HADOOP_HOME/bin/hadoop jar $MRQL_HOME/lib/mrql-mr-*.jar org.apache.mrql.Main $*
 else
-   EXEC="$JAVA_HOME/bin/java -ms256m -mx1024m -classpath $MRQL_HOME/lib/mrql.jar:$MRQL_CLASSPATH"
+   mvn -q -f $MRQL_HOME/pom.xml -pl MapReduce exec:java -Dexec.mainClass="org.apache.mrql.Main" -Dexec.args="$*"
 fi
-
-$EXEC org.apache.mrql.Main $*

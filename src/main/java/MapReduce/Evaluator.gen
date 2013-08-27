@@ -9,7 +9,7 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
+ * Unless required by applicable law or agreed to in writing, softwar	if (hadoop)e
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
@@ -31,10 +31,14 @@ final public class Evaluator extends Interpreter {
     /** initialize the MapReduce evaluator */
     final static void init ( Configuration conf ) {
 	Config.map_reduce_mode = true;
-	if (Config.local_mode) {
-	    conf.set("mapred.job.tracker","local");
-	    conf.set("fs.default.name","file:///");
-	}
+	if (Config.hadoop_mode)
+            if (Config.local_mode) {
+                conf.set("mapred.job.tracker","local");
+                conf.set("fs.default.name","file:///");
+            } else {
+                conf.set("mapred.job.tracker",System.getenv("MAPRED_JOB_TRACKER"));
+                conf.set("fs.default.name",System.getenv("FS_DEFAULT_NAME"));
+            }
     }
 
     /** shutdown the MapReduce evaluator */

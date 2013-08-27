@@ -638,6 +638,8 @@ final public class PlanGeneration extends AlgebraicOptimization {
 	case MapAggregateReduce2(`mx,`my,
 				 lambda(`v,cmap(lambda(`vx,cmap(lambda(`vy,`b),nth(`nx,1))),nth(`ny,0))),
 				 null,null,`x,`y,false):
+	    if (Config.noMapJoin)
+		fail;
 	    if (!nx.equals(v) || !ny.equals(v) || occurences(v,b) > 0)
 		fail;
 	    Tree X = new_var();
@@ -663,6 +665,8 @@ final public class PlanGeneration extends AlgebraicOptimization {
 								      nth(`ny,0))),
 						       null,null,`X,`Y,false))))))>;
 	case MapAggregateReduce2(`mx,`my,lambda(`v,`b),null,null,`x,`y,false):
+	    if (Config.noMapJoin)
+		fail;
 	    Tree X = new_var();
 	    Tree Y = new_var();
 	    Tree nv = new_var();

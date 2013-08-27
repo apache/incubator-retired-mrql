@@ -1,4 +1,4 @@
-#!/bin/bash
+#/bin/bash
 #--------------------------------------------------------------------------------
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -18,19 +18,25 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# run MRQL in BSP mode
+#
+# Set MRQL-specific environment variables here.
+# Used by Makefile and build.xml only
 #
 #--------------------------------------------------------------------------------
 
-MRQL_HOME=$(dirname $(readlink -f $0))/..
+# Required: The MRQL version
+MRQL_VERSION=0.9.0-incubating
 
-. $MRQL_HOME/conf/mrql-env.sh
+# Required: The jflex parser library
+# You may install it as a linux package or download it from http://jflex.de/
+JFLEX_JAR=/usr/share/java/JFlex.jar
 
-export JAVA_HOME FS_DEFAULT_NAME BSP_MASTER_ADDRESS HAMA_ZOOKEEPER_QUORUM
+# Required: The CUP parser library
+# You may install it as a linux package or download it from http://www2.cs.tum.edu/projects/cup/
+CUP_JAR=/usr/share/java/cup.jar
 
-if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
-   $HAMA_HOME/bin/hama jar $MRQL_HOME/lib/mrql-bsp-*.jar org.apache.mrql.Main $*
-else
-   HAMA_CLASSPATH=$(readlink -f $MRQL_HOME/lib/mrql-bsp-*.jar):$HAMA_JAR:$HADOOP_JARS
-   $JAVA_HOME/bin/java -classpath $HAMA_CLASSPATH org.apache.mrql.Main $*
-fi
+# Required: The JLine library
+# You may download from http://jline.sourceforge.net
+JLINE_JAR=${HOME}/mrql18/lib/jline-1.0.jar
+
+MRQL_CLASSPATH=classes:${HAMA_JAR}:${SPARK_JARS}:${HADOOP_JARS}

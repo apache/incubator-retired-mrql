@@ -777,7 +777,7 @@ final public class MapReduceAlgebra {
 		    if (cache.get(i) instanceof Bag && ((Bag)cache.get(i)).size() > 0)
 			System.out.println(tabs+"      cache "+i+": "+cache.get(i));
 	    };
-	    result = (Tuple)superstep.eval(new Tuple(cache,msgs,state));
+	    result = (Tuple)superstep.eval(new Tuple(cache,msgs,state,new MR_string("")));
 	    Bag new_msgs = (Bag)result.get(0);
 	    state = result.get(1);
 	    exit = ((MR_bool)result.get(2)).get();
