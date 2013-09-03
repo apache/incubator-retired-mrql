@@ -73,7 +73,7 @@ final public class Evaluator extends Interpreter {
      * @param zero  the zero element of type T
      * @param plan the plan that constructs the dataset that contains the bag of values {T}
      * @param env contains bindings fro variables to values (MRData)
-     * @returns the aggregation result of type T
+     * @return the aggregation result of type T
      */
     final static MRData aggregate ( Tree acc_fnc,
 				    Tree zero,
@@ -105,7 +105,6 @@ final public class Evaluator extends Interpreter {
     /** Evaluate an MRQL physical plan using Hadoop and print tracing info
      * @param e the physical plan
      * @param env contains bindings fro variables to values (MRData)
-     * @param tne name of the counter used in loops
      * @return a DataSet (stored in HDFS)
      */
     final static DataSet eval ( final Tree e,
@@ -130,7 +129,6 @@ final public class Evaluator extends Interpreter {
     /** Evaluate MRQL physical operators using Hadoop
      * @param e the physical plan
      * @param env contains bindings fro variables to values (MRData)
-     * @param tne name of the counter used in loops
      * @return a DataSet (stored in HDFS)
      */
     final static DataSet evalD ( final Tree e,

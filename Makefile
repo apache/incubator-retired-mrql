@@ -109,4 +109,4 @@ clean_tests:
 	@/bin/rm -rf tests/results/*/*
 
 clean: 
-	@/bin/rm -rf *~ */*~ */*/*~ classes mrql-tmp tmp null tests/error_log.txt
+	@/bin/rm -rf *~ */*~ */*/*~ classes mrql-tmp tmp null tests/error_log.txt */dependency-reduced-pom.xml

@@ -32,5 +32,7 @@ export JAVA_HOME MAPRED_JOB_TRACKER FS_DEFAULT_NAME
 if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
    $HADOOP_HOME/bin/hadoop jar $MRQL_HOME/lib/mrql-mr-*.jar org.apache.mrql.Main $*
 else
-   mvn -q -f $MRQL_HOME/pom.xml -pl MapReduce exec:java -Dexec.mainClass="org.apache.mrql.Main" -Dexec.args="$*"
+   #mvn -q -f $MRQL_HOME/pom.xml -pl MapReduce exec:java -Dexec.mainClass="org.apache.mrql.Main" -Dexec.args="$*"
+   CLASSPATH=$(readlink -f $MRQL_HOME/lib/mrql-mr-*.jar):$HADOOP_JARS
+   $JAVA_HOME/bin/java -classpath $CLASSPATH org.apache.mrql.Main $*
 fi

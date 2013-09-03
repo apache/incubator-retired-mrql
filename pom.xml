@@ -33,6 +33,15 @@
       <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
     </license>
   </licenses>
+  <prerequisites>
+    <maven>3.0</maven>
+  </prerequisites>
+
+  <parent>
+    <groupId>org.apache</groupId>
+    <artifactId>apache</artifactId>
+    <version>13</version>
+  </parent>
 
   <properties>
     <hadoop.version>1.0.3</hadoop.version>
@@ -45,6 +54,7 @@
     <module>MapReduce</module>
     <module>BSP</module>
     <module>Spark</module>
+    <module>dist</module>
   </modules>
 
   <dependencies>
@@ -73,17 +83,120 @@
   <build>
     <plugins>
       <plugin>
-	<groupId>org.codehaus.mojo</groupId>
-	<artifactId>exec-maven-plugin</artifactId>
-	<version>1.2.1</version>
+	<groupId>org.apache.maven.plugins</groupId>
+	<artifactId>maven-compiler-plugin</artifactId>
+	<version>3.1</version>
+	<configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+	</configuration>
       </plugin>
       <plugin>
 	<groupId>org.apache.maven.plugins</groupId>
 	<artifactId>maven-site-plugin</artifactId>
 	<version>2.1.1</version>
       </plugin>
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <version>0.8</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <excludes>
+	    <exclude>.git/**</exclude>
+	    <exclude>.gitignore</exclude>
+            <exclude>.classpath/**</exclude>
+            <exclude>.project/**</exclude>
+            <exclude>tests/**</exclude>
+            <exclude>queries/**</exclude>
+            <exclude>**/dependency-reduced-pom.xml</exclude>
+            <exclude>**/docs/apidocs/**</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>1.4</version>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>2.4.1</version>
+        <configuration>
+          <filesets>
+            <fileset>
+              <directory>${project.basedir}</directory>
+              <includes>
+                <include>**/*~</include>
+                <include>lib/**</include>
+                <include>tests/results/**</include>
+                <include>tests/error_log.txt</include>
+                <include>mrql-tmp</include>
+                <include>tmp</include>
+                <include>**/dependency-reduced-pom.xml</include>
+                <include>**/docs/**</include>
+                <include>**/.project</include>
+                <include>**/.classpath</include>
+                <include>**/.settings/**</include>
+              </includes>
+            </fileset>
+          </filesets>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.9.1</version>
+        <configuration>
+          <aggregate>true</aggregate>
+          <outputDirectory>docs/apidocs</outputDirectory>
+          <show>package</show>
+          <quiet>true</quiet>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+             <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
+    <extensions>
+      <extension>
+        <groupId>org.apache.maven.wagon</groupId>
+        <artifactId>wagon-ssh-external</artifactId>
+        <version>1.0-beta-6</version>
+      </extension>
+    </extensions>
   </build>
+
+  <distributionManagement>
+    <repository>
+      <id>apache.website</id>
+      <url>scpexe://people.apache.org/www/mrql.apache.org</url>
+<!--
+      <url>file://target</url>
+-->
+    </repository>
+  </distributionManagement>
 
   <issueManagement>
     <system>JIRA</system>
@@ -91,6 +204,12 @@
   </issueManagement>
 
   <mailingLists>
+    <mailingList>
+      <name>User List</name>
+      <subscribe>user-subscribe@mrql.incubator.apache.org</subscribe>
+      <unsubscribe>user-unsubscribe@mrql.incubator.apache.org</unsubscribe>
+      <archive>http://mail-archives.apache.org/mod_mbox/incubator-mrql-user/</archive>
+    </mailingList>
     <mailingList>
       <name>Development</name>
       <post>dev@mrql.incubator.apache.org</post>

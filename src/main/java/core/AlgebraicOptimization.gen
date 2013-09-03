@@ -36,7 +36,7 @@ public class AlgebraicOptimization extends Simplification {
     /**
      * algebraic optimization (algebra to algebra)
      * @param e the algebraic form to be optimized
-     * @returns the optimized form
+     * @return the optimized form
      */
     public static Tree translate ( Tree e ) {
 	match e {

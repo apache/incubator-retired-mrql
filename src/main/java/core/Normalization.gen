@@ -313,7 +313,7 @@ public class Normalization extends Translator {
     }
 
     /** normalize algebraic expressions to more efficient forms using heuristic rules */
-    static Tree normalize ( Tree e ) {
+    public static Tree normalize ( Tree e ) {
 	match e {
 	case select(`u,from(),where(true)):
 	    return normalize(#<bag(`u)>);
@@ -397,7 +397,7 @@ public class Normalization extends Translator {
     }
 
     /** normalize algebraic expressions to more efficient forms using heuristic rules */
-    static Tree normalize_all ( Tree e ) {
+    public static Tree normalize_all ( Tree e ) {
 	Tree ne = normalize(e);
 	if (e.equals(ne))
 	    return e;

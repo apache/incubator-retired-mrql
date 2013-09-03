@@ -87,15 +87,3 @@ same license, as is the CUP runtime code linked with the generated
 parser.  Java is a trademark of Sun Microsystems, Inc. References to
 the Java programming language in relation to JLex are not meant to
 imply that Sun endorses this product.
-
-----------------------------------------------------------------------------
-
-Gen: A Java Package for Constructing and Manipulating Abstract Syntax Trees
-
-Copyright (c) 2013 by Leonidas Fegaras, the University of Texas at
-Arlington. All rights reserved. 
-
-This material is provided as is, with absolutely no warranty expressed
-or implied. Any use is at your own risk. Permission is hereby granted
-to use or copy this program for any purpose, provided the above
-notices are retained on all copies.

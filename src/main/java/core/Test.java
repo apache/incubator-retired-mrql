@@ -106,6 +106,7 @@ final public class Test {
 	    throw new Error("Must provide a query directory, a result directory, and an error log file");
 	File query_dir = new File(Main.query_file);
 	result_directory = Config.extra_args.get(0);
+        (new File(result_directory)).mkdirs();
 	System.setErr(new PrintStream(Config.extra_args.get(1)));
 	test_out = System.out;
 	for ( File f: query_dir.listFiles() )

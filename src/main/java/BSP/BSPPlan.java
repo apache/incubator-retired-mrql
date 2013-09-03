@@ -450,7 +450,7 @@ final public class BSPPlan extends Plan {
     }
 
     /** Evaluate a BSP operation that aggregates the results
-     * @param source_nums   output tags
+     * @param source_num    output tag
      * @param superstep     the superstep function
      * @param init_state    initial state
      * @param acc_fnc       accumulator function
