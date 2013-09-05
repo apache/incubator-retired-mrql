@@ -30,7 +30,7 @@
   <parent>
     <groupId>org.apache.mrql</groupId>
     <artifactId>MRQL</artifactId>
-    <version>0.9.0-incubating</version>
+    <version>0.9.0-incubating-SNAPSHOT</version>
   </parent>
   
   <dependencies>
