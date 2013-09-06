@@ -15,7 +15,8 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.mrql</groupId>
@@ -29,7 +30,7 @@
   <parent>
     <groupId>org.apache.mrql</groupId>
     <artifactId>MRQL</artifactId>
-    <version>0.9.1-incubating-SNAPSHOT</version>
+    <version>0.9.0-incubating-SNAPSHOT</version>
   </parent>
   
   <dependencies>
@@ -127,29 +128,37 @@
 	    </goals>
 	    <configuration>
               <target>
-		<property name="compile_classpath" refid="maven.compile.classpath" />
-		<fileset id="gen.path" dir="../src/main/java/core" includes="*.gen" />
-		<pathconvert pathsep=" " property="gen.files" refid="gen.path" />
-		<java classname="org.apache.mrql.gen.Main" classpath="../lib/gen-${project.version}.jar:${compile_classpath}">
-		  <arg line="${gen.files}" />
-		  <arg line="-o" />
-		  <arg file="${project.build.directory}/generated-sources/org/apache/mrql" />
+		<property name="compile_classpath" refid="maven.compile.classpath"/>
+		<fileset id="gen.path" dir="../src/main/java/core" includes="*.gen"/>
+		<pathconvert pathsep=" " property="gen.files" refid="gen.path"/>
+		<java classname="org.apache.mrql.gen.Main"
+		      classpath="../lib/gen-${project.version}.jar:${compile_classpath}">
+		  <arg line="${gen.files}"/>
+		  <arg line="-o"/>
+		  <arg file="${project.build.directory}/generated-sources/org/apache/mrql"/>
 		</java>
-		<fileset id="mr.gen.path" dir="../src/main/java/BSP" includes="*.gen" />
-		<pathconvert pathsep=" " property="mr.gen.files" refid="mr.gen.path" />
-		<java classname="org.apache.mrql.gen.Main" classpath="../lib/gen-${project.version}.jar:${compile_classpath}">
-		  <arg line="${mr.gen.files}" />
-		  <arg line="-o" />
-		  <arg file="${project.build.directory}/generated-sources/org/apache/mrql" />
+		<fileset id="mr.gen.path" dir="../src/main/java/BSP" includes="*.gen"/>
+		<pathconvert pathsep=" " property="mr.gen.files" refid="mr.gen.path"/>
+		<java classname="org.apache.mrql.gen.Main"
+		      classpath="../lib/gen-${project.version}.jar:${compile_classpath}">
+		  <arg line="${mr.gen.files}"/>
+		  <arg line="-o"/>
+		  <arg file="${project.build.directory}/generated-sources/org/apache/mrql"/>
 		</java>
-		<java classname="org.apache.mrql.gen.Main" classpath="../lib/gen-${project.version}.jar:${compile_classpath}">
-		  <arg file="../src/main/java/core/mrql.cgen" />
-		  <arg line="-o" />
-		  <arg file="${project.build.directory}/generated-sources/mrql.cup" />
+		<java classname="org.apache.mrql.gen.Main"
+		      classpath="../lib/gen-${project.version}.jar:${compile_classpath}">
+		  <arg file="../src/main/java/core/mrql.cgen"/>
+		  <arg line="-o"/>
+		  <arg file="${project.build.directory}/generated-sources/mrql.cup"/>
 		</java>
-                <taskdef name="cup" classname="java_cup.anttask.CUPTask" classpathref="maven.compile.classpath" />
-                <cup srcfile="${project.build.directory}/generated-sources/mrql.cup" destdir="${project.build.directory}/generated-sources" nosummary="true" parser="MRQLParser" />
-                <cup srcfile="src/main/java/core/JSON.cup" destdir="${project.build.directory}/generated-sources" nosummary="true" parser="JSONParser" symbols="jsym" />
+                <taskdef name="cup" classname="java_cup.anttask.CUPTask"
+			 classpathref="maven.compile.classpath"/>
+                <cup srcfile="${project.build.directory}/generated-sources/mrql.cup"
+		     destdir="${project.build.directory}/generated-sources"
+		     nosummary="true" parser="MRQLParser"/>
+                <cup srcfile="src/main/java/core/JSON.cup"
+		     destdir="${project.build.directory}/generated-sources"
+		     nosummary="true" parser="JSONParser" symbols="jsym"/>
 	      </target>
   	    </configuration>
 	  </execution>
@@ -160,21 +169,26 @@
 	      <goal>run</goal>
 	    </goals>
 	    <configuration>
-	      <target name="validate_hama" description="Validate all test queries on Hama">
-		<property name="runtime_classpath" refid="maven.runtime.classpath" />
-		<echo message="Evaluating test queries in memory (BSP mode):" />
-		<java classname="org.apache.mrql.Test" classpath="${runtime_classpath}" dir=".." fork="yes">
-		  <jvmarg line="-ms256m" />
-		  <arg file="../tests/queries" />
-		  <arg file="../tests/results/bsp-memory" />
-		  <arg file="../tests/error_log.txt" />
+	      <target name="validate_hama"
+		      description="Validate all test queries on Hama">
+		<property name="runtime_classpath" refid="maven.runtime.classpath"/>
+		<echo message="Evaluating test queries in memory (BSP mode):"/>
+		<java classname="org.apache.mrql.Test"
+		      classpath="${runtime_classpath}"
+		      dir=".." fork="yes">
+		  <jvmarg line="-ms256m"/>
+		  <arg file="../tests/queries"/>
+		  <arg file="../tests/results/bsp-memory"/>
+		  <arg file="../tests/error_log.txt"/>
 		</java>
-		<echo message="Evaluating test queries in Hama local mode:" />
-		<java classname="org.apache.mrql.Test" classpath="../lib/mrql-bsp-${project.version}.jar:${runtime_classpath}" dir=".." fork="yes" error="/dev/null">
-		  <arg line="-local" />
-		  <arg file="../tests/queries" />
-		  <arg file="../tests/results/bsp" />
-		  <arg file="../tests/error_log.txt" />
+		<echo message="Evaluating test queries in Hama local mode:"/>
+		<java classname="org.apache.mrql.Test"
+		      classpath="../lib/mrql-bsp-${project.version}.jar:${runtime_classpath}"
+		      dir=".." fork="yes" error="/dev/null">
+		  <arg line="-local"/>
+		  <arg file="../tests/queries"/>
+		  <arg file="../tests/results/bsp"/>
+		  <arg file="../tests/error_log.txt"/>
 		</java>
 	      </target>
   	    </configuration>
