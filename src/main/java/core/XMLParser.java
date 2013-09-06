@@ -40,70 +40,70 @@ final public class XMLParser implements Parser {
     final static SAXParserFactory factory = SAXParserFactory.newInstance();
 
     public void initialize ( Trees args ) {
-	try {
-	    if (args.length() > 0) {
-		if (!(args.nth(0) instanceof Node)
-		    || !(((Node)args.nth(0)).name().equals("list")
-			 || ((Node)args.nth(0)).name().equals("bag")))
-		    throw new Error("Expected a bag of synchronization tagnames in XML source: "+args.nth(0));
-		Trees ts = ((Node)args.nth(0)).children();
-		if (ts.length() == 0)
-		    throw new Error("Expected at least one synchronization tagname in XML source: "+ts);
-		tags = new String[ts.length()];
-		for ( int i = 0; i < tags.length; i++ )
-		    if (ts.nth(i) instanceof StringLeaf)
-			tags[i] = ((StringLeaf)(ts.nth(i))).value();
-		    else throw new Error("Expected a synchronization tagname in XML source: "+ts.nth(i));
-		if (args.length() == 2)
-		    xpath = ((Node)args.nth(1)).children().nth(0);
-		else xpath = new VariableLeaf("dot");
-	    } else xpath = new VariableLeaf("dot");
-	    parser = new XPathParser(xpath);
-	    factory.setValidating(false);
-	    factory.setNamespaceAware(false);
-	    xmlReader = factory.newSAXParser().getXMLReader();
-	} catch (Exception e) {
-	    throw new Error(e);
-	}
+        try {
+            if (args.length() > 0) {
+                if (!(args.nth(0) instanceof Node)
+                    || !(((Node)args.nth(0)).name().equals("list")
+                         || ((Node)args.nth(0)).name().equals("bag")))
+                    throw new Error("Expected a bag of synchronization tagnames in XML source: "+args.nth(0));
+                Trees ts = ((Node)args.nth(0)).children();
+                if (ts.length() == 0)
+                    throw new Error("Expected at least one synchronization tagname in XML source: "+ts);
+                tags = new String[ts.length()];
+                for ( int i = 0; i < tags.length; i++ )
+                    if (ts.nth(i) instanceof StringLeaf)
+                        tags[i] = ((StringLeaf)(ts.nth(i))).value();
+                    else throw new Error("Expected a synchronization tagname in XML source: "+ts.nth(i));
+                if (args.length() == 2)
+                    xpath = ((Node)args.nth(1)).children().nth(0);
+                else xpath = new VariableLeaf("dot");
+            } else xpath = new VariableLeaf("dot");
+            parser = new XPathParser(xpath);
+            factory.setValidating(false);
+            factory.setNamespaceAware(false);
+            xmlReader = factory.newSAXParser().getXMLReader();
+        } catch (Exception e) {
+            throw new Error(e);
+        }
     }
 
     public void open ( String file ) {
-	try {
-	    splitter = new XMLSplitter(tags,file,new DataOutputBuffer());
-	} catch (Exception e) {
-	    throw new Error(e);
-	}
+        try {
+            splitter = new XMLSplitter(tags,file,new DataOutputBuffer());
+        } catch (Exception e) {
+            throw new Error(e);
+        }
     }
 
     public void open ( FSDataInputStream fsin, long start, long end ) {
-	try {
-	    splitter = new XMLSplitter(tags,fsin,start,end,new DataOutputBuffer());
-	} catch (Exception e) {
-	    throw new Error(e);
-	}
+        try {
+            splitter = new XMLSplitter(tags,fsin,start,end,new DataOutputBuffer());
+        } catch (Exception e) {
+            throw new Error(e);
+        }
     }
 
     public Tree type () { return new VariableLeaf("XML"); }
 
     public String slice () {
-	if (splitter.hasNext()) {
-	    DataOutputBuffer b = splitter.next();
-	    return new String(b.getData(),0,b.getLength());
-	} else return null;
+        if (splitter.hasNext()) {
+            DataOutputBuffer b = splitter.next();
+            return new String(b.getData(),0,b.getLength());
+        } else return null;
     }
 
     public Bag parse ( String s ) {
-	try {
-	    parser.dataConstructor.start();
-	    xmlReader.setContentHandler(parser.handler);
-	    xmlReader.parse(new InputSource(new StringReader(s)));
-	    Bag b = new Bag();
-	    for ( MRData e: parser.dataConstructor.value() )
-		b.add(e);
-	    return b;
-	} catch (Exception e) {
-	    System.err.println(e);
-	    return new Bag();
-	}
+        try {
+            parser.dataConstructor.start();
+            xmlReader.setContentHandler(parser.handler);
+            xmlReader.parse(new InputSource(new StringReader(s)));
+            Bag b = new Bag();
+            for ( MRData e: parser.dataConstructor.value() )
+                b.add(e);
+            return b;
+        } catch (Exception e) {
+            System.err.println(e);
+            return new Bag();
+        }
     }
 }

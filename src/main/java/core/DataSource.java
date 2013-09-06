@@ -44,115 +44,115 @@ public class DataSource {
      * It assumes that each path can only be associated with a single data source format and parser
      */
     final static class DataSourceDirectory extends HashMap<String,DataSource> {
-	public void read ( Configuration conf ) {
-	    clear();
-	    for ( String s: conf.get("mrql.data.source.directory").split("@@@") ) {
-		String[] p = s.split("===");
-		put(p[0],DataSource.read(p[1],conf));
-	    }
-	}
+        public void read ( Configuration conf ) {
+            clear();
+            for ( String s: conf.get("mrql.data.source.directory").split("@@@") ) {
+                String[] p = s.split("===");
+                put(p[0],DataSource.read(p[1],conf));
+            }
+        }
 
-	public String toString () {
-	    String s = "";
-	    for ( String k: keySet() )
-		s += "@@@"+k+"==="+get(k);
-	    if (s.equals(""))
-		return s;
-	    else return s.substring(3);
-	}
+        public String toString () {
+            String s = "";
+            for ( String k: keySet() )
+                s += "@@@"+k+"==="+get(k);
+            if (s.equals(""))
+                return s;
+            else return s.substring(3);
+        }
 
-	public DataSource get ( String name ) {
-	    for ( Map.Entry<String,DataSource> e: entrySet() )
-		if (name.startsWith(e.getKey()))
-		    return e.getValue();
-	    return null;
-	}
+        public DataSource get ( String name ) {
+            for ( Map.Entry<String,DataSource> e: entrySet() )
+                if (name.startsWith(e.getKey()))
+                    return e.getValue();
+            return null;
+        }
 
-	public void distribute ( Configuration conf ) {
-	    conf.set("mrql.data.source.directory",toString());
-	}
+        public void distribute ( Configuration conf ) {
+            conf.set("mrql.data.source.directory",toString());
+        }
     }
 
     DataSource () {}
 
     DataSource ( int source_num,
-		 String path,
-		 Class<? extends MRQLFileInputFormat> inputFormat,
-		 Configuration conf ) {
-	this.source_num = source_num;
-	this.path = path;
-	this.inputFormat = inputFormat;
-	to_be_merged = false;
-	try {
-	    Path p = new Path(path);
-	    FileSystem fs = p.getFileSystem(conf);
-	    String complete_path = fs.getFileStatus(p).getPath().toString();
-	    //String complete_path = "file:"+path;
-	    this.path = complete_path;
-	    dataSourceDirectory.put(this.path,this);
-	} catch (IOException e) {
-	    throw new Error(e);
-	}
+                 String path,
+                 Class<? extends MRQLFileInputFormat> inputFormat,
+                 Configuration conf ) {
+        this.source_num = source_num;
+        this.path = path;
+        this.inputFormat = inputFormat;
+        to_be_merged = false;
+        try {
+            Path p = new Path(path);
+            FileSystem fs = p.getFileSystem(conf);
+            String complete_path = fs.getFileStatus(p).getPath().toString();
+            //String complete_path = "file:"+path;
+            this.path = complete_path;
+            dataSourceDirectory.put(this.path,this);
+        } catch (IOException e) {
+            throw new Error(e);
+        }
     }
 
     public static void loadParsers() {
-	if (!loaded) {
-	    DataSource.parserDirectory.put("xml",XMLParser.class);
-	    DataSource.parserDirectory.put("json",JsonParser.class);
-	    DataSource.parserDirectory.put("line",LineParser.class);
-	    loaded = true;
-	}
+        if (!loaded) {
+            DataSource.parserDirectory.put("xml",XMLParser.class);
+            DataSource.parserDirectory.put("json",JsonParser.class);
+            DataSource.parserDirectory.put("line",LineParser.class);
+            loaded = true;
+        }
     }
 
     static {
-	loadParsers();
+        loadParsers();
     }
 
     private static long size ( Path path, Configuration conf ) throws IOException {
-	FileStatus s = path.getFileSystem(conf).getFileStatus(path);
-	if (!s.isDir())
-	    return s.getLen();
-	long size = 0;
-	for ( FileStatus fs: path.getFileSystem(conf).listStatus(path) )
-	    size += fs.getLen();
-	return size;
+        FileStatus s = path.getFileSystem(conf).getFileStatus(path);
+        if (!s.isDir())
+            return s.getLen();
+        long size = 0;
+        for ( FileStatus fs: path.getFileSystem(conf).listStatus(path) )
+            size += fs.getLen();
+        return size;
     }
 
     /** data set size in bytes */
     public long size ( Configuration conf ) {
-	try {
-	    return size(new Path(path),conf);
-	} catch (IOException e) {
-	    throw new Error(e);
-	}
+        try {
+            return size(new Path(path),conf);
+        } catch (IOException e) {
+            throw new Error(e);
+        }
     }
 
     public static DataSource read ( String buffer, Configuration conf ) {
-	try {
-	    String[] s = buffer.split(separator);
-	    int n = Integer.parseInt(s[1]);
-	    if (s[0].equals("Binary"))
-		return new BinaryDataSource(n,s[2],conf);
-	    else if (s[0].equals("Generator"))
-		return new GeneratorDataSource(n,s[2],conf);
-	    else if (s[0].equals("Text"))
-		return new ParsedDataSource(n,s[3],parserDirectory.get(s[2]),((Node)Tree.parse(s[4])).children(),conf);
-	    else throw new Error("Unrecognized data source: "+s[0]);
-	} catch (Exception e) {
-	    throw new Error(e);
-	}
+        try {
+            String[] s = buffer.split(separator);
+            int n = Integer.parseInt(s[1]);
+            if (s[0].equals("Binary"))
+                return new BinaryDataSource(n,s[2],conf);
+            else if (s[0].equals("Generator"))
+                return new GeneratorDataSource(n,s[2],conf);
+            else if (s[0].equals("Text"))
+                return new ParsedDataSource(n,s[3],parserDirectory.get(s[2]),((Node)Tree.parse(s[4])).children(),conf);
+            else throw new Error("Unrecognized data source: "+s[0]);
+        } catch (Exception e) {
+            throw new Error(e);
+        }
     }
 
     public static DataSource get ( String path, Configuration conf ) {
-	if (dataSourceDirectory.isEmpty())
-	    dataSourceDirectory.read(conf);
-	return dataSourceDirectory.get(path);
+        if (dataSourceDirectory.isEmpty())
+            dataSourceDirectory.read(conf);
+        return dataSourceDirectory.get(path);
     }
 
     public static DataSource getCached ( String remote_path, String local_path, Configuration conf ) {
-	DataSource ds = get(remote_path,conf);
-	ds.path = local_path;
-	dataSourceDirectory.put(local_path,ds);
-	return ds;
+        DataSource ds = get(remote_path,conf);
+        ds.path = local_path;
+        dataSourceDirectory.put(local_path,ds);
+        return ds;
     }
 }

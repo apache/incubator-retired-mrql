@@ -23,14 +23,14 @@ import org.apache.hadoop.conf.Configuration;
 /** A DataSource used for storing intermediate results and data dumps */
 final public class BinaryDataSource extends DataSource {
     BinaryDataSource ( int source_num, String path, Configuration conf ) {
-	super(source_num,path,BinaryInputFormat.class,conf);
+        super(source_num,path,BinaryInputFormat.class,conf);
     }
 
     BinaryDataSource ( String path, Configuration conf ) {
-	super(-1,path,BinaryInputFormat.class,conf);
+        super(-1,path,BinaryInputFormat.class,conf);
     }
 
     public String toString () {
-	return "Binary"+separator+source_num+separator+path;
+        return "Binary"+separator+source_num+separator+path;
     }
 }

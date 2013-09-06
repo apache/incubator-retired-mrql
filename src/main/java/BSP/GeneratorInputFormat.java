@@ -29,61 +29,61 @@ import org.apache.hama.bsp.*;
  *  an (offset,size) pair that generates the range of values [offset,offset+size] */
 final public class GeneratorInputFormat extends MRQLFileInputFormat {
     public static class GeneratorRecordReader implements RecordReader<MRContainer,MRContainer> {
-	final long offset;
-	final long size;
-	final int source_number;
-	final MRData source_num_data;
-	long index;
-	SequenceFile.Reader reader;
+        final long offset;
+        final long size;
+        final int source_number;
+        final MRData source_num_data;
+        long index;
+        SequenceFile.Reader reader;
 
-	public GeneratorRecordReader ( FileSplit split,
-				       int source_number,
-				       BSPJob job ) throws IOException {
-	    Configuration conf = BSPPlan.getConfiguration(job);
-	    Path path = split.getPath();
-	    FileSystem fs = path.getFileSystem(conf);
-	    reader = new SequenceFile.Reader(path.getFileSystem(conf),path,conf);
-	    MRContainer key = new MRContainer();
-	    MRContainer value = new MRContainer();
-	    reader.next(key,value);
-	    offset = ((MR_long)((Tuple)(value.data())).first()).get();
-	    size = ((MR_long)((Tuple)(value.data())).second()).get();
-	    this.source_number = source_number;
-	    source_num_data = new MR_int(source_number);
-	    index = -1;
-	}
+        public GeneratorRecordReader ( FileSplit split,
+                                       int source_number,
+                                       BSPJob job ) throws IOException {
+            Configuration conf = BSPPlan.getConfiguration(job);
+            Path path = split.getPath();
+            FileSystem fs = path.getFileSystem(conf);
+            reader = new SequenceFile.Reader(path.getFileSystem(conf),path,conf);
+            MRContainer key = new MRContainer();
+            MRContainer value = new MRContainer();
+            reader.next(key,value);
+            offset = ((MR_long)((Tuple)(value.data())).first()).get();
+            size = ((MR_long)((Tuple)(value.data())).second()).get();
+            this.source_number = source_number;
+            source_num_data = new MR_int(source_number);
+            index = -1;
+        }
 
-	public MRContainer createKey () {
-	    return new MRContainer(null);
-	}
+        public MRContainer createKey () {
+            return new MRContainer(null);
+        }
 
-	public MRContainer createValue () {
-	    return new MRContainer(null);
-	}
+        public MRContainer createValue () {
+            return new MRContainer(null);
+        }
 
-	public boolean next ( MRContainer key, MRContainer value ) throws IOException {
-	    index++;
-	    value.set(new Tuple(source_num_data,new MR_long(offset+index)));
-	    key.set(new MR_long(index));
-	    return index < size;
-	}
+        public boolean next ( MRContainer key, MRContainer value ) throws IOException {
+            index++;
+            value.set(new Tuple(source_num_data,new MR_long(offset+index)));
+            key.set(new MR_long(index));
+            return index < size;
+        }
 
-	public long getPos () throws IOException { return index; }
+        public long getPos () throws IOException { return index; }
 
-	public void close () throws IOException { reader.close(); }
+        public void close () throws IOException { reader.close(); }
 
-	public float getProgress () throws IOException {
-	    return index / (float)size;
-	}
+        public float getProgress () throws IOException {
+            return index / (float)size;
+        }
 
-	public void initialize ( InputSplit split, TaskAttemptContext context ) throws IOException { }
+        public void initialize ( InputSplit split, TaskAttemptContext context ) throws IOException { }
     }
 
     public RecordReader<MRContainer,MRContainer>
-	        getRecordReader ( InputSplit split, BSPJob job ) throws IOException {
-	Configuration conf = BSPPlan.getConfiguration(job);
-	String path = ((FileSplit)split).getPath().toString();
-	GeneratorDataSource ds = (GeneratorDataSource)DataSource.get(path,conf);
-	return new GeneratorRecordReader((FileSplit)split,ds.source_num,job);
+                getRecordReader ( InputSplit split, BSPJob job ) throws IOException {
+        Configuration conf = BSPPlan.getConfiguration(job);
+        String path = ((FileSplit)split).getPath().toString();
+        GeneratorDataSource ds = (GeneratorDataSource)DataSource.get(path,conf);
+        return new GeneratorRecordReader((FileSplit)split,ds.source_num,job);
     }
 }

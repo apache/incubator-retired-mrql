@@ -65,7 +65,7 @@ common: clean_build gen mrql_parser json_parser
 
 clean_build:
 	@rm -rf classes tmp
-	@mkdir -p classes tmp tests/results tests/results/mr-memory tests/results/bsp-memory tests/results/hadoop tests/results/bsp tests/results/spark
+	@mkdir -p lib classes tmp tests/results tests/results/mr-memory tests/results/bsp-memory tests/results/hadoop tests/results/bsp tests/results/spark
 
 gen:
 	@${JFLEX} src/main/java/gen/gen.lex -d tmp

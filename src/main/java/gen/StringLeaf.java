@@ -24,24 +24,24 @@ final public class StringLeaf extends Tree {
     public String value;
 
     public StringLeaf ( String s ) {
-	super();
-	value = s;
+        super();
+        value = s;
     }
 
     public String value () { return value; }
 
     public boolean equals ( Tree e ) {
-	return (e instanceof StringLeaf)
-	    && value.equals(((StringLeaf) e).value);
+        return (e instanceof StringLeaf)
+            && value.equals(((StringLeaf) e).value);
     }
 
     protected int size () { return value.length()+2; }
 
     public String toString () {
-	return "\"" + value + "\"";
+        return "\"" + value + "\"";
     }
 
     public String pretty ( int position ) {
-	return toString();
+        return toString();
     }
 }

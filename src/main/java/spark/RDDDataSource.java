@@ -25,12 +25,12 @@ final public class RDDDataSource extends DataSource {
     JavaRDD<MRData> rdd;
 
     RDDDataSource ( JavaRDD<MRData> rdd ) {
-	super();
-	this.rdd = rdd;
+        super();
+        this.rdd = rdd;
     }
 
     @Override
     public long size ( Configuration conf ) {
-	return rdd.count();
+        return rdd.count();
     }
 }

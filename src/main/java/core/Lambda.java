@@ -35,18 +35,18 @@ final public class Lambda extends MRData {
     public Function lambda () { return lambda; }
 
     final public void write ( DataOutput out ) throws IOException {
-	throw new Error("Functions are not serializable");
+        throw new Error("Functions are not serializable");
     }
 
     public void readFields ( DataInput in ) throws IOException {
-	throw new Error("Functions are not serializable");
+        throw new Error("Functions are not serializable");
     }
 
     public int compareTo ( MRData x ) {
-	throw new Error("Functions cannot be compared");
+        throw new Error("Functions cannot be compared");
     }
 
     public boolean equals ( Object x ) {
-	throw new Error("Functions cannot be compared");
+        throw new Error("Functions cannot be compared");
     }
 }

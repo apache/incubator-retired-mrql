@@ -25,25 +25,25 @@ import org.apache.hadoop.conf.Configuration;
 /** A DataSource used for processing the range min..max */
 final public class GeneratorDataSource extends DataSource {
     GeneratorDataSource ( int source_num, String path, Configuration conf ) {
-	super(source_num,path,GeneratorInputFormat.class,conf);
+        super(source_num,path,GeneratorInputFormat.class,conf);
     }
 
     GeneratorDataSource ( String path, Configuration conf ) {
-	super(-1,path,GeneratorInputFormat.class,conf);
+        super(-1,path,GeneratorInputFormat.class,conf);
     }
 
     public static long size ( Path path, Configuration conf ) throws IOException {
-	// each file generates range_split_size long integers
-	FileStatus s = path.getFileSystem(conf).getFileStatus(path);
-	if (!s.isDir())
-	    return Config.range_split_size*8;
-	long size = 0;
-	for ( FileStatus fs: path.getFileSystem(conf).listStatus(path) )
-	    size += Config.range_split_size*8;
-	return size;
+        // each file generates range_split_size long integers
+        FileStatus s = path.getFileSystem(conf).getFileStatus(path);
+        if (!s.isDir())
+            return Config.range_split_size*8;
+        long size = 0;
+        for ( FileStatus fs: path.getFileSystem(conf).listStatus(path) )
+            size += Config.range_split_size*8;
+        return size;
     }
 
     public String toString () {
-	return "Generator"+separator+source_num+separator+path;
+        return "Generator"+separator+source_num+separator+path;
     }
 }

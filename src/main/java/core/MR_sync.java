@@ -29,7 +29,7 @@ final public class MR_sync extends MRData {
     public void materializeAll () {};
 
     final public void write ( DataOutput out ) throws IOException {
-	out.writeByte(MRContainer.SYNC);
+        out.writeByte(MRContainer.SYNC);
     }
 
     public void readFields ( DataInput in ) throws IOException {}

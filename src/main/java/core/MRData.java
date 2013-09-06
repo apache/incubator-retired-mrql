@@ -27,12 +27,12 @@ public abstract class MRData implements WritableComparable<MRData>, Serializable
 
     /* doesn't work
     private void writeObject ( ObjectOutputStream out ) throws IOException {
-	write(out);
+        write(out);
     }
 
     private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
-	byte n = in.readByte();
-	readFields(in);
+        byte n = in.readByte();
+        readFields(in);
     }
     */
 }

@@ -31,85 +31,85 @@ final public class Test {
     static PrintStream test_out;
 
     private static int compare ( String file1, String file2 ) throws Exception {
-	FileInputStream s1 = new FileInputStream(file1);
-	FileInputStream s2 = new FileInputStream(file2);
-	int b1, b2;
-	int i = 1;
-	while ((b1 = s1.read()) == (b2 = s2.read()) && b1 != -1 && b2 != -1)
-	    i++;
-	return (b1 == -1 && b2 == -1) ? 0 : i;
+        FileInputStream s1 = new FileInputStream(file1);
+        FileInputStream s2 = new FileInputStream(file2);
+        int b1, b2;
+        int i = 1;
+        while ((b1 = s1.read()) == (b2 = s2.read()) && b1 != -1 && b2 != -1)
+            i++;
+        return (b1 == -1 && b2 == -1) ? 0 : i;
     }
 
     private static void query ( File query ) throws Exception {
-	String path = query.getPath();
-	if (!path.endsWith(".mrql"))
-	    return;
-	Translator.global_reset();
-	String qname = query.getName();
-	qname = qname.substring(0,qname.length()-5);
-	test_out.print("   Testing "+qname+" ... ");
-	String result_file = result_directory+"/"+qname+".txt";
-	boolean exists = new File(result_file).exists();
-	if (exists)
-	    System.setOut(new PrintStream(result_directory+"/result.txt"));
-	else System.setOut(new PrintStream(result_file));
-	try {
-	    parser = new MRQLParser(new MRQLLex(new FileInputStream(query)));
-	    Main.parser = parser;
-	    MRQLLex.reset();
-	    parser.parse();
-	    int i;
-	    if (exists && (i = compare(result_file,result_directory+"/result.txt")) > 0)
-		test_out.println("MISMATCH AT "+(i-1));
-	    else if (exists)
-		test_out.println("OK matched");
-	    else test_out.println("OK created");
-	} catch (Error ex) {
-	    System.err.println(qname+": "+ex);
-	    ex.printStackTrace(System.err);
-	    test_out.println("FAILED");
-	    if (!exists)
-		new File(result_file).delete();
-	} catch (Exception ex) {
-	    System.err.println(qname+": "+ex);
-	    ex.printStackTrace(System.err);
-	    test_out.println("FAILED");
-	    if (!exists)
-		new File(result_file).delete();
-	} finally {
-	    if (Config.hadoop_mode)
-		Plan.clean();
-	    if (Config.compile_functional_arguments)
-		Compiler.clean();
-	}
+        String path = query.getPath();
+        if (!path.endsWith(".mrql"))
+            return;
+        Translator.global_reset();
+        String qname = query.getName();
+        qname = qname.substring(0,qname.length()-5);
+        test_out.print("   Testing "+qname+" ... ");
+        String result_file = result_directory+"/"+qname+".txt";
+        boolean exists = new File(result_file).exists();
+        if (exists)
+            System.setOut(new PrintStream(result_directory+"/result.txt"));
+        else System.setOut(new PrintStream(result_file));
+        try {
+            parser = new MRQLParser(new MRQLLex(new FileInputStream(query)));
+            Main.parser = parser;
+            MRQLLex.reset();
+            parser.parse();
+            int i;
+            if (exists && (i = compare(result_file,result_directory+"/result.txt")) > 0)
+                test_out.println("MISMATCH AT "+(i-1));
+            else if (exists)
+                test_out.println("OK matched");
+            else test_out.println("OK created");
+        } catch (Error ex) {
+            System.err.println(qname+": "+ex);
+            ex.printStackTrace(System.err);
+            test_out.println("FAILED");
+            if (!exists)
+                new File(result_file).delete();
+        } catch (Exception ex) {
+            System.err.println(qname+": "+ex);
+            ex.printStackTrace(System.err);
+            test_out.println("FAILED");
+            if (!exists)
+                new File(result_file).delete();
+        } finally {
+            if (Config.hadoop_mode)
+                Plan.clean();
+            if (Config.compile_functional_arguments)
+                Compiler.clean();
+        }
     }
 
     public static void main ( String[] args ) throws Exception {
-	boolean hadoop = false;
-	for ( String arg: args )
-	    hadoop |= arg.equals("-local") || arg.equals("-dist");
-	Config.quiet_execution = true;
-	if (hadoop) {
-	    conf = Evaluator.new_configuration();
-	    GenericOptionsParser gop = new GenericOptionsParser(conf,args);
-	    conf = gop.getConfiguration();
-	    args = gop.getRemainingArgs();
-	};
-	Config.parse_args(args,conf);
-	Config.hadoop_mode = Config.local_mode || Config.distributed_mode;
+        boolean hadoop = false;
+        for ( String arg: args )
+            hadoop |= arg.equals("-local") || arg.equals("-dist");
+        Config.quiet_execution = true;
+        if (hadoop) {
+            conf = Evaluator.new_configuration();
+            GenericOptionsParser gop = new GenericOptionsParser(conf,args);
+            conf = gop.getConfiguration();
+            args = gop.getRemainingArgs();
+        };
+        Config.parse_args(args,conf);
+        Config.hadoop_mode = Config.local_mode || Config.distributed_mode;
         Evaluator.init(conf);
-	new TopLevel();
-	Config.testing = true;
-	if (Config.hadoop_mode && Config.bsp_mode)
-	    Config.write(Plan.conf);
-	if (Main.query_file.equals("") || Config.extra_args.size() != 2)
-	    throw new Error("Must provide a query directory, a result directory, and an error log file");
-	File query_dir = new File(Main.query_file);
-	result_directory = Config.extra_args.get(0);
+        new TopLevel();
+        Config.testing = true;
+        if (Config.hadoop_mode && Config.bsp_mode)
+            Config.write(Plan.conf);
+        if (Main.query_file.equals("") || Config.extra_args.size() != 2)
+            throw new Error("Must provide a query directory, a result directory, and an error log file");
+        File query_dir = new File(Main.query_file);
+        result_directory = Config.extra_args.get(0);
         (new File(result_directory)).mkdirs();
-	System.setErr(new PrintStream(Config.extra_args.get(1)));
-	test_out = System.out;
-	for ( File f: query_dir.listFiles() )
-	    query(f);
+        System.setErr(new PrintStream(Config.extra_args.get(1)));
+        test_out = System.out;
+        for ( File f: query_dir.listFiles() )
+            query(f);
     }
 }

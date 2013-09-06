@@ -24,29 +24,29 @@ final public class LongLeaf extends Tree {
     public long value;
 
     public LongLeaf ( int n ) {
-	super();
-	value = (long)n;
+        super();
+        value = (long)n;
     }
 
     public LongLeaf ( long n ) {
-	super();
-	value = n;
+        super();
+        value = n;
     }
 
     public long value () { return value; }
 
     public boolean equals ( Tree e ) {
-	return (e instanceof LongLeaf)
-	    && value == ((LongLeaf) e).value;
+        return (e instanceof LongLeaf)
+            && value == ((LongLeaf) e).value;
     }
 
     protected int size () { return toString().length(); }
 
     public String toString () {
-	return Long.toString(value);
+        return Long.toString(value);
     }
 
     public String pretty ( int position ) {
-	return toString();
+        return toString();
     }
 }

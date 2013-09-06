@@ -23,65 +23,65 @@ import org.apache.mrql.gen.*;
 parser code {:
 
     static int[] tokens = {
-	sym.error, sym.IF, sym.THEN, sym.ELSE, sym.SELECT, sym.FROM, sym.HAVING,
-	sym.LB, sym.RB, sym.LP, sym.RP, sym.LSB, sym.RSB,
-	sym.PLUS, sym.MINUS, sym.TIMES,	sym.DIV, sym.MOD, sym.EQ,
-	sym.NEQ, sym.LT, sym.LEQ, sym.GT, sym.GEQ, sym.SHARP, sym.AS,
-	sym.AND, sym.OR, sym.NOT, sym.UNION,
-	sym.INTERSECT, sym.EXCEPT, sym.EXISTS, sym.IN, sym.DOT, sym.COLON, sym.COMMA,
-	sym.SEMI, sym.ASSIGN, sym.WHERE, sym.ORDER, sym.GROUP, sym.BY, sym.ASCENDING,
-	sym.DESCENDING, sym.FUNCTION, sym.DISTINCT, sym.BSLASH, sym.SOME, sym.ALL,
-	sym.SOME, sym.ALL, sym.GTR, sym.SEP, sym.STORE, sym.DUMP, sym.TYPE, sym.DATA, sym.REPEAT,
-	sym.STEP, sym.LIMIT, sym.LET, sym.ATSYM, sym.EXCLAMATION,
-	sym.Variable, sym.Integer, sym.Double, sym.String, sym.Decimal,
-	sym.START_TEMPLATE, sym.END_TEMPLATE, sym.TEXT
+        sym.error, sym.IF, sym.THEN, sym.ELSE, sym.SELECT, sym.FROM, sym.HAVING,
+        sym.LB, sym.RB, sym.LP, sym.RP, sym.LSB, sym.RSB,
+        sym.PLUS, sym.MINUS, sym.TIMES, sym.DIV, sym.MOD, sym.EQ,
+        sym.NEQ, sym.LT, sym.LEQ, sym.GT, sym.GEQ, sym.SHARP, sym.AS,
+        sym.AND, sym.OR, sym.NOT, sym.UNION,
+        sym.INTERSECT, sym.EXCEPT, sym.EXISTS, sym.IN, sym.DOT, sym.COLON, sym.COMMA,
+        sym.SEMI, sym.ASSIGN, sym.WHERE, sym.ORDER, sym.GROUP, sym.BY, sym.ASCENDING,
+        sym.DESCENDING, sym.FUNCTION, sym.DISTINCT, sym.BSLASH, sym.SOME, sym.ALL,
+        sym.SOME, sym.ALL, sym.GTR, sym.SEP, sym.STORE, sym.DUMP, sym.TYPE, sym.DATA, sym.REPEAT,
+        sym.STEP, sym.LIMIT, sym.LET, sym.ATSYM, sym.EXCLAMATION,
+        sym.Variable, sym.Integer, sym.Double, sym.String, sym.Decimal,
+        sym.START_TEMPLATE, sym.END_TEMPLATE, sym.TEXT
     };
 
     static String[] token_names = {
-	"error", "if", "then", "else", "select", "from", "having",
-	"[", "]", "(", ")", "{", "}",
-	"+", "-", "*", "/", "mod", "=",
-	"<>", "<", "<=", ">", ">=", "#", "as",
-	"and", "or", "not", "union",
-	"intersect", "except", "exists", "in", ".", ":", ",",
-	";", ":=", "where", "order", "group", "by", "ascending",
-	"descending", "function", "distinct", "\\", "some", "all",
-	"some", "all", ">", "|", "store", "dump", "type", "data", "repeat",
-	"step", "limit", "let", "@", "!",
-	"Variable", "Integer", "Double", "String", "Decimal",
-	"[|", "|]", "Text"
+        "error", "if", "then", "else", "select", "from", "having",
+        "[", "]", "(", ")", "{", "}",
+        "+", "-", "*", "/", "mod", "=",
+        "<>", "<", "<=", ">", ">=", "#", "as",
+        "and", "or", "not", "union",
+        "intersect", "except", "exists", "in", ".", ":", ",",
+        ";", ":=", "where", "order", "group", "by", "ascending",
+        "descending", "function", "distinct", "\\", "some", "all",
+        "some", "all", ">", "|", "store", "dump", "type", "data", "repeat",
+        "step", "limit", "let", "@", "!",
+        "Variable", "Integer", "Double", "String", "Decimal",
+        "[|", "|]", "Text"
     };
 
     public static String print ( Symbol s ) {
-	for (int i=0; i<tokens.length; i++)
-	    if (tokens[i]==s.sym)
-	    {  String res = token_names[i] + " ";
-	       if (s.value==null)
-		  return res;
-	       else if (s.value instanceof Integer)
-		  return res + ((Integer) s.value).intValue();
-	       else if (s.value instanceof Float)
-		  return res + ((Float) s.value).floatValue();
-	       else if (s.value instanceof String)
-		  return res + (String) s.value;
-	    }
-	return "?";
+        for (int i=0; i<tokens.length; i++)
+            if (tokens[i]==s.sym)
+            {  String res = token_names[i] + " ";
+               if (s.value==null)
+                  return res;
+               else if (s.value instanceof Integer)
+                  return res + ((Integer) s.value).intValue();
+               else if (s.value instanceof Float)
+                  return res + ((Float) s.value).floatValue();
+               else if (s.value instanceof String)
+                  return res + (String) s.value;
+            }
+        return "?";
     }
 
     static {
-	Tree.parsed = true;
+        Tree.parsed = true;
     }
 
     public int line_pos () {
-    	return ((MRQLLex)getScanner()).line_pos();
+        return ((MRQLLex)getScanner()).line_pos();
     }
 
     public int char_pos () {
-    	return ((MRQLLex)getScanner()).char_pos();
+        return ((MRQLLex)getScanner()).char_pos();
     }
 
     public void syntax_error ( Symbol token ) {
-	System.err.println("*** Syntax Error: " + print(token) + " (line: " + line_pos() + ", position: " + char_pos() + ")");
+        System.err.println("*** Syntax Error: " + print(token) + " (line: " + line_pos() + ", position: " + char_pos() + ")");
         if (Config.testing)
            throw new Error("Syntax Error");
     }
@@ -90,276 +90,276 @@ parser code {:
 
 /* Terminals (tokens returned by the scanner). */
 terminal IF, THEN, ELSE, SELECT, FROM, HAVING, LB, RB, LP, RP, LSB, RSB, LDOT, SHARP,
-	 PLUS, MINUS, TIMES, DIV, MOD, EQ, NEQ, LT, LEQ, GT, GEQ, AND, OR, NOT, AS,
-	 UNION, INTERSECT, EXCEPT, EXISTS, IN, COMMA, DOT, COLON, ASSIGN, SEMI, WHERE,
-	 ORDER, GROUP, BY, ASCENDING, DESCENDING, UMINUS, FUNCTION, DISTINCT, BSLASH,
-	 SOME, ALL, GTR, SEP, STORE, TYPE, DATA, CASE, ATSYM, XPATH, REPEAT, STEP, LIMIT,
+         PLUS, MINUS, TIMES, DIV, MOD, EQ, NEQ, LT, LEQ, GT, GEQ, AND, OR, NOT, AS,
+         UNION, INTERSECT, EXCEPT, EXISTS, IN, COMMA, DOT, COLON, ASSIGN, SEMI, WHERE,
+         ORDER, GROUP, BY, ASCENDING, DESCENDING, UMINUS, FUNCTION, DISTINCT, BSLASH,
+         SOME, ALL, GTR, SEP, STORE, TYPE, DATA, CASE, ATSYM, XPATH, REPEAT, STEP, LIMIT,
          LET, IMPORT, PARSER, AGGREGATION, INCLUDE, EXCLAMATION, MACRO, DUMP;
 
-terminal String   	Variable;
-terminal Long		Integer;
-terminal Double		Double;
-terminal String		String;
-terminal Double		Decimal;
+terminal String         Variable;
+terminal Long           Integer;
+terminal Double         Double;
+terminal String         String;
+terminal Double         Decimal;
 terminal String         START_TEMPLATE;
 terminal String         END_TEMPLATE;
 terminal String         TEXT;
 
-non terminal		prog;
-non terminal Tree	item, expr, var, const, mrql, pattern, opt_where, opt_orderby,
+non terminal            prog;
+non terminal Tree       item, expr, var, const, mrql, pattern, opt_where, opt_orderby,
                         mode, opt_groupby, opt_having, opt_distinct, type, xpath, xname,
-			xpred, opt_limit, unit;
-non terminal Trees	expl, name_binds, pat_list, pat_binds,
-    	     		binds, order_binds, groupby_binds, typel, type_binds,
+                        xpred, opt_limit, unit;
+non terminal Trees      expl, name_binds, pat_list, pat_binds,
+                        binds, order_binds, groupby_binds, typel, type_binds,
                         data_binds, cases, fnl, template, template_pat, fnc_params, var_list;
 
-precedence nonassoc	LDOT, ASSIGN, LIMIT;
-precedence nonassoc	ELSE, COLON;
-precedence nonassoc	ORDER, GROUP, HAVING, WHERE;
+precedence nonassoc     LDOT, ASSIGN, LIMIT;
+precedence nonassoc     ELSE, COLON;
+precedence nonassoc     ORDER, GROUP, HAVING, WHERE;
 precedence left         INTERSECT, UNION, EXCEPT, IN;
-precedence nonassoc	ASCENDING, DESCENDING;
-precedence nonassoc	COMMA, LP;
-precedence right	OR;
-precedence right	AND;
-precedence nonassoc	NOT;
-precedence nonassoc	EQ, LT, GT, LEQ, GEQ, NEQ;
-precedence left		PLUS, MINUS;
-precedence left		TIMES, DIV, MOD;
-precedence nonassoc	DOT, SHARP, LB, AS;
+precedence nonassoc     ASCENDING, DESCENDING;
+precedence nonassoc     COMMA, LP;
+precedence right        OR;
+precedence right        AND;
+precedence nonassoc     NOT;
+precedence nonassoc     EQ, LT, GT, LEQ, GEQ, NEQ;
+precedence left         PLUS, MINUS;
+precedence left         TIMES, DIV, MOD;
+precedence nonassoc     DOT, SHARP, LB, AS;
 precedence nonassoc     UMINUS;
 
 start with prog;
 
-prog            ::= item:i SEMI 			{: Translator.top_level(i); :}
-		|   prog item:i SEMI 			{: Translator.top_level(i); :}
-		;
-item		::= expr:e      			{: RESULT = #<expression(`e)>; :}
-                |   var:v EQ expr:e			{: RESULT = #<assign(`v,`e)>; :}
-                |   STORE var:v ASSIGN expr:e		{: RESULT = #<store(`v,`e)>; :}
-                |   STORE String:s FROM expr:e		{: RESULT = #<dump(`(new StringLeaf(s)),`e)>; :}
-                |   DUMP String:s FROM expr:e		{: RESULT = #<dump_text(`(new StringLeaf(s)),`e)>; :}
-		|   TYPE var:v EQ type:t		{: RESULT = #<typedef(`v,`t)>; :}
-		|   DATA var:v EQ data_binds:nl		{: RESULT = #<datadef(`v,union(...nl))>; :}
-		|   FUNCTION var:f LP
-		    fnc_params:p RP COLON type:tp
-		    LSB expr:e RSB			{: RESULT = #<functiondef(`f,params(...p),`tp,`e)>; :}
-		|   FUNCTION var:f LP RP COLON type:tp
-		    LSB expr:e RSB			{: RESULT = #<functiondef(`f,params(),`tp,`e)>; :}
-		|   MACRO var:f LP var_list:vl RP
-		    LSB expr:e RSB			{: RESULT = #<macrodef(`f,params(...vl),`e)>; :}
-		|   IMPORT fnl:l FROM String:c		{: RESULT = #<import(`c,...l)>; :}
-		|   IMPORT String:c   			{: RESULT = #<import(`c)>; :}
-                |   PARSER var:c EQ String:p		{: RESULT = #<parser(`c,`p)>; :}
-		|   INCLUDE String:c   			{: RESULT = #<include(`c)>; :}
-		|   AGGREGATION var:n LP expr:a COMMA expr:z unit:u RP COLON type:tp
-		    		      	    	       	{: RESULT = #<aggregation(`n,`tp,`a,`z,`u)>; :}
-		|   error				{: :}
-		;
-unit		::= COMMA expr:u			{: RESULT = u; :}
-		|   	  				{: RESULT = #<lambda(x,x)>; :}
-		;
-fnl		::= Variable:v                          {: RESULT = #[`v]; :}
-		|   String:v				{: RESULT = #[`v]; :}
-		|   Variable:v COMMA fnl:l		{: RESULT = #[`v,...l]; :}
-		|   String:v COMMA fnl:l		{: RESULT = #[`v,...l]; :}
-		;
-fnc_params      ::= fnc_params:nl
-                    COMMA var:v COLON type:e		{: RESULT = nl.append(#<bind(`v,`e)>); :}
-                |   var:v COLON type:e 	    	  	{: RESULT = #[bind(`v,`e)]; :}
+prog            ::= item:i SEMI                         {: Translator.top_level(i); :}
+                |   prog item:i SEMI                    {: Translator.top_level(i); :}
                 ;
-var		::= Variable:v                          {: RESULT = #<`v>; :}
-		;
-var_list	::= var:v				{: RESULT = #[`v]; :}
-		|   var_list:el COMMA var:v		{: RESULT = el.append(v); :}
-		;
-const		::= String:s				{: RESULT = new StringLeaf(s); :}
-		|   Integer:n				{: RESULT = new LongLeaf(n.longValue()); :}
-		|   Double:n				{: RESULT = new DoubleLeaf((double)n.doubleValue()); :}
-		|   Decimal:n				{: RESULT = new DoubleLeaf((double)n.doubleValue()); :}
-		;
-expr		::= mrql:e				{: RESULT = e; :}
-		|   var:v				{: RESULT = v; :}
-		|   IF expr:p THEN expr:e1 ELSE expr:e2	{: RESULT = #<if(`p,`e1,`e2)>; :}
-		|   expr:e1 PLUS expr:e2		{: RESULT = #<call(plus,`e1,`e2)>; :}
-		|   expr:e1 MINUS expr:e2		{: RESULT = #<call(minus,`e1,`e2)>; :}
-		|   expr:e1 TIMES expr:e2		{: RESULT = #<call(times,`e1,`e2)>; :}
-		|   expr:e1 DIV expr:e2			{: RESULT = #<call(div,`e1,`e2)>; :}
-		|   expr:e1 MOD expr:e2			{: RESULT = #<call(mod,`e1,`e2)>; :}
-		|   expr:e1 EQ expr:e2			{: RESULT = #<call(eq,`e1,`e2)>; :}
-		|   expr:e1 NEQ expr:e2			{: RESULT = #<call(neq,`e1,`e2)>; :}
-		|   expr:e1 LT expr:e2			{: RESULT = #<call(lt,`e1,`e2)>; :}
-		|   expr:e1 LEQ expr:e2			{: RESULT = #<call(leq,`e1,`e2)>; :}
-		|   expr:e1 GT expr:e2			{: RESULT = #<call(gt,`e1,`e2)>; :}
-		|   expr:e1 GEQ expr:e2			{: RESULT = #<call(geq,`e1,`e2)>; :}
-		|   expr:e1 AND expr:e2			{: RESULT = #<call(and,`e1,`e2)>; :}
-		|   expr:e1 OR expr:e2			{: RESULT = #<call(or,`e1,`e2)>; :}
-		|   expr:e1 UNION expr:e2		{: RESULT = #<call(plus,`e1,`e2)>; :}
-		|   expr:e1 INTERSECT expr:e2		{: RESULT = #<intersect(`e1,`e2)>; :}
-		|   expr:e1 EXCEPT expr:e2		{: RESULT = #<except(`e1,`e2)>; :}
-		|   expr:e DOT var:v 			{: RESULT = #<project(`e,`v)>; :}
-		|   expr:e DOT TIMES			{: RESULT = #<call(XMLchildren,`(new StringLeaf("*")),`e)>; :}
-		|   expr:e DOT ATSYM Variable:v		{: RESULT = #<call(XMLattribute,`(new StringLeaf(v)),`e)>; :}
-		|   expr:e DOT ATSYM TIMES		{: RESULT = #<call(XMLattributes,`(new StringLeaf("*")),`e)>; :}
-		|   expr:e SHARP Integer:n		{: RESULT = #<nth(`e,`(new LongLeaf(n.longValue())))>; :}
-		|   expr:e LB expr:i RB			{: RESULT = #<index(`e,`i)>; :}
-		|   expr:e LB expr:i COLON expr:j RB	{: RESULT = #<range(`e,`i,`j)>; :}
-		|   var:v LP RP	     			{: RESULT = #<call(`v)>; :}
-		|   var:v LP expl:el RP			{: RESULT = #<call(`v,...el)>; :}
+item            ::= expr:e                              {: RESULT = #<expression(`e)>; :}
+                |   var:v EQ expr:e                     {: RESULT = #<assign(`v,`e)>; :}
+                |   STORE var:v ASSIGN expr:e           {: RESULT = #<store(`v,`e)>; :}
+                |   STORE String:s FROM expr:e          {: RESULT = #<dump(`(new StringLeaf(s)),`e)>; :}
+                |   DUMP String:s FROM expr:e           {: RESULT = #<dump_text(`(new StringLeaf(s)),`e)>; :}
+                |   TYPE var:v EQ type:t                {: RESULT = #<typedef(`v,`t)>; :}
+                |   DATA var:v EQ data_binds:nl         {: RESULT = #<datadef(`v,union(...nl))>; :}
+                |   FUNCTION var:f LP
+                    fnc_params:p RP COLON type:tp
+                    LSB expr:e RSB                      {: RESULT = #<functiondef(`f,params(...p),`tp,`e)>; :}
+                |   FUNCTION var:f LP RP COLON type:tp
+                    LSB expr:e RSB                      {: RESULT = #<functiondef(`f,params(),`tp,`e)>; :}
+                |   MACRO var:f LP var_list:vl RP
+                    LSB expr:e RSB                      {: RESULT = #<macrodef(`f,params(...vl),`e)>; :}
+                |   IMPORT fnl:l FROM String:c          {: RESULT = #<import(`c,...l)>; :}
+                |   IMPORT String:c                     {: RESULT = #<import(`c)>; :}
+                |   PARSER var:c EQ String:p            {: RESULT = #<parser(`c,`p)>; :}
+                |   INCLUDE String:c                    {: RESULT = #<include(`c)>; :}
+                |   AGGREGATION var:n LP expr:a COMMA expr:z unit:u RP COLON type:tp
+                                                        {: RESULT = #<aggregation(`n,`tp,`a,`z,`u)>; :}
+                |   error                               {: :}
+                ;
+unit            ::= COMMA expr:u                        {: RESULT = u; :}
+                |                                       {: RESULT = #<lambda(x,x)>; :}
+                ;
+fnl             ::= Variable:v                          {: RESULT = #[`v]; :}
+                |   String:v                            {: RESULT = #[`v]; :}
+                |   Variable:v COMMA fnl:l              {: RESULT = #[`v,...l]; :}
+                |   String:v COMMA fnl:l                {: RESULT = #[`v,...l]; :}
+                ;
+fnc_params      ::= fnc_params:nl
+                    COMMA var:v COLON type:e            {: RESULT = nl.append(#<bind(`v,`e)>); :}
+                |   var:v COLON type:e                  {: RESULT = #[bind(`v,`e)]; :}
+                ;
+var             ::= Variable:v                          {: RESULT = #<`v>; :}
+                ;
+var_list        ::= var:v                               {: RESULT = #[`v]; :}
+                |   var_list:el COMMA var:v             {: RESULT = el.append(v); :}
+                ;
+const           ::= String:s                            {: RESULT = new StringLeaf(s); :}
+                |   Integer:n                           {: RESULT = new LongLeaf(n.longValue()); :}
+                |   Double:n                            {: RESULT = new DoubleLeaf((double)n.doubleValue()); :}
+                |   Decimal:n                           {: RESULT = new DoubleLeaf((double)n.doubleValue()); :}
+                ;
+expr            ::= mrql:e                              {: RESULT = e; :}
+                |   var:v                               {: RESULT = v; :}
+                |   IF expr:p THEN expr:e1 ELSE expr:e2 {: RESULT = #<if(`p,`e1,`e2)>; :}
+                |   expr:e1 PLUS expr:e2                {: RESULT = #<call(plus,`e1,`e2)>; :}
+                |   expr:e1 MINUS expr:e2               {: RESULT = #<call(minus,`e1,`e2)>; :}
+                |   expr:e1 TIMES expr:e2               {: RESULT = #<call(times,`e1,`e2)>; :}
+                |   expr:e1 DIV expr:e2                 {: RESULT = #<call(div,`e1,`e2)>; :}
+                |   expr:e1 MOD expr:e2                 {: RESULT = #<call(mod,`e1,`e2)>; :}
+                |   expr:e1 EQ expr:e2                  {: RESULT = #<call(eq,`e1,`e2)>; :}
+                |   expr:e1 NEQ expr:e2                 {: RESULT = #<call(neq,`e1,`e2)>; :}
+                |   expr:e1 LT expr:e2                  {: RESULT = #<call(lt,`e1,`e2)>; :}
+                |   expr:e1 LEQ expr:e2                 {: RESULT = #<call(leq,`e1,`e2)>; :}
+                |   expr:e1 GT expr:e2                  {: RESULT = #<call(gt,`e1,`e2)>; :}
+                |   expr:e1 GEQ expr:e2                 {: RESULT = #<call(geq,`e1,`e2)>; :}
+                |   expr:e1 AND expr:e2                 {: RESULT = #<call(and,`e1,`e2)>; :}
+                |   expr:e1 OR expr:e2                  {: RESULT = #<call(or,`e1,`e2)>; :}
+                |   expr:e1 UNION expr:e2               {: RESULT = #<call(plus,`e1,`e2)>; :}
+                |   expr:e1 INTERSECT expr:e2           {: RESULT = #<intersect(`e1,`e2)>; :}
+                |   expr:e1 EXCEPT expr:e2              {: RESULT = #<except(`e1,`e2)>; :}
+                |   expr:e DOT var:v                    {: RESULT = #<project(`e,`v)>; :}
+                |   expr:e DOT TIMES                    {: RESULT = #<call(XMLchildren,`(new StringLeaf("*")),`e)>; :}
+                |   expr:e DOT ATSYM Variable:v         {: RESULT = #<call(XMLattribute,`(new StringLeaf(v)),`e)>; :}
+                |   expr:e DOT ATSYM TIMES              {: RESULT = #<call(XMLattributes,`(new StringLeaf("*")),`e)>; :}
+                |   expr:e SHARP Integer:n              {: RESULT = #<nth(`e,`(new LongLeaf(n.longValue())))>; :}
+                |   expr:e LB expr:i RB                 {: RESULT = #<index(`e,`i)>; :}
+                |   expr:e LB expr:i COLON expr:j RB    {: RESULT = #<range(`e,`i,`j)>; :}
+                |   var:v LP RP                         {: RESULT = #<call(`v)>; :}
+                |   var:v LP expl:el RP                 {: RESULT = #<call(`v,...el)>; :}
                 |   LP RP                               {: RESULT = #<tuple()>; :}
                 |   LP expl:el RP                       {: RESULT = (el.length()==1)?el.head():#<tuple(...el)>; :}
-		|   LSB RSB    				{: RESULT = #<bag()>; :}
-		|   LSB expl:el RSB			{: RESULT = #<bag(...el)>; :}
-		|   LB RB    				{: RESULT = #<list()>; :}
-		|   LB expl:el RB			{: RESULT = #<list(...el)>; :}
-		|   LT					{: MRQLLex.record_begin(); :}
-                    name_binds:nl GTR			{: MRQLLex.record_end(); RESULT = #<record(...nl)>; :}
-		|   PLUS expr:e				{: RESULT = e; :}  %prec UMINUS
-		|   MINUS expr:e			{: RESULT = #<call(minus,`e)>; :}  %prec UMINUS
-		|   NOT expr:e				{: RESULT = #<call(not,`e)>; :}
-		|   EXISTS expr:e			{: RESULT = #<call(exists,`e)>; :}
-		|   CASE expr:e LSB cases:cs RSB	{: RESULT = #<case(`e,...cs)>; :}
-		|   BSLASH LP fnc_params:p RP
-		    COLON type:tp DOT expr:e		{: RESULT = #<function(tuple(...p),`tp,`e)>; :}  %prec LDOT
-		|   expr:e AS type:tp	 		{: RESULT = #<typed(`e,`tp)>; :}
-		|   LET pattern:p EQ expr:e IN expr:b   {: RESULT = #<let_bind(`p,`e,`b)>; :}
-		|   expr:i DOT DOT expr:j		{: RESULT = #<range(`i,`j)>; :}
-		|   expr:i DOT DOT DOT expr:j		{: RESULT = #<gen(`i,`j,-1)>; :}
-		|   XPATH LP xpath:x RP	   	  	{: RESULT = #<xpath(`x)>; :}
-		|   TYPE LP type:tp RP	   	  	{: RESULT = #<type(`tp)>; :}
-		|   REPEAT Variable:v EQ expr:s STEP expr:b
-		    	   	     	       	    	{: RESULT = #<repeat(lambda(`v,`b),`s)>; :}
-		|   REPEAT Variable:v EQ expr:s STEP expr:b LIMIT expr:n
-		    	   	    	   		{: RESULT = #<repeat(lambda(`v,`b),`s,`n)>; :}
-		|   REPEAT LP var_list:vl RP EQ expr:s STEP expr:b LIMIT expr:n
-		    	   	    	   		{: RESULT = #<loop(lambda(tuple(...vl),`b),`s,`n)>; :}
+                |   LSB RSB                             {: RESULT = #<bag()>; :}
+                |   LSB expl:el RSB                     {: RESULT = #<bag(...el)>; :}
+                |   LB RB                               {: RESULT = #<list()>; :}
+                |   LB expl:el RB                       {: RESULT = #<list(...el)>; :}
+                |   LT                                  {: MRQLLex.record_begin(); :}
+                    name_binds:nl GTR                   {: MRQLLex.record_end(); RESULT = #<record(...nl)>; :}
+                |   PLUS expr:e                         {: RESULT = e; :}  %prec UMINUS
+                |   MINUS expr:e                        {: RESULT = #<call(minus,`e)>; :}  %prec UMINUS
+                |   NOT expr:e                          {: RESULT = #<call(not,`e)>; :}
+                |   EXISTS expr:e                       {: RESULT = #<call(exists,`e)>; :}
+                |   CASE expr:e LSB cases:cs RSB        {: RESULT = #<case(`e,...cs)>; :}
+                |   BSLASH LP fnc_params:p RP
+                    COLON type:tp DOT expr:e            {: RESULT = #<function(tuple(...p),`tp,`e)>; :}  %prec LDOT
+                |   expr:e AS type:tp                   {: RESULT = #<typed(`e,`tp)>; :}
+                |   LET pattern:p EQ expr:e IN expr:b   {: RESULT = #<let_bind(`p,`e,`b)>; :}
+                |   expr:i DOT DOT expr:j               {: RESULT = #<range(`i,`j)>; :}
+                |   expr:i DOT DOT DOT expr:j           {: RESULT = #<gen(`i,`j,-1)>; :}
+                |   XPATH LP xpath:x RP                 {: RESULT = #<xpath(`x)>; :}
+                |   TYPE LP type:tp RP                  {: RESULT = #<type(`tp)>; :}
+                |   REPEAT Variable:v EQ expr:s STEP expr:b
+                                                        {: RESULT = #<repeat(lambda(`v,`b),`s)>; :}
+                |   REPEAT Variable:v EQ expr:s STEP expr:b LIMIT expr:n
+                                                        {: RESULT = #<repeat(lambda(`v,`b),`s,`n)>; :}
+                |   REPEAT LP var_list:vl RP EQ expr:s STEP expr:b LIMIT expr:n
+                                                        {: RESULT = #<loop(lambda(tuple(...vl),`b),`s,`n)>; :}
                 |   START_TEMPLATE:s template:t END_TEMPLATE:e
-							{: RESULT = Translator.template(#<template(`(s.substring(1,s.length()-1)),...t,text(`e))>); :}
-                |   START_TEMPLATE:s END_TEMPLATE:e	{: RESULT = Translator.template(#<template(`(s.substring(1,s.length()-1)),text(`e))>); :}
-		|   const:c				{: RESULT = c; :}
-		;
-template	::= template:t TEXT:s			{: RESULT = t.append(#<text(`s)>); :}
-		|   template:t expr:e			{: RESULT = t.append(e); :}
-		|   TEXT:s				{: RESULT = #[text(`s)]; :}
-		|   expr:e				{: RESULT = #[`e]; :}
-		;
-expl		::= expr:e				{: RESULT = #[`e]; :}
-		|   expl:el COMMA expr:e 		{: RESULT = el.append(e); :}
-		;
-name_binds      ::= name_binds:nl
-                    COMMA var:v COLON expr:e		{: RESULT = nl.append(#<bind(`v,`e)>); :}
-                |   var:v COLON expr:e 	    	  	{: RESULT = #[bind(`v,`e)]; :}
+                                                        {: RESULT = Translator.template(#<template(`(s.substring(1,s.length()-1)),...t,text(`e))>); :}
+                |   START_TEMPLATE:s END_TEMPLATE:e     {: RESULT = Translator.template(#<template(`(s.substring(1,s.length()-1)),text(`e))>); :}
+                |   const:c                             {: RESULT = c; :}
                 ;
-cases		::= cases:cs SEP pattern:p COLON expr:e	{: RESULT = cs.append(#<case(`p,`e)>); :}
-		|   pattern:p COLON expr:e  	  	{: RESULT = #[case(`p,`e)]; :}
-		;
-pattern		::= var:v				{: RESULT = v; :}
-		|   TIMES				{: RESULT = #<any>; :}
-		|   const:c				{: RESULT = c; :}
+template        ::= template:t TEXT:s                   {: RESULT = t.append(#<text(`s)>); :}
+                |   template:t expr:e                   {: RESULT = t.append(e); :}
+                |   TEXT:s                              {: RESULT = #[text(`s)]; :}
+                |   expr:e                              {: RESULT = #[`e]; :}
+                ;
+expl            ::= expr:e                              {: RESULT = #[`e]; :}
+                |   expl:el COMMA expr:e                {: RESULT = el.append(e); :}
+                ;
+name_binds      ::= name_binds:nl
+                    COMMA var:v COLON expr:e            {: RESULT = nl.append(#<bind(`v,`e)>); :}
+                |   var:v COLON expr:e                  {: RESULT = #[bind(`v,`e)]; :}
+                ;
+cases           ::= cases:cs SEP pattern:p COLON expr:e {: RESULT = cs.append(#<case(`p,`e)>); :}
+                |   pattern:p COLON expr:e              {: RESULT = #[case(`p,`e)]; :}
+                ;
+pattern         ::= var:v                               {: RESULT = v; :}
+                |   TIMES                               {: RESULT = #<any>; :}
+                |   const:c                             {: RESULT = c; :}
                 |   LP RP                               {: RESULT = #<tuple()>; :}
-		|   LP pat_list:el RP			{: RESULT = (el.length()==1)?el.head():#<tuple(...el)>; :}
-		|   LB RB    				{: RESULT = #<list()>; :}
-		|   LB expl:el RB			{: RESULT = #<list(...el)>; :}
-		|   pattern:p AS type:t			{: RESULT = #<typed(`p,`t)>; :}
-                |   Variable:c LP pat_list:pl RP	{: RESULT = #<call(`c,...pl)>; :}
-		|   LT 		   			{: MRQLLex.record_begin(); :}
-		    pat_binds:nl GTR			{: MRQLLex.record_end(); RESULT = #<record(...nl)>; :}
+                |   LP pat_list:el RP                   {: RESULT = (el.length()==1)?el.head():#<tuple(...el)>; :}
+                |   LB RB                               {: RESULT = #<list()>; :}
+                |   LB expl:el RB                       {: RESULT = #<list(...el)>; :}
+                |   pattern:p AS type:t                 {: RESULT = #<typed(`p,`t)>; :}
+                |   Variable:c LP pat_list:pl RP        {: RESULT = #<call(`c,...pl)>; :}
+                |   LT                                  {: MRQLLex.record_begin(); :}
+                    pat_binds:nl GTR                    {: MRQLLex.record_end(); RESULT = #<record(...nl)>; :}
                 |   START_TEMPLATE:s template_pat:t END_TEMPLATE:e
-							{: RESULT = Translator.template(#<template(`(s.substring(1,s.length()-1)),...t,text(`e))>); :}
-                |   START_TEMPLATE:s END_TEMPLATE:e	{: RESULT = Translator.template(#<template(`(s.substring(1,s.length()-1)),text(`e))>); :}
-		;
-template_pat	::= template_pat:t TEXT:s		{: RESULT = t.append(#<text(`s)>); :}
-		|   template_pat:t pattern:e		{: RESULT = t.append(e); :}
-		|   TEXT:s				{: RESULT = #[text(`s)]; :}
-		|   pattern:e				{: RESULT = #[`e]; :}
-		;
-pat_list	::= pattern:e				{: RESULT = #[`e]; :}
-		|   pat_list:el COMMA pattern:e		{: RESULT = el.append(e); :}
-		;
+                                                        {: RESULT = Translator.template(#<template(`(s.substring(1,s.length()-1)),...t,text(`e))>); :}
+                |   START_TEMPLATE:s END_TEMPLATE:e     {: RESULT = Translator.template(#<template(`(s.substring(1,s.length()-1)),text(`e))>); :}
+                ;
+template_pat    ::= template_pat:t TEXT:s               {: RESULT = t.append(#<text(`s)>); :}
+                |   template_pat:t pattern:e            {: RESULT = t.append(e); :}
+                |   TEXT:s                              {: RESULT = #[text(`s)]; :}
+                |   pattern:e                           {: RESULT = #[`e]; :}
+                ;
+pat_list        ::= pattern:e                           {: RESULT = #[`e]; :}
+                |   pat_list:el COMMA pattern:e         {: RESULT = el.append(e); :}
+                ;
 pat_binds       ::= pat_binds:nl
-                    COMMA var:v COLON pattern:e		{: RESULT = nl.append(#<bind(`v,`e)>); :}
-                |   var:v COLON pattern:e    	  	{: RESULT = #[bind(`v,`e)]; :}
+                    COMMA var:v COLON pattern:e         {: RESULT = nl.append(#<bind(`v,`e)>); :}
+                |   var:v COLON pattern:e               {: RESULT = #[bind(`v,`e)]; :}
                 ;
 mrql            ::= SELECT opt_distinct:d expr:e
                     FROM binds:bl
                     opt_where:w
                     opt_groupby:g
-                    opt_orderby:o			{: RESULT = #<select(`d,`e,from(...bl),`w,`g,`o)>; :}
-		|   SOME binds:bl COLON expr:e		{: RESULT = #<call(exists,select(none,true,from(...bl),where(`e),groupby(),orderby()))>; :}
-		|   ALL binds:bl COLON expr:e		{: RESULT = #<call(all,select(none,`e,from(...bl),where(true),groupby(),orderby()))>; :}
-		|   ALL LP mrql:e RP			{: RESULT = #<call(all,`e)>; :}
-		|   SOME LP mrql:e RP			{: RESULT = #<call(some,`e)>; :}
+                    opt_orderby:o                       {: RESULT = #<select(`d,`e,from(...bl),`w,`g,`o)>; :}
+                |   SOME binds:bl COLON expr:e          {: RESULT = #<call(exists,select(none,true,from(...bl),where(`e),groupby(),orderby()))>; :}
+                |   ALL binds:bl COLON expr:e           {: RESULT = #<call(all,select(none,`e,from(...bl),where(true),groupby(),orderby()))>; :}
+                |   ALL LP mrql:e RP                    {: RESULT = #<call(all,`e)>; :}
+                |   SOME LP mrql:e RP                   {: RESULT = #<call(some,`e)>; :}
                 ;
-opt_distinct	::= DISTINCT				{: RESULT = #<distinct>; :}
-		|   					{: RESULT = #<none>; :}
-		;
-binds           ::= binds:bl COMMA pattern:p IN expr:e	{: RESULT = bl.append(#<bind(`p,`e)>); :}
-		|   binds:bl COMMA pattern:p EQ expr:e	{: RESULT = bl.append(#<bind(`p,bag(`e))>); :}
-                |   pattern:p IN expr:e			{: RESULT = #[bind(`p,`e)]; :}
-                |   pattern:p EQ expr:e			{: RESULT = #[bind(`p,bag(`e))]; :}
+opt_distinct    ::= DISTINCT                            {: RESULT = #<distinct>; :}
+                |                                       {: RESULT = #<none>; :}
                 ;
-opt_where 	::= WHERE expr:e			{: RESULT = #<where(`e)>; :}
-		|					{: RESULT = #<where(true)>; :}
-		;
-opt_orderby	::= ORDER BY order_binds:ol opt_limit:l	{: RESULT = #<orderby(`l,...ol)>; :}
-		|					{: RESULT = #<orderby()>; :}
-		;
-order_binds	::= expr:e mode:m			{: RESULT = m.equals(#<asc>) ? #[`e] : #[call(inv,`e)]; :}
-		|   order_binds:ol COMMA expr:e mode:m	{: RESULT = ol.append(m.equals(#<asc>) ? #<`e> : #<call(inv,`e)>); :}
-		;
-mode		::= ASCENDING				{: RESULT = #<asc>; :}
-		|   DESCENDING				{: RESULT = #<desc>; :}
-		|					{: RESULT = #<asc>; :}
-		;
-opt_limit	::= LIMIT expr:n			{: RESULT = n; :}
-		|   	  				{: RESULT = #<none>; :}
-		;
+binds           ::= binds:bl COMMA pattern:p IN expr:e  {: RESULT = bl.append(#<bind(`p,`e)>); :}
+                |   binds:bl COMMA pattern:p EQ expr:e  {: RESULT = bl.append(#<bind(`p,bag(`e))>); :}
+                |   pattern:p IN expr:e                 {: RESULT = #[bind(`p,`e)]; :}
+                |   pattern:p EQ expr:e                 {: RESULT = #[bind(`p,bag(`e))]; :}
+                ;
+opt_where       ::= WHERE expr:e                        {: RESULT = #<where(`e)>; :}
+                |                                       {: RESULT = #<where(true)>; :}
+                ;
+opt_orderby     ::= ORDER BY order_binds:ol opt_limit:l {: RESULT = #<orderby(`l,...ol)>; :}
+                |                                       {: RESULT = #<orderby()>; :}
+                ;
+order_binds     ::= expr:e mode:m                       {: RESULT = m.equals(#<asc>) ? #[`e] : #[call(inv,`e)]; :}
+                |   order_binds:ol COMMA expr:e mode:m  {: RESULT = ol.append(m.equals(#<asc>) ? #<`e> : #<call(inv,`e)>); :}
+                ;
+mode            ::= ASCENDING                           {: RESULT = #<asc>; :}
+                |   DESCENDING                          {: RESULT = #<desc>; :}
+                |                                       {: RESULT = #<asc>; :}
+                ;
+opt_limit       ::= LIMIT expr:n                        {: RESULT = n; :}
+                |                                       {: RESULT = #<none>; :}
+                ;
 opt_groupby     ::= GROUP BY groupby_binds:gl
-                    opt_having:h			{: RESULT = #<groupby(`h,...gl)>; :}
-                |   					{: RESULT = #<groupby()>; :}
+                    opt_having:h                        {: RESULT = #<groupby(`h,...gl)>; :}
+                |                                       {: RESULT = #<groupby()>; :}
                 ;
-groupby_binds   ::= pattern:p COLON expr:e	        {: RESULT = #[bind(`p,`e)]; :}
-                |   pattern:p	                        {: RESULT = #[bind(`p,`p)]; :}
+groupby_binds   ::= pattern:p COLON expr:e              {: RESULT = #[bind(`p,`e)]; :}
+                |   pattern:p                           {: RESULT = #[bind(`p,`p)]; :}
                 ;
-opt_having      ::= HAVING expr:e			{: RESULT = e; :}
-                |   	   				{: RESULT = #<true>; :}
+opt_having      ::= HAVING expr:e                       {: RESULT = e; :}
+                |                                       {: RESULT = #<true>; :}
                 ;
-type		::= var:v				{: RESULT = v; :}
-                |   LP RP				{: RESULT = #<tuple()>; :}
-                |   LP typel:el RP			{: RESULT = #<tuple(...el)>; :}
-		|   LT type_binds:nl GT			{: RESULT = #<record(...nl)>; :}
-		|   LB type:tp RB  			{: RESULT = #<list(`tp)>; :}
-		|   LSB type:tp RSB  			{: RESULT = #<bag(`tp)>; :}
-		|   Variable:v LP typel:tl RP		{: RESULT = #<`v(...tl)>; :}
-		|   EXCLAMATION type:tp	   		{: RESULT = #<persistent(`tp)>; :}
-		;
-typel		::= type:e				{: RESULT = #[`e]; :}
-		|   typel:el COMMA type:e 		{: RESULT = el.append(e); :}
-		;
+type            ::= var:v                               {: RESULT = v; :}
+                |   LP RP                               {: RESULT = #<tuple()>; :}
+                |   LP typel:el RP                      {: RESULT = #<tuple(...el)>; :}
+                |   LT type_binds:nl GT                 {: RESULT = #<record(...nl)>; :}
+                |   LB type:tp RB                       {: RESULT = #<list(`tp)>; :}
+                |   LSB type:tp RSB                     {: RESULT = #<bag(`tp)>; :}
+                |   Variable:v LP typel:tl RP           {: RESULT = #<`v(...tl)>; :}
+                |   EXCLAMATION type:tp                 {: RESULT = #<persistent(`tp)>; :}
+                ;
+typel           ::= type:e                              {: RESULT = #[`e]; :}
+                |   typel:el COMMA type:e               {: RESULT = el.append(e); :}
+                ;
 type_binds      ::= type_binds:nl
-                    COMMA var:v COLON type:e		{: RESULT = nl.append(#<bind(`v,`e)>); :}
-                |   var:v COLON type:e 	    	  	{: RESULT = #[bind(`v,`e)]; :}
+                    COMMA var:v COLON type:e            {: RESULT = nl.append(#<bind(`v,`e)>); :}
+                |   var:v COLON type:e                  {: RESULT = #[bind(`v,`e)]; :}
                 ;
 data_binds      ::= data_binds:nl
-                    SEP Variable:c COLON type:e		{: RESULT = nl.append(#<`c(`e)>); :}
-                |   Variable:c COLON type:e  		{: RESULT = #[`c(`e)]; :}
+                    SEP Variable:c COLON type:e         {: RESULT = nl.append(#<`c(`e)>); :}
+                |   Variable:c COLON type:e             {: RESULT = #[`c(`e)]; :}
                 ;
-xpath		::= DOT					{: RESULT = #<dot>; :}
-		|   xpath:x DIV xname:n			{: RESULT = #<child(`n,`x)>; :}
-		|   xpath:x DIV DIV xname:n		{: RESULT = #<descendant(`n,`x)>; :}
-		|   xpath:x LB Integer:n RB		{: RESULT = #<index(`x,`n)>; :}
-		|   xpath:x LB xpred:p RB		{: RESULT = #<predicate(`p,`x)>; :}
-		|   DIV xname:n				{: RESULT = #<child(`n,root)>; :}
-		|   DIV DIV xname:n			{: RESULT = #<descendant(`n,root)>; :}
-		|   xname:n				{: RESULT = #<child(`n,dot)>; :}
-		;
-xname		::= var:v				{: RESULT = v; :}
-		|   Variable:n COLON Variable:v		{: RESULT = new VariableLeaf(n+":"+v); :}
-		|   TIMES      	     			{: RESULT = new VariableLeaf("*"); :}
-		|   ATSYM Variable:v			{: RESULT = new VariableLeaf("@"+v); :}
-		|   ATSYM Variable:n COLON Variable:v	{: RESULT = new VariableLeaf("@"+n+":"+v); :}
-		|   ATSYM TIMES	     	   		{: RESULT = new VariableLeaf("@*"); :}
-		|   ATSYM Variable:n COLON TIMES	{: RESULT = new VariableLeaf("@"+n+":*"); :}
-		;
-xpred		::= xpath:x EQ const:c			{: RESULT = #<eq(`x,`c)>; :}
-		|   xpath:x    				{: RESULT = x; :}
-		;
+xpath           ::= DOT                                 {: RESULT = #<dot>; :}
+                |   xpath:x DIV xname:n                 {: RESULT = #<child(`n,`x)>; :}
+                |   xpath:x DIV DIV xname:n             {: RESULT = #<descendant(`n,`x)>; :}
+                |   xpath:x LB Integer:n RB             {: RESULT = #<index(`x,`n)>; :}
+                |   xpath:x LB xpred:p RB               {: RESULT = #<predicate(`p,`x)>; :}
+                |   DIV xname:n                         {: RESULT = #<child(`n,root)>; :}
+                |   DIV DIV xname:n                     {: RESULT = #<descendant(`n,root)>; :}
+                |   xname:n                             {: RESULT = #<child(`n,dot)>; :}
+                ;
+xname           ::= var:v                               {: RESULT = v; :}
+                |   Variable:n COLON Variable:v         {: RESULT = new VariableLeaf(n+":"+v); :}
+                |   TIMES                               {: RESULT = new VariableLeaf("*"); :}
+                |   ATSYM Variable:v                    {: RESULT = new VariableLeaf("@"+v); :}
+                |   ATSYM Variable:n COLON Variable:v   {: RESULT = new VariableLeaf("@"+n+":"+v); :}
+                |   ATSYM TIMES                         {: RESULT = new VariableLeaf("@*"); :}
+                |   ATSYM Variable:n COLON TIMES        {: RESULT = new VariableLeaf("@"+n+":*"); :}
+                ;
+xpred           ::= xpath:x EQ const:c                  {: RESULT = #<eq(`x,`c)>; :}
+                |   xpath:x                             {: RESULT = x; :}
+                ;

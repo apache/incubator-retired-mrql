@@ -26,11 +26,11 @@ public class AlgebraicOptimization extends Simplification {
 
     /** Is this a group-by operation?*/
     private static boolean is_groupBy ( Tree e ) {
-	match e {
-	case groupBy(...): return true;
-	case orderBy(...): return true;
-	};
-	return false;
+        match e {
+        case groupBy(...): return true;
+        case orderBy(...): return true;
+        };
+        return false;
     }
 
     /**
@@ -39,188 +39,188 @@ public class AlgebraicOptimization extends Simplification {
      * @return the optimized form
      */
     public static Tree translate ( Tree e ) {
-	match e {
-	// if the group-by key is the same as the join key, fuse the group-by into the join
-	case mapReduce2(lambda(`v,bag(tuple(nth(`v1,0),`mx))),`my,
-			lambda(`rv,`rb),
-			`groupBy(cmap(lambda(`w,`m),`X)),`Y,`o):
-	    if (!v1.equals(v) || !Config.groupJoinOpt || ! #[groupBy,orderBy].member(#<`groupBy>))
-		fail;
-	    Tree nv = new_var();
-	    Tree nr = subst(#<nth(`rv,0)>,#<cmap(lambda(`v,bag(`mx)),groupBy(nth(`rv,0)))>,rb);
-	    Tree res = #<mapReduce2(lambda(`w,cmap(lambda(`nv,bag(tuple(nth(`nv,0),`nv))),`m)),
-				    `my,lambda(`rv,`nr),`X,`Y,`o)>;
-	    res = simplify_all(rename(res));
-	    TypeInference.type_inference(res);
-	    return translate(res);
-	// same for the right join input
-	case mapReduce2(`mx,lambda(`v,bag(tuple(nth(`v1,0),`my))),
-			lambda(`rv,`rb),
-			`X,`groupBy(cmap(lambda(`w,`m),`Y)),`o):
-	    if (!v1.equals(v) || !Config.groupJoinOpt || ! #[groupBy,orderBy].member(#<`groupBy>))
-		fail;
-	    Tree nv = new_var();
-	    Tree nr = subst(#<nth(`rv,1)>,#<cmap(lambda(`v,bag(`my)),groupBy(nth(`rv,1)))>,rb);
-	    Tree res = #<mapReduce2(`mx,lambda(`w,cmap(lambda(`nv,bag(tuple(nth(`nv,0),`nv))),`m)),
-				    lambda(`rv,`nr),`X,`Y,`o)>;
-	    res = simplify_all(rename(res));
-	    TypeInference.type_inference(res);
-	    return translate(res);
+        match e {
+        // if the group-by key is the same as the join key, fuse the group-by into the join
+        case mapReduce2(lambda(`v,bag(tuple(nth(`v1,0),`mx))),`my,
+                        lambda(`rv,`rb),
+                        `groupBy(cmap(lambda(`w,`m),`X)),`Y,`o):
+            if (!v1.equals(v) || !Config.groupJoinOpt || ! #[groupBy,orderBy].member(#<`groupBy>))
+                fail;
+            Tree nv = new_var();
+            Tree nr = subst(#<nth(`rv,0)>,#<cmap(lambda(`v,bag(`mx)),groupBy(nth(`rv,0)))>,rb);
+            Tree res = #<mapReduce2(lambda(`w,cmap(lambda(`nv,bag(tuple(nth(`nv,0),`nv))),`m)),
+                                    `my,lambda(`rv,`nr),`X,`Y,`o)>;
+            res = simplify_all(rename(res));
+            TypeInference.type_inference(res);
+            return translate(res);
+        // same for the right join input
+        case mapReduce2(`mx,lambda(`v,bag(tuple(nth(`v1,0),`my))),
+                        lambda(`rv,`rb),
+                        `X,`groupBy(cmap(lambda(`w,`m),`Y)),`o):
+            if (!v1.equals(v) || !Config.groupJoinOpt || ! #[groupBy,orderBy].member(#<`groupBy>))
+                fail;
+            Tree nv = new_var();
+            Tree nr = subst(#<nth(`rv,1)>,#<cmap(lambda(`v,bag(`my)),groupBy(nth(`rv,1)))>,rb);
+            Tree res = #<mapReduce2(`mx,lambda(`w,cmap(lambda(`nv,bag(tuple(nth(`nv,0),`nv))),`m)),
+                                    lambda(`rv,`nr),`X,`Y,`o)>;
+            res = simplify_all(rename(res));
+            TypeInference.type_inference(res);
+            return translate(res);
         // convert self-joins to single-source mapreduce; Hadoop doesn't like self-joins anyway
-	case mapReduce2(lambda(`vx,`bx),lambda(`vy,`by),lambda(`s,`f),`X,`Y,`o):
-	    if (!alpha_equivalent(X,Y) || !Config.selfJoinOpt)
-		fail;
-	    Tree ny = subst(vy,vx,by);
-	    Tree tx = null;
-	    Tree ty = null;
-	    match TypeInference.type_inference(bx) {
-	    case _(tuple(_,`t)): tx = t;
-	    };
-	    match TypeInference.type_inference(by) {
-	    case _(tuple(_,`t)): ty = t;
-	    };
-	    Tree b = subst(s,#<tuple(cmap(lambda(tuple(n,v1,v2),
-						 if(call(eq,n,1),bag(v1),bag())),s),
-				     cmap(lambda(tuple(n,v1,v2),
-						 if(call(eq,n,2),bag(v2),bag())),s))>,
-			   f);
-	    Tree res = #<mapReduce(lambda(`vx,call(plus,
-			     cmap(lambda(x,bag(tuple(nth(x,0),tuple(1,nth(x,1),typed(null,`ty))))),`bx),
-				     cmap(lambda(y,bag(tuple(nth(y,0),tuple(2,typed(null,`tx),nth(y,1))))),`ny))),
-			   lambda(tuple(k,s),`b),
-			   `X,`o)>;
-	    res = simplify_all(rename(res));
-	    TypeInference.type_inference(res);
-	    return translate(res);
-	case mapReduce2(`mx,`my,`r,cmap(lambda(`v,`b),`X),`Y,`o):
-	    match X {
-	    case groupBy(...): ;
-	    case _: return translate(#<mapReduce2(lambda(`v,cmap(`mx,`b)),`my,`r,`X,`Y,`o)>);
-	    };
-	    fail
-	case mapReduce2(`mx,`my,`r,`X,cmap(lambda(`v,`b),`Y),`o):
-	    match Y {
-	    case groupBy(...): ;
-	    case _: return translate(#<mapReduce2(`mx,lambda(`v,cmap(`my,`b)),`r,`X,`Y,`o)>);
-	    };
-	    fail
-	case crossProduct(`mx,`my,`r,cmap(lambda(`vx,`bx),`X),cmap(lambda(`vy,`by),`Y)):
-	    return translate(#<crossProduct(lambda(`vx,cmap(`mx,`bx)),
-					    lambda(`vy,cmap(`my,`by)),`r,`X,`Y)>);
-	case crossProduct(`mx,`my,`r,cmap(lambda(`v,`b),`X),`Y):
-	    return translate(#<crossProduct(lambda(`v,cmap(`mx,`b)),`my,`r,`X,`Y)>);
-	case crossProduct(`mx,`my,`r,`X,cmap(lambda(`v,`b),`Y)):
-	    return translate(#<crossProduct(`mx,lambda(`v,cmap(`my,`b)),`r,`X,`Y)>);
-	case cmap(`m,crossProduct(`mx,`my,lambda(`v,`b),`X,`Y)):
-	    return translate(#<crossProduct(`mx,`my,lambda(`v,cmap(`m,`b)),`X,`Y)>);
-	case cmap(`r,`groupBy1(cmap(`m,`groupBy2(`s)))):
-	    if (! #[groupBy,orderBy].member(#<`groupBy1>)
-		&& ! #[groupBy,orderBy].member(#<`groupBy2>))
-		fail;
-	    return #<mapReduce(`(identity()),
-			       `(translate(r)),
-			       `(translate(#<cmap(`m,`groupBy2(`s))>)),
-			       `((#<`groupBy1>.equals(#<orderBy>)) ? #<true> : #<false>))>;
-	case cmap(`r,`groupBy(cmap(`m,`s))):
-	    if (! #[groupBy,orderBy].member(#<`groupBy>))
-		fail;
-	    return #<mapReduce(`(translate(m)),
-			       `(translate(r)),
-			       `(translate(s)),
-			       `((#<`groupBy>.equals(#<orderBy>)) ? #<true> : #<false>))>;
-	case `groupBy(cmap(`m,groupBy(`s))):
-	    if (! #[groupBy,orderBy].member(#<`groupBy>))
-		fail;
-	    return #<mapReduce(`(identity()),
-			       `(identity()),
-			       `(translate(#<cmap(`m,groupBy(`s))>)),
-			       `((#<`groupBy>.equals(#<orderBy>)) ? #<true> : #<false>))>;
-	case `groupBy(cmap(`m,`s)):
-	    if (! #[groupBy,orderBy].member(#<`groupBy>))
-		fail;
-	    return #<mapReduce(`(translate(m)),
-			       `(identity()),
-			       `(translate(s)),
-			       `((#<`groupBy>.equals(#<orderBy>)) ? #<true> : #<false>))>;
-	case cmap(`r,`groupBy(`s)):
-	    if (! #[groupBy,orderBy].member(#<`groupBy>))
-		fail;
-	    return #<mapReduce(`(identity()),
-			       `(translate(r)),
-			       `(translate(s)),
-			       `((#<`groupBy>.equals(#<orderBy>)) ? #<true> : #<false>))>;
-	case `groupBy(`s):
-	    if (! #[groupBy,orderBy].member(#<`groupBy>))
-		fail;
-	    return #<mapReduce(`(identity()),
-			       `(identity()),
-			       `(translate(s)),
-			       `((#<`groupBy>.equals(#<orderBy>)) ? #<true> : #<false>))>;
-	case cmap(`m,`s):
-	    return #<cmap(`(translate(m)),
-			  `(translate(s)))>;
+        case mapReduce2(lambda(`vx,`bx),lambda(`vy,`by),lambda(`s,`f),`X,`Y,`o):
+            if (!alpha_equivalent(X,Y) || !Config.selfJoinOpt)
+                fail;
+            Tree ny = subst(vy,vx,by);
+            Tree tx = null;
+            Tree ty = null;
+            match TypeInference.type_inference(bx) {
+            case _(tuple(_,`t)): tx = t;
+            };
+            match TypeInference.type_inference(by) {
+            case _(tuple(_,`t)): ty = t;
+            };
+            Tree b = subst(s,#<tuple(cmap(lambda(tuple(n,v1,v2),
+                                                 if(call(eq,n,1),bag(v1),bag())),s),
+                                     cmap(lambda(tuple(n,v1,v2),
+                                                 if(call(eq,n,2),bag(v2),bag())),s))>,
+                           f);
+            Tree res = #<mapReduce(lambda(`vx,call(plus,
+                             cmap(lambda(x,bag(tuple(nth(x,0),tuple(1,nth(x,1),typed(null,`ty))))),`bx),
+                                     cmap(lambda(y,bag(tuple(nth(y,0),tuple(2,typed(null,`tx),nth(y,1))))),`ny))),
+                           lambda(tuple(k,s),`b),
+                           `X,`o)>;
+            res = simplify_all(rename(res));
+            TypeInference.type_inference(res);
+            return translate(res);
+        case mapReduce2(`mx,`my,`r,cmap(lambda(`v,`b),`X),`Y,`o):
+            match X {
+            case groupBy(...): ;
+            case _: return translate(#<mapReduce2(lambda(`v,cmap(`mx,`b)),`my,`r,`X,`Y,`o)>);
+            };
+            fail
+        case mapReduce2(`mx,`my,`r,`X,cmap(lambda(`v,`b),`Y),`o):
+            match Y {
+            case groupBy(...): ;
+            case _: return translate(#<mapReduce2(`mx,lambda(`v,cmap(`my,`b)),`r,`X,`Y,`o)>);
+            };
+            fail
+        case crossProduct(`mx,`my,`r,cmap(lambda(`vx,`bx),`X),cmap(lambda(`vy,`by),`Y)):
+            return translate(#<crossProduct(lambda(`vx,cmap(`mx,`bx)),
+                                            lambda(`vy,cmap(`my,`by)),`r,`X,`Y)>);
+        case crossProduct(`mx,`my,`r,cmap(lambda(`v,`b),`X),`Y):
+            return translate(#<crossProduct(lambda(`v,cmap(`mx,`b)),`my,`r,`X,`Y)>);
+        case crossProduct(`mx,`my,`r,`X,cmap(lambda(`v,`b),`Y)):
+            return translate(#<crossProduct(`mx,lambda(`v,cmap(`my,`b)),`r,`X,`Y)>);
+        case cmap(`m,crossProduct(`mx,`my,lambda(`v,`b),`X,`Y)):
+            return translate(#<crossProduct(`mx,`my,lambda(`v,cmap(`m,`b)),`X,`Y)>);
+        case cmap(`r,`groupBy1(cmap(`m,`groupBy2(`s)))):
+            if (! #[groupBy,orderBy].member(#<`groupBy1>)
+                && ! #[groupBy,orderBy].member(#<`groupBy2>))
+                fail;
+            return #<mapReduce(`(identity()),
+                               `(translate(r)),
+                               `(translate(#<cmap(`m,`groupBy2(`s))>)),
+                               `((#<`groupBy1>.equals(#<orderBy>)) ? #<true> : #<false>))>;
+        case cmap(`r,`groupBy(cmap(`m,`s))):
+            if (! #[groupBy,orderBy].member(#<`groupBy>))
+                fail;
+            return #<mapReduce(`(translate(m)),
+                               `(translate(r)),
+                               `(translate(s)),
+                               `((#<`groupBy>.equals(#<orderBy>)) ? #<true> : #<false>))>;
+        case `groupBy(cmap(`m,groupBy(`s))):
+            if (! #[groupBy,orderBy].member(#<`groupBy>))
+                fail;
+            return #<mapReduce(`(identity()),
+                               `(identity()),
+                               `(translate(#<cmap(`m,groupBy(`s))>)),
+                               `((#<`groupBy>.equals(#<orderBy>)) ? #<true> : #<false>))>;
+        case `groupBy(cmap(`m,`s)):
+            if (! #[groupBy,orderBy].member(#<`groupBy>))
+                fail;
+            return #<mapReduce(`(translate(m)),
+                               `(identity()),
+                               `(translate(s)),
+                               `((#<`groupBy>.equals(#<orderBy>)) ? #<true> : #<false>))>;
+        case cmap(`r,`groupBy(`s)):
+            if (! #[groupBy,orderBy].member(#<`groupBy>))
+                fail;
+            return #<mapReduce(`(identity()),
+                               `(translate(r)),
+                               `(translate(s)),
+                               `((#<`groupBy>.equals(#<orderBy>)) ? #<true> : #<false>))>;
+        case `groupBy(`s):
+            if (! #[groupBy,orderBy].member(#<`groupBy>))
+                fail;
+            return #<mapReduce(`(identity()),
+                               `(identity()),
+                               `(translate(s)),
+                               `((#<`groupBy>.equals(#<orderBy>)) ? #<true> : #<false>))>;
+        case cmap(`m,`s):
+            return #<cmap(`(translate(m)),
+                          `(translate(s)))>;
         // convert self-joins to single-source mapreduce; Hadoop doesn't like self-joins anyway
-	case join(lambda(`vx,`bx),lambda(`vy,`by),lambda(`s,`f),`x,`y):
-	    if (!x.equals(y) || !Config.selfJoinOpt)
-		fail;
-	    Tree ny = subst(vy,vx,by);
-	    Tree b = subst(s,
-			    #<tuple(cmap(lambda(tuple(n,v),
-						if(call(eq,n,1),bag(v),bag())),s),
-				    cmap(lambda(tuple(n,v),
-						if(call(eq,n,2),bag(v),bag())),s))>,
-				     f);
-	    Tree res = #<mapReduce(lambda(`vx,bag(tuple(`bx,tuple(1,`vx)),
-						  tuple(`ny,tuple(2,`vx)))),
-				   lambda(tuple(k,s),`b),`x,false)>;
-	    res = simplify_all(rename(res));
-	    TypeInference.type_inference(res);
-	    return translate(res);
-	case join(lambda(`vx,`bx),lambda(`vy,`by),`f,`x,`y):
-	    return translate(#<mapReduce2(lambda(`vx,bag(tuple(`bx,`vx))),
-					  lambda(`vy,bag(tuple(`by,`vy))),
-					  `f,`x,`y,false)>);
-	case nth(`x,`n):
-	    match TypeInference.type_inference2(x) {
-	    case `S(tuple(...bl)):
-		if (!is_collection(S))
-		    fail;
-		Tree nv = new_var();
-		type_env.insert(nv.toString(),bl.nth((int)n.longValue()));
-		return translate(#<cmap(lambda(`nv,`S(nth(`nv,`n))),`x)>);
-	    };
-	    fail
-	case project(`x,`a):
-	    match TypeInference.type_inference2(x) {
-	    case `S(record(...bl)):
-		if (!is_collection(S))
-		    fail;
-		for ( Tree b: bl )
-		    match b {
-		    case bind(`c,_):
-			if (!a.equals(c))
-			    fail;
-			Tree nv = new_var();
-			type_env.insert(nv.toString(),#<record(...bl)>);
-			return translate(#<cmap(lambda(`nv,`S(project(`nv,`a))),`x)>);
-		    };
-	    };
-	    fail
-	case `f(...al):
-	    Trees bl = #[];
-	    for ( Tree a: al )
-		bl = bl.append(translate(a));
-	    return #<`f(...bl)>;
-	};
-	return e;
+        case join(lambda(`vx,`bx),lambda(`vy,`by),lambda(`s,`f),`x,`y):
+            if (!x.equals(y) || !Config.selfJoinOpt)
+                fail;
+            Tree ny = subst(vy,vx,by);
+            Tree b = subst(s,
+                            #<tuple(cmap(lambda(tuple(n,v),
+                                                if(call(eq,n,1),bag(v),bag())),s),
+                                    cmap(lambda(tuple(n,v),
+                                                if(call(eq,n,2),bag(v),bag())),s))>,
+                                     f);
+            Tree res = #<mapReduce(lambda(`vx,bag(tuple(`bx,tuple(1,`vx)),
+                                                  tuple(`ny,tuple(2,`vx)))),
+                                   lambda(tuple(k,s),`b),`x,false)>;
+            res = simplify_all(rename(res));
+            TypeInference.type_inference(res);
+            return translate(res);
+        case join(lambda(`vx,`bx),lambda(`vy,`by),`f,`x,`y):
+            return translate(#<mapReduce2(lambda(`vx,bag(tuple(`bx,`vx))),
+                                          lambda(`vy,bag(tuple(`by,`vy))),
+                                          `f,`x,`y,false)>);
+        case nth(`x,`n):
+            match TypeInference.type_inference2(x) {
+            case `S(tuple(...bl)):
+                if (!is_collection(S))
+                    fail;
+                Tree nv = new_var();
+                type_env.insert(nv.toString(),bl.nth((int)n.longValue()));
+                return translate(#<cmap(lambda(`nv,`S(nth(`nv,`n))),`x)>);
+            };
+            fail
+        case project(`x,`a):
+            match TypeInference.type_inference2(x) {
+            case `S(record(...bl)):
+                if (!is_collection(S))
+                    fail;
+                for ( Tree b: bl )
+                    match b {
+                    case bind(`c,_):
+                        if (!a.equals(c))
+                            fail;
+                        Tree nv = new_var();
+                        type_env.insert(nv.toString(),#<record(...bl)>);
+                        return translate(#<cmap(lambda(`nv,`S(project(`nv,`a))),`x)>);
+                    };
+            };
+            fail
+        case `f(...al):
+            Trees bl = #[];
+            for ( Tree a: al )
+                bl = bl.append(translate(a));
+            return #<`f(...bl)>;
+        };
+        return e;
     }
 
     /** apply algebraic optimizations multiple times until no change */
     public static Tree translate_all ( Tree e ) {
-	Tree ne = translate(e);
-	if (e.equals(ne))
-	    return e;
-	else return translate_all(ne);
+        Tree ne = translate(e);
+        if (e.equals(ne))
+            return e;
+        else return translate_all(ne);
     }
 
     /**
@@ -230,19 +230,19 @@ public class AlgebraicOptimization extends Simplification {
      * @return true if e contains a bulk plan that doesn't refer to v
      */
     private static boolean contains_plan ( Tree e, Tree v ) {
-	match e {
-	case lambda(`x,`u): return false;
-	case let(...): return false;
-	case Let(...): return false;
-	case `f(...as):
-	    if (plan_names.member(#<`f>) && !free_variables(e,#[]).member(v))
-		return true;
-	    for (Tree a: as)
-		if (contains_plan(a,v))
-		    return true;
-	    return false;
-	};
-	return false;
+        match e {
+        case lambda(`x,`u): return false;
+        case let(...): return false;
+        case Let(...): return false;
+        case `f(...as):
+            if (plan_names.member(#<`f>) && !free_variables(e,#[]).member(v))
+                return true;
+            for (Tree a: as)
+                if (contains_plan(a,v))
+                    return true;
+            return false;
+        };
+        return false;
     }
 
     /**
@@ -253,21 +253,21 @@ public class AlgebraicOptimization extends Simplification {
      * @return the list of common factors
      */
     private static Trees common_factors ( Tree e, Tree v ) {
-	match e {
-	case lambda(`x,`u): return #[];
-	case let(...): return #[];
-	case Let(...): return #[];
-	case `f(...as):
-	    if (!contains_plan(e,v))
-		fail;
-	    if (plan_names.member(#<`f>) && !free_variables(e,#[]).member(v))
-		return #[`e];
-	    Trees bs = #[];
-	    for ( Tree a: as )
-		bs = bs.append(common_factors(a,v));
-	    return bs;
-	};
-	return #[];
+        match e {
+        case lambda(`x,`u): return #[];
+        case let(...): return #[];
+        case Let(...): return #[];
+        case `f(...as):
+            if (!contains_plan(e,v))
+                fail;
+            if (plan_names.member(#<`f>) && !free_variables(e,#[]).member(v))
+                return #[`e];
+            Trees bs = #[];
+            for ( Tree a: as )
+                bs = bs.append(common_factors(a,v));
+            return bs;
+        };
+        return #[];
     }
 
     /**
@@ -276,40 +276,40 @@ public class AlgebraicOptimization extends Simplification {
      * @return the factored-out expression
      */
     public static Tree common_factoring ( Tree e ) {
-	match e {
-	case `f(...as):
-	    if (!plan_names.member(#<`f>))
-		fail;
-	    Trees bs = #[];
-	    Trees binds = #[];
-	    for ( Tree a: as )
-		match a {
-		case lambda(`v,`u):
-		    if (!contains_plan(u,v))
-			fail;
-		    Trees gs = common_factors(u,v);
-		    Tree nb = u;
-		    for ( Tree g: gs) {
-			Tree nv = new_var();
-			nb = subst(g,nv,nb);
-			binds = binds.append(#<bind(`nv,`g)>);
-		    };
-		    bs = bs.append(#<lambda(`v,`(common_factoring(nb)))>);
-		case _: bs = bs.append(common_factoring(a));
-		};
-	    Tree res = #<`f(...bs)>;
-	    for ( Tree bind: binds )
-		match bind {
-		case bind(`v,`x):
-		    res = #<let(`v,`x,`res)>;
-		};
-	    return res;
-	case `f(...as):
-	    Trees bs = #[];
-	    for ( Tree a: as )
-		bs = bs.append(common_factoring(a));
-	    return #<`f(...bs)>;
-	};
-	return e;
+        match e {
+        case `f(...as):
+            if (!plan_names.member(#<`f>))
+                fail;
+            Trees bs = #[];
+            Trees binds = #[];
+            for ( Tree a: as )
+                match a {
+                case lambda(`v,`u):
+                    if (!contains_plan(u,v))
+                        fail;
+                    Trees gs = common_factors(u,v);
+                    Tree nb = u;
+                    for ( Tree g: gs) {
+                        Tree nv = new_var();
+                        nb = subst(g,nv,nb);
+                        binds = binds.append(#<bind(`nv,`g)>);
+                    };
+                    bs = bs.append(#<lambda(`v,`(common_factoring(nb)))>);
+                case _: bs = bs.append(common_factoring(a));
+                };
+            Tree res = #<`f(...bs)>;
+            for ( Tree bind: binds )
+                match bind {
+                case bind(`v,`x):
+                    res = #<let(`v,`x,`res)>;
+                };
+            return res;
+        case `f(...as):
+            Trees bs = #[];
+            for ( Tree a: as )
+                bs = bs.append(common_factoring(a));
+            return #<`f(...bs)>;
+        };
+        return e;
     }
 }

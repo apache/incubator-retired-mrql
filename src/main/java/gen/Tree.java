@@ -65,29 +65,29 @@ abstract public class Tree implements Serializable {
     public abstract String pretty ( int position );
 
     private static Tree fix_tree ( Tree e ) {
-	if (e instanceof Node) {
-	    Trees cs = Trees.nil;
-	    for ( Tree a: ((Node) e).children().tail() )
-		cs = cs.append(fix_tree(a));
-	    return new Node(((VariableLeaf)(((Node) e).children().head())).value(),cs);
-	} else return e;
+        if (e instanceof Node) {
+            Trees cs = Trees.nil;
+            for ( Tree a: ((Node) e).children().tail() )
+                cs = cs.append(fix_tree(a));
+            return new Node(((VariableLeaf)(((Node) e).children().head())).value(),cs);
+        } else return e;
     }
 
     /* the inverse of toString() */
     final public static synchronized Tree parse ( String s ) throws Exception {
-	GenParser.scanner = new GenLex(new StringReader("#<"+s+">"));
-	GenParser.out = new PrintStream(new ByteArrayOutputStream());
-	new GenParser(GenParser.scanner).parse();
-	return fix_tree(GenParser.parse_tree);
+        GenParser.scanner = new GenLex(new StringReader("#<"+s+">"));
+        GenParser.out = new PrintStream(new ByteArrayOutputStream());
+        new GenParser(GenParser.scanner).parse();
+        return fix_tree(GenParser.parse_tree);
     }
 
     private static HashMap<String,String> names = new HashMap<String,String>(1000);
 
     public static String add ( String s ) {
-	String ns = names.get(s);
-	if (ns == null) {
-	    names.put(s,s);
-	    return s;
-	} else return ns;
+        String ns = names.get(s);
+        if (ns == null) {
+            names.put(s,s);
+            return s;
+        } else return ns;
     }
 }

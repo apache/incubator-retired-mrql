@@ -103,6 +103,7 @@
         <version>2.2</version>
         <configuration>
           <mavenExecutorId>forked-path</mavenExecutorId>
+          <autoVersionSubmodules>true</autoVersionSubmodules>
         </configuration>
       </plugin>
       <plugin>
@@ -123,8 +124,9 @@
 	    <exclude>.gitignore</exclude>
             <exclude>.classpath/**</exclude>
             <exclude>.project/**</exclude>
-            <exclude>tests/**</exclude>
-            <exclude>queries/**</exclude>
+            <exclude>tests/data/**</exclude>
+            <exclude>tests/results/**</exclude>
+            <exclude>tests/error_log.txt</exclude>
             <exclude>**/dependency-reduced-pom.xml</exclude>
             <exclude>**/docs/apidocs/**</exclude>
           </excludes>

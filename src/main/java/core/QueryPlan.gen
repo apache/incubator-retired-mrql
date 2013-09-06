@@ -50,950 +50,950 @@ private final static class SingleQueryPlan {
 
     /** true if the query domain is a collection retrieved from a data source */
     static boolean persistent_domain ( Tree e, Trees vars ) {
-	if (contains_variables(e,vars))       // dependent to a persistent collection
-	    return true;
-	match TypeInference.type_inference2(e) {
-	case `T(_):
-	    if (Translator.is_persistent_collection(T))   // persistent collection
-		return true;
-	};
-	return false;
+        if (contains_variables(e,vars))       // dependent to a persistent collection
+            return true;
+        match TypeInference.type_inference2(e) {
+        case `T(_):
+            if (Translator.is_persistent_collection(T))   // persistent collection
+                return true;
+        };
+        return false;
     }
 
     /** true if the query domain is a collection retrieved from a data source */
     static boolean persistent_domain ( Tree e ) {
-	return persistent_domain(e,query_variables);
+        return persistent_domain(e,query_variables);
     }
 
     /** the query bindings at any nesting level */
     static Trees all_binds ( Tree e, Trees vars ) {
-	match e {
-	case select(`u,from(...bl),where(`p)):
-	    Trees nl = #[];
-	    Trees vs = vars;
-	    for ( Tree b: bl )
-		match b {
-		case bind(`v,`d):
-		    nl = nl.append(all_binds(b,vs));
-		    if (persistent_domain(d,vs)) {
-			vs = vs.append(v);
-			nl = nl.append(b);
-		    }
-	    };
-	    return nl.append(all_binds(p,vs)).append(all_binds(u,vs));
-	case `f(...al):
-	    Trees bl = #[];
-	    for ( Tree a: al )
-		bl = bl.append(all_binds(a,vars));
-	    return bl;
-	};
-	return #[];
+        match e {
+        case select(`u,from(...bl),where(`p)):
+            Trees nl = #[];
+            Trees vs = vars;
+            for ( Tree b: bl )
+                match b {
+                case bind(`v,`d):
+                    nl = nl.append(all_binds(b,vs));
+                    if (persistent_domain(d,vs)) {
+                        vs = vs.append(v);
+                        nl = nl.append(b);
+                    }
+            };
+            return nl.append(all_binds(p,vs)).append(all_binds(u,vs));
+        case `f(...al):
+            Trees bl = #[];
+            for ( Tree a: al )
+                bl = bl.append(all_binds(a,vars));
+            return bl;
+        };
+        return #[];
     }
 
     static int var_index ( String name ) {
-	for ( int i = 0; i < var.length; i++ )
-	    if (name.equals(var[i]))
-		return i;
-	return -1;
+        for ( int i = 0; i < var.length; i++ )
+            if (name.equals(var[i]))
+                return i;
+        return -1;
     }
 
     static void find_dependencies ( int i, Tree e ) {
-	match e {
-	case `f(...al):
-	    for (Tree a: al)
-		find_dependencies(i,a);
+        match e {
+        case `f(...al):
+            for (Tree a: al)
+                find_dependencies(i,a);
         case `v:
-	    if (!v.is_variable())
-		fail;
-	    String nm = ((VariableLeaf)v).value();
-	    int j = var_index(nm);
-	    if (j >= 0)
-		depends[i].set(j);
+            if (!v.is_variable())
+                fail;
+            String nm = ((VariableLeaf)v).value();
+            int j = var_index(nm);
+            if (j >= 0)
+                depends[i].set(j);
         }
     }
 
     static int find_var ( Tree e ) {
-	match e {
-	case `f(...al):
-	    int i = -1;
-	    for (Tree a: al) {
-		int j = find_var(a);
-		if (j == -2)
-		    return j;
-		else if (j >= 0)
-		    if (i >= 0 && i != j)
-			i = -2;
-		    else i = j;
-	    };
-	    return i;
+        match e {
+        case `f(...al):
+            int i = -1;
+            for (Tree a: al) {
+                int j = find_var(a);
+                if (j == -2)
+                    return j;
+                else if (j >= 0)
+                    if (i >= 0 && i != j)
+                        i = -2;
+                    else i = j;
+            };
+            return i;
         case `v:
-	    if (!v.is_variable())
-		fail;
-	    String nm = ((VariableLeaf)v).value();
-	    return var_index(nm);
+            if (!v.is_variable())
+                fail;
+            String nm = ((VariableLeaf)v).value();
+            return var_index(nm);
         };
-	return -1;
+        return -1;
     }
 
     static boolean has_select ( Tree e ) {
-	match e {
-	case select(...):
-	    return true;
-	case `f(...al):
-	    for (Tree a: al)
-		if (has_select(a))
-		    return true;
-	};
-	return false;
+        match e {
+        case select(...):
+            return true;
+        case `f(...al):
+            for (Tree a: al)
+                if (has_select(a))
+                    return true;
+        };
+        return false;
     }
 
     static boolean contains_variables ( Tree e, Trees vars ) {
-	match e {
-	case `f(...al):
-	    for (Tree a: al)
-		if (contains_variables(a,vars))
-		    return true;
-	case _:
-	    if (vars.member(e))
-		return true;
-	};
-	return false;
+        match e {
+        case `f(...al):
+            for (Tree a: al)
+                if (contains_variables(a,vars))
+                    return true;
+        case _:
+            if (vars.member(e))
+                return true;
+        };
+        return false;
     }
 
     static Trees union ( Trees xs, Trees ys ) {
-	Trees s = xs;
-	for (Tree y: ys)
-	    if (!s.member(y))
-		s = s.append(y);
-	return s;
+        Trees s = xs;
+        for (Tree y: ys)
+            if (!s.member(y))
+                s = s.append(y);
+        return s;
     }
 
     static Trees difference ( Trees xs, Trees ys ) {
-	Trees s = #[];
-	for (Tree x: xs)
-	    if (!ys.member(x))
-		s = s.append(x);
-	return s;
+        Trees s = #[];
+        for (Tree x: xs)
+            if (!ys.member(x))
+                s = s.append(x);
+        return s;
     }
 
     static Tree prime_expr ( Trees vars, Tree e ) {
-	match e {
-	case lambda(`p,`b):
-	    return #<lambda(`p,`(prime_expr(difference(vars,pattern_variables(p)),b)))>;
-	case `f(...al):
-	    Trees s = #[];
-	    for (Tree a: al)
-		s = s.append(prime_expr(vars,a));
-	    return #<`f(...s)>;
+        match e {
+        case lambda(`p,`b):
+            return #<lambda(`p,`(prime_expr(difference(vars,pattern_variables(p)),b)))>;
+        case `f(...al):
+            Trees s = #[];
+            for (Tree a: al)
+                s = s.append(prime_expr(vars,a));
+            return #<`f(...s)>;
         case `v:
-	    if (v.is_variable())
-	        if (vars.member(v))
-		    return new VariableLeaf(((VariableLeaf)v).value()+"'");
-	};
-	return e;
+            if (v.is_variable())
+                if (vars.member(v))
+                    return new VariableLeaf(((VariableLeaf)v).value()+"'");
+        };
+        return e;
     }
 
     static Trees pattern_variables ( Tree pat ) {
-	match pat {
-	case `f(...al):
-	    Trees s = #[];
-	    for (Tree a: al)
-		s = s.append(pattern_variables(a));
-	    return s;
+        match pat {
+        case `f(...al):
+            Trees s = #[];
+            for (Tree a: al)
+                s = s.append(pattern_variables(a));
+            return s;
         case `v:
-	    if (v.is_variable())
-	        return #[`v];
-	};
-	return #[];
+            if (v.is_variable())
+                return #[`v];
+        };
+        return #[];
     }
 
     static Tree prime ( Tree pat, Tree e ) {
-	return prime_expr(pattern_variables(pat),e);
+        return prime_expr(pattern_variables(pat),e);
     }
 
     static Tree subst_expr ( Tree var, Tree value, Tree e ) {
-	match e {
-	case lambda(`p,`b):
-	    if (pattern_variables(p).member(var))
-		return e;
-	    else return #<lambda(`p,`(subst_expr(var,value,b)))>;
-	case `f(...al):
-	    Trees s = #[];
-	    for (Tree a: al)
-		s = s.append(subst_expr(var,value,a));
-	    return #<`f(...s)>;
+        match e {
+        case lambda(`p,`b):
+            if (pattern_variables(p).member(var))
+                return e;
+            else return #<lambda(`p,`(subst_expr(var,value,b)))>;
+        case `f(...al):
+            Trees s = #[];
+            for (Tree a: al)
+                s = s.append(subst_expr(var,value,a));
+            return #<`f(...s)>;
         case `v:
-	    if (v.is_variable())
-	        if (v.equals(var))
-		    return value;
-	};
-	return e;
+            if (v.is_variable())
+                if (v.equals(var))
+                    return value;
+        };
+        return e;
     }
 
     static Tree and ( Tree x, Tree y ) {
-	if (x.equals(#<true>))
-	    return y;
-	else if (y.equals(#<true>))
-	    return x;
-	else return #<call(and,`x,`y)>;
+        if (x.equals(#<true>))
+            return y;
+        else if (y.equals(#<true>))
+            return x;
+        else return #<call(and,`x,`y)>;
     }
 
     static Tree find_predicates ( Tree e, Trees exclude_variables ) {
-	match e {
-	case call(and,`x,`y):
-	    return and(find_predicates(x,exclude_variables),
-		       find_predicates(y,exclude_variables));
-	case call(eq,`x,`y):
-	    if (contains_variables(x,exclude_variables)
-		|| contains_variables(y,exclude_variables))
-		fail;
-	    int i = find_var(x);
-	    int j = find_var(y);
-	    if (i >= 0 && j >= 0 && i != j) {
-		predicate[i][j] = predicate[j][i]
-		    = (predicate[i][j].equals(#<true>)) ? e : and(e,predicate[i][j]);
-		selectivity[i][j] = selectivity[j][i] = 0.01;
-		return #<true>;
-	    } else if (i >= 0 && j == -1) {
-		filter[i] = (filter[i].equals(#<true>)) ? e : and(e,filter[i]);
-		plan[i] = #<cmap(lambda(`(var[i]),if(`e,bag(`(var[i])),bag())),`(plan[i]))>;
-		return #<true>;
-	    } else if (j >= 0 && i == -1) {
-		filter[j] = (filter[j].equals(#<true>)) ? e : and(e,filter[j]);
-		plan[j] = #<cmap(lambda(`(var[j]),if(`e,bag(`(var[j])),bag())),`(plan[j]))>;
-		return #<true>;
-	    }
-	case call(`f,`x,`y):
-	    if (! #[ne,gt,geq,lt,leq].member(f))
-		fail;
-	    if (has_select(x) || has_select(y))
-		fail;
-	    if (contains_variables(x,exclude_variables)
-		|| contains_variables(y,exclude_variables))
-		fail;
-	    int i = find_var(x);
-	    int j = find_var(y);
-	    if (i >= 0 && j < 0) {
-		filter[i] = (filter[i].equals(#<true>)) ? e : and(e,filter[i]);
-		plan[i] = #<cmap(lambda(`(var[i]),if(`e,bag(`(var[i])),bag())),`(plan[i]))>;
-		return #<true>;
-	    } else if (i < 0 && j >= 0) {
-		filter[j] = (filter[j].equals(#<true>)) ? e : and(e,filter[j]);
-		plan[j] = #<cmap(lambda(`(var[j]),if(`e,bag(`(var[j])),bag())),`(plan[j]))>;
-		return #<true>;
-	    }
+        match e {
+        case call(and,`x,`y):
+            return and(find_predicates(x,exclude_variables),
+                       find_predicates(y,exclude_variables));
+        case call(eq,`x,`y):
+            if (contains_variables(x,exclude_variables)
+                || contains_variables(y,exclude_variables))
+                fail;
+            int i = find_var(x);
+            int j = find_var(y);
+            if (i >= 0 && j >= 0 && i != j) {
+                predicate[i][j] = predicate[j][i]
+                    = (predicate[i][j].equals(#<true>)) ? e : and(e,predicate[i][j]);
+                selectivity[i][j] = selectivity[j][i] = 0.01;
+                return #<true>;
+            } else if (i >= 0 && j == -1) {
+                filter[i] = (filter[i].equals(#<true>)) ? e : and(e,filter[i]);
+                plan[i] = #<cmap(lambda(`(var[i]),if(`e,bag(`(var[i])),bag())),`(plan[i]))>;
+                return #<true>;
+            } else if (j >= 0 && i == -1) {
+                filter[j] = (filter[j].equals(#<true>)) ? e : and(e,filter[j]);
+                plan[j] = #<cmap(lambda(`(var[j]),if(`e,bag(`(var[j])),bag())),`(plan[j]))>;
+                return #<true>;
+            }
+        case call(`f,`x,`y):
+            if (! #[ne,gt,geq,lt,leq].member(f))
+                fail;
+            if (has_select(x) || has_select(y))
+                fail;
+            if (contains_variables(x,exclude_variables)
+                || contains_variables(y,exclude_variables))
+                fail;
+            int i = find_var(x);
+            int j = find_var(y);
+            if (i >= 0 && j < 0) {
+                filter[i] = (filter[i].equals(#<true>)) ? e : and(e,filter[i]);
+                plan[i] = #<cmap(lambda(`(var[i]),if(`e,bag(`(var[i])),bag())),`(plan[i]))>;
+                return #<true>;
+            } else if (i < 0 && j >= 0) {
+                filter[j] = (filter[j].equals(#<true>)) ? e : and(e,filter[j]);
+                plan[j] = #<cmap(lambda(`(var[j]),if(`e,bag(`(var[j])),bag())),`(plan[j]))>;
+                return #<true>;
+            }
         };
-	return e;
+        return e;
     }
 
     static String tuple_var ( Tree x ) {
-	match x {
-	case cmap(_,`z): return tuple_var(z);
-	};
-	String s = x.toString();
-	if (s.endsWith("'"))
-	    return s.substring(0,s.length()-1);
-	return s;
+        match x {
+        case cmap(_,`z): return tuple_var(z);
+        };
+        String s = x.toString();
+        if (s.endsWith("'"))
+            return s.substring(0,s.length()-1);
+        return s;
     }
 
     /** reorder the tuple components in s based on the expected pattern variables in vars */
     static Tree tuple ( Trees s, Trees vars ) {
-	if (s.length() != vars.length())
-	    throw new Error("Wrong pattern: "+s+" "+vars);
-	if (s.length() == 1)
-	    return s.head();
-	Tree[] v = new Tree[s.length()];
-	for (Tree x: s) {
-	    int i = 0;
-	    for (Tree y: vars) {
-		if (tuple_var(x).equals(y.toString()))
-		    v[i] = x;
-		i++;
-	    };
-	};
-	Trees rs = #[];
-	for ( int i = v.length-1; i >= 0 ; i-- )
-	    if (v[i] == null)
-		throw new Error("Wrong pattern: "+s+" "+vars);
-	    else rs = rs.cons(v[i]);
-	return #<tuple(...rs)>;
+        if (s.length() != vars.length())
+            throw new Error("Wrong pattern: "+s+" "+vars);
+        if (s.length() == 1)
+            return s.head();
+        Tree[] v = new Tree[s.length()];
+        for (Tree x: s) {
+            int i = 0;
+            for (Tree y: vars) {
+                if (tuple_var(x).equals(y.toString()))
+                    v[i] = x;
+                i++;
+            };
+        };
+        Trees rs = #[];
+        for ( int i = v.length-1; i >= 0 ; i-- )
+            if (v[i] == null)
+                throw new Error("Wrong pattern: "+s+" "+vars);
+            else rs = rs.cons(v[i]);
+        return #<tuple(...rs)>;
     }
 
     static class Header {
-	public Tree header;
-	public Trees pattern;
-	Header ( Tree h, Trees p ) { header = h; pattern = p; }
-	public String toString () { return header+" "+pattern; }
+        public Tree header;
+        public Trees pattern;
+        Header ( Tree h, Trees p ) { header = h; pattern = p; }
+        public String toString () { return header+" "+pattern; }
     }
 
     static Header build_graph ( Tree e, int level ) {
-	match e {
-	case select(`u,from(...bl),where(`p)):
-	    Trees nl = #[];
-	    Tree nv = new_var();
-	    Trees rest = #[];
-	    Trees exclude_variables = #[];
-	    depths.put(nv.toString(),new Integer(level));
-	    for (Tree b: bl)
-		match b {
-		case bind(`v,`d):
-		    if (!persistent_domain(d)) {
-			exclude_variables = exclude_variables.append(v);
-			rest = rest.append(b);
-			continue;
-		    };
-		    String name = ((VariableLeaf)v).value();
-		    int i = var_index(name);
-		    Header nd = build_graph(d,level+1);
-		    plan[i] = nd.header;
-		    depth[i] = level;
-		    query_variables = query_variables.append(v);
-		    depths.put(name,new Integer(level+1));
-		    pattern[i] = #<`(nv.toString())(`v)>;
-		    find_dependencies(i,d);
-		    nl = nl.append(v);
-		};
-	    if (nl.equals(#[]))
-		return new Header(e,#[]);
-	    query_variables = query_variables.append(nv);
-	    Header nu = build_graph(u,level+1);
-	    Tree npred = find_predicates(p,exclude_variables);
-	    Header np = build_graph(npred,level+1);
-	    for (Tree b: nu.pattern)
-		match b {
-		case bind(`v,_): nl = nl.append(v);
-		};
-	    for (Tree b: np.pattern)
-		match b {
-		case bind(`v,_): nl = nl.append(v);
-		};
-	    Tree t = tuple(nl,nl);
-	    header_binds.insert(nv.toString(),t);
-	    return new Header(#<select(`(nu.header),from(bind(`t,`nv),...rest),where(`(np.header)))>,
-			      #[bind(`nv,`t)]);
-	case `f(...al):
-	    Trees bl = #[];
-	    Trees nl = #[];
-	    for (Tree a: al) {
-		Header n = build_graph(a,level);
-		bl = bl.append(n.header);
-		nl = nl.append(n.pattern);
-	    };
-	    return new Header(#<`f(...bl)>,nl);
-	};
-	return new Header(e,#[]);
+        match e {
+        case select(`u,from(...bl),where(`p)):
+            Trees nl = #[];
+            Tree nv = new_var();
+            Trees rest = #[];
+            Trees exclude_variables = #[];
+            depths.put(nv.toString(),new Integer(level));
+            for (Tree b: bl)
+                match b {
+                case bind(`v,`d):
+                    if (!persistent_domain(d)) {
+                        exclude_variables = exclude_variables.append(v);
+                        rest = rest.append(b);
+                        continue;
+                    };
+                    String name = ((VariableLeaf)v).value();
+                    int i = var_index(name);
+                    Header nd = build_graph(d,level+1);
+                    plan[i] = nd.header;
+                    depth[i] = level;
+                    query_variables = query_variables.append(v);
+                    depths.put(name,new Integer(level+1));
+                    pattern[i] = #<`(nv.toString())(`v)>;
+                    find_dependencies(i,d);
+                    nl = nl.append(v);
+                };
+            if (nl.equals(#[]))
+                return new Header(e,#[]);
+            query_variables = query_variables.append(nv);
+            Header nu = build_graph(u,level+1);
+            Tree npred = find_predicates(p,exclude_variables);
+            Header np = build_graph(npred,level+1);
+            for (Tree b: nu.pattern)
+                match b {
+                case bind(`v,_): nl = nl.append(v);
+                };
+            for (Tree b: np.pattern)
+                match b {
+                case bind(`v,_): nl = nl.append(v);
+                };
+            Tree t = tuple(nl,nl);
+            header_binds.insert(nv.toString(),t);
+            return new Header(#<select(`(nu.header),from(bind(`t,`nv),...rest),where(`(np.header)))>,
+                              #[bind(`nv,`t)]);
+        case `f(...al):
+            Trees bl = #[];
+            Trees nl = #[];
+            for (Tree a: al) {
+                Header n = build_graph(a,level);
+                bl = bl.append(n.header);
+                nl = nl.append(n.pattern);
+            };
+            return new Header(#<`f(...bl)>,nl);
+        };
+        return new Header(e,#[]);
     }
 
     static void dump ( int n ) {
-	System.out.println("Query graph nodes:");
-	for ( int i = 0; i < n; i++ ) {
-	    System.out.print(""+i+") "+variables(i)+" depth="+depth[i]+" pattern="+pattern[i]
-			     +" plan="+plan[i]+" size="+size[i]+" depends=(");
-	    for ( int j = 0; j < n; j++ )
-		if (depends[i].get(j))
-		    System.out.print(""+j+" ");
-	    System.out.println(") "+filter[i]);
-	};
-	System.out.println("Query graph edges (predicates):");
-	for ( int i = 0; i < n; i++ )
-	    for ( int j = 0; j < i; j++ )
-		if (!predicate[i][j].equals(#<true>))
-		    System.out.println(""+i+" "+j+") "+predicate[i][j]);
-	System.out.println("----------------------");
+        System.out.println("Query graph nodes:");
+        for ( int i = 0; i < n; i++ ) {
+            System.out.print(""+i+") "+variables(i)+" depth="+depth[i]+" pattern="+pattern[i]
+                             +" plan="+plan[i]+" size="+size[i]+" depends=(");
+            for ( int j = 0; j < n; j++ )
+                if (depends[i].get(j))
+                    System.out.print(""+j+" ");
+            System.out.println(") "+filter[i]);
+        };
+        System.out.println("Query graph edges (predicates):");
+        for ( int i = 0; i < n; i++ )
+            for ( int j = 0; j < i; j++ )
+                if (!predicate[i][j].equals(#<true>))
+                    System.out.println(""+i+" "+j+") "+predicate[i][j]);
+        System.out.println("----------------------");
     }
 
     static Trees variables ( BitSet bs ) {
-	Trees bl = #[];
-	for ( int j = bs.nextSetBit(0); j >= 0; j = bs.nextSetBit(j+1)) {
-	    bl = bl.append(#<`(var[j])>);
-	};
-	return bl;
+        Trees bl = #[];
+        for ( int j = bs.nextSetBit(0); j >= 0; j = bs.nextSetBit(j+1)) {
+            bl = bl.append(#<`(var[j])>);
+        };
+        return bl;
     }
 
     static Trees variables ( int i ) {
-	return variables(variables[i]);
+        return variables(variables[i]);
     }
 
     static Tree make_key ( Tree pred, BitSet vars ) {
-	match pred {
-	case call(and,`x,`y):
-	    return #<tuple(`(make_key(x,vars)),`(make_key(y,vars)))>;
-	case call(eq,`x,`y):
-	    int i = find_var(x);
-	    if (i >= 0 && vars.get(i))
-		return x;
-	    else return y;
+        match pred {
+        case call(and,`x,`y):
+            return #<tuple(`(make_key(x,vars)),`(make_key(y,vars)))>;
+        case call(eq,`x,`y):
+            int i = find_var(x);
+            if (i >= 0 && vars.get(i))
+                return x;
+            else return y;
         };
-	return pred;
+        return pred;
     }
 
     static boolean eq_patterns ( Trees xs, Tree y ) {
-	Trees ys = (y.is_node()) ? ((Node)y).children() : #[`y];
-	if (xs.length() != ys.length())
-	    return false;
-	for (Tree x: xs)
-	    if (!ys.member(x))
-		return false;
-	return true;
+        Trees ys = (y.is_node()) ? ((Node)y).children() : #[`y];
+        if (xs.length() != ys.length())
+            return false;
+        for (Tree x: xs)
+            if (!ys.member(x))
+                return false;
+        return true;
     }
 
     static String pattern_head ( Tree x ) {
-	String s = "";
-	match x {
-	case `g(...): return g;
-	};
-	return x.toString();
+        String s = "";
+        match x {
+        case `g(...): return g;
+        };
+        return x.toString();
     }
 
     static Tree pattern_head ( Tree x, boolean prime ) {
-	String s = pattern_head(x);
-	return #<`(prime ? s+"'" : s)>;
+        String s = pattern_head(x);
+        return #<`(prime ? s+"'" : s)>;
     }
 
     static Trees pattern_children ( Tree x ) {
-	match x {
-	case _(...r): return r;
-	};
-	throw new Error("pattern is not a set: "+x);
+        match x {
+        case _(...r): return r;
+        };
+        throw new Error("pattern is not a set: "+x);
     }
 
     static Tree pattern ( Tree p, boolean prime ) {
-	Trees s = #[];
-	match p {
-	case `f(...r):
-	    for (Tree x: r)
-		s = s.append(pattern_head(x,prime));
-	case _: s = s.append(pattern_head(p,prime));
-	};
-	return (s.length() == 1) ? s.head() : #<tuple(...s)>;
+        Trees s = #[];
+        match p {
+        case `f(...r):
+            for (Tree x: r)
+                s = s.append(pattern_head(x,prime));
+        case _: s = s.append(pattern_head(p,prime));
+        };
+        return (s.length() == 1) ? s.head() : #<tuple(...s)>;
     }
 
     static Trees pattern_children_variables ( Tree p ) {
-	Trees s = #[];
-	match p {
-	case `f(...r):
-	    for (Tree x: r)
-		s = s.append(pattern_head(x,false));
-	case _: s = s.append(pattern_head(p,false));
-	};
-	return s;
+        Trees s = #[];
+        match p {
+        case `f(...r):
+            for (Tree x: r)
+                s = s.append(pattern_head(x,false));
+        case _: s = s.append(pattern_head(p,false));
+        };
+        return s;
     }
 
     static boolean contains ( Tree pattern, String var ) {
-	match pattern {
-	case `f(...s):
-	    if (f.equals(var))
-		return true;
-	    for (Tree x: s)
-		if (contains(x,var))
-		    return true;
-	};
-	return pattern.equals(#<`var>);
+        match pattern {
+        case `f(...s):
+            if (f.equals(var))
+                return true;
+            for (Tree x: s)
+                if (contains(x,var))
+                    return true;
+        };
+        return pattern.equals(#<`var>);
     }
 
     static Trees merge_patterns ( Tree x, Trees r ) {
-	Trees s = #[];
-	for (Tree y: r)
-	    if (pattern_overlap(x,y))
-		s = s.append(merge_patterns(x,y));
-	    else s = s.append(y);
-	if (!pattern_overlap(x,r))
-	    s = s.append(x);
-	return s;
+        Trees s = #[];
+        for (Tree y: r)
+            if (pattern_overlap(x,y))
+                s = s.append(merge_patterns(x,y));
+            else s = s.append(y);
+        if (!pattern_overlap(x,r))
+            s = s.append(x);
+        return s;
     }
 
     static Trees merge_patterns ( Trees r1, Trees r2 ) {
-	Trees s = #[];
-	for (Tree x: r1)
-	    if (pattern_overlap(x,r2))
-		s = s.append(merge_patterns(x,r2));
-	    else s = s.append(x);
-	for (Tree y: r2)
-	    if (!pattern_overlap(y,r1))
-		s = s.append(y);
-	return s;
+        Trees s = #[];
+        for (Tree x: r1)
+            if (pattern_overlap(x,r2))
+                s = s.append(merge_patterns(x,r2));
+            else s = s.append(x);
+        for (Tree y: r2)
+            if (!pattern_overlap(y,r1))
+                s = s.append(y);
+        return s;
     }
 
     static Tree merge_patterns ( Tree p1, Tree p2 ) {
-	match p1 {
-	case `f1(...r1):
-	    match p2 {
-	    case `f2(...r2):
-		if (no_grouping || depth(f1) == depth(f2))
-		    return #<`f1(...(merge_patterns(r1,r2)))>;
-		if (depth(f1) < depth(f2))
-		    return #<`f1(...(merge_patterns(p2,r1)))>;
-		if (depth(f1) > depth(f2))
-		    return #<`f2(...(merge_patterns(p1,r2)))>;
-	    case _: return #<`f1(...(merge_patterns(p2,r1)))>;
-	    };
-	case_ :
-	    match p2 {
-	    case `f2(...r2):
-		return #<`f2(...(merge_patterns(p1,r2)))>;
-	    }
-	};
-	throw new Error("Cannot merge the pattern "+p1+" with "+p2);
+        match p1 {
+        case `f1(...r1):
+            match p2 {
+            case `f2(...r2):
+                if (no_grouping || depth(f1) == depth(f2))
+                    return #<`f1(...(merge_patterns(r1,r2)))>;
+                if (depth(f1) < depth(f2))
+                    return #<`f1(...(merge_patterns(p2,r1)))>;
+                if (depth(f1) > depth(f2))
+                    return #<`f2(...(merge_patterns(p1,r2)))>;
+            case _: return #<`f1(...(merge_patterns(p2,r1)))>;
+            };
+        case_ :
+            match p2 {
+            case `f2(...r2):
+                return #<`f2(...(merge_patterns(p1,r2)))>;
+            }
+        };
+        throw new Error("Cannot merge the pattern "+p1+" with "+p2);
     }
 
     static boolean pattern_overlap ( Tree x, Trees r ) {
-	for (Tree y: r)
-	    if (pattern_overlap(x,y))
-		return true;
-	return false;
+        for (Tree y: r)
+            if (pattern_overlap(x,y))
+                return true;
+        return false;
     }
 
     static boolean pattern_overlap ( Tree x, Tree y ) {
-	match x {
-	case `f1(...r1):
-	    match y {
-	    case `f2(...r2):
-		if (f1.equals(f2)
-		    || contains(header_binds.lookup(f1),f2)
-		    || contains(header_binds.lookup(f2),f1))
-		    return true;
-	    case _: return contains(header_binds.lookup(f1),y.toString());
-	    };
-	};
-	return x.equals(y);
+        match x {
+        case `f1(...r1):
+            match y {
+            case `f2(...r2):
+                if (f1.equals(f2)
+                    || contains(header_binds.lookup(f1),f2)
+                    || contains(header_binds.lookup(f2),f1))
+                    return true;
+            case _: return contains(header_binds.lookup(f1),y.toString());
+            };
+        };
+        return x.equals(y);
     }
 
     static Trees join_body ( Tree x, Trees r, Tree pred ) {
-	Trees s = #[];
-	if (!pattern_overlap(x,r))
-	    s = s.append((pred.equals(#<true>))
-			 ? pattern_head(x,false)
-			 : #<cmap(lambda(`(pattern(x,false)),if(`pred,bag(`(pattern(x,false))),bag())),
-				  `(pattern_head(x,false)))>);
-	for (Tree y: r)
-	    if (pattern_overlap(x,y))
-		s = s.append(join_body(x,y,#<true>));
-	    else s = s.append(pattern_head(y,true));
-	return s;
+        Trees s = #[];
+        if (!pattern_overlap(x,r))
+            s = s.append((pred.equals(#<true>))
+                         ? pattern_head(x,false)
+                         : #<cmap(lambda(`(pattern(x,false)),if(`pred,bag(`(pattern(x,false))),bag())),
+                                  `(pattern_head(x,false)))>);
+        for (Tree y: r)
+            if (pattern_overlap(x,y))
+                s = s.append(join_body(x,y,#<true>));
+            else s = s.append(pattern_head(y,true));
+        return s;
     }
 
     static Trees join_body ( Trees r, Tree y, Tree pred ) {
-	Trees s = #[];
-	for (Tree x: r)
-	    if (pattern_overlap(x,y))
-		s = s.append(join_body(x,y,#<true>));
-	    else s = s.append(pattern_head(x,false));
-	if (!pattern_overlap(y,r))
-	    s = s.append((pred.equals(#<true>))
-			 ? pattern_head(y,true)
-			 : #<cmap(lambda(`(pattern(y,true)),if(`pred,bag(`(pattern(y,true))),bag())),
-				  `(pattern_head(y,true)))>);
-	return s;
+        Trees s = #[];
+        for (Tree x: r)
+            if (pattern_overlap(x,y))
+                s = s.append(join_body(x,y,#<true>));
+            else s = s.append(pattern_head(x,false));
+        if (!pattern_overlap(y,r))
+            s = s.append((pred.equals(#<true>))
+                         ? pattern_head(y,true)
+                         : #<cmap(lambda(`(pattern(y,true)),if(`pred,bag(`(pattern(y,true))),bag())),
+                                  `(pattern_head(y,true)))>);
+        return s;
     }
 
     static Trees join_body ( Trees r1, Trees r2 ) {
-	Trees s = #[];
-	for (Tree x: r1)
-	    if (pattern_overlap(x,r2))
-		s = s.append(join_body(x,r2,#<true>));
-	    else s = s.append(pattern_head(x,false));
-	for (Tree y: r2)
-	    if (!pattern_overlap(y,r1))
-		s = s.append(pattern_head(y,true));
-	return s;
+        Trees s = #[];
+        for (Tree x: r1)
+            if (pattern_overlap(x,r2))
+                s = s.append(join_body(x,r2,#<true>));
+            else s = s.append(pattern_head(x,false));
+        for (Tree y: r2)
+            if (!pattern_overlap(y,r1))
+                s = s.append(pattern_head(y,true));
+        return s;
     }
 
     static int depth ( String n ) {
-	return depths.get(n).intValue();
+        return depths.get(n).intValue();
     }
 
     static Tree join_body ( Tree p1, Tree p2, Tree pred ) {
-	Tree pat1 = pattern(p1,false);
-	Tree pat2 = pattern(p2,true);
-	Trees vars = pattern_children_variables(merge_patterns(p1,p2));
-	match p1 {
-	case `f1(...r1):
-	    match p2 {
-	    case `f2(...r2):
-		if (no_grouping || depth(f1) == depth(f2)) {
-		    Tree t = tuple(join_body(r1,r2),vars);
-		    Tree body = (pred.equals(#<true>)) ? #<bag(`t)> : #<if(`pred,bag(`t),bag())>;
-		    return #<cmap(lambda(`pat1,cmap(lambda(`pat2,`body),`(f2+"'"))),
-				  `f1)>;
-		} else if (depth(f1) < depth(f2)) {
-		    Tree t = tuple(join_body(r1,p2,pred),vars);
-		    return #<cmap(lambda(`pat1,bag(`t)),`f1)>;
-		} else if (depth(f1) > depth(f2)) {
-		    Tree t = tuple(join_body(p1,r2,pred),vars);
-		    return #<cmap(lambda(`pat2,bag(`t)),`(f2+"'"))>;  // 3/12/11: changed from `f2
-		}
-	    }
-	};
-	throw new Error("wrong join: "+p1+" "+p2);
+        Tree pat1 = pattern(p1,false);
+        Tree pat2 = pattern(p2,true);
+        Trees vars = pattern_children_variables(merge_patterns(p1,p2));
+        match p1 {
+        case `f1(...r1):
+            match p2 {
+            case `f2(...r2):
+                if (no_grouping || depth(f1) == depth(f2)) {
+                    Tree t = tuple(join_body(r1,r2),vars);
+                    Tree body = (pred.equals(#<true>)) ? #<bag(`t)> : #<if(`pred,bag(`t),bag())>;
+                    return #<cmap(lambda(`pat1,cmap(lambda(`pat2,`body),`(f2+"'"))),
+                                  `f1)>;
+                } else if (depth(f1) < depth(f2)) {
+                    Tree t = tuple(join_body(r1,p2,pred),vars);
+                    return #<cmap(lambda(`pat1,bag(`t)),`f1)>;
+                } else if (depth(f1) > depth(f2)) {
+                    Tree t = tuple(join_body(p1,r2,pred),vars);
+                    return #<cmap(lambda(`pat2,bag(`t)),`(f2+"'"))>;  // 3/12/11: changed from `f2
+                }
+            }
+        };
+        throw new Error("wrong join: "+p1+" "+p2);
     }
 
     static Tree make_join ( int i, int j ) {
-	Tree pi = pattern(pattern[i],false);
-	Tree pj = pattern(pattern[j],false);
-	Tree keyi = make_key(predicate[i][j],variables[i]);
-	Tree keyj = make_key(predicate[i][j],variables[j]);
-	Tree left = pattern_head(pattern[i],false);
-	Tree right = pattern_head(pattern[j],true);
-	Tree body = join_body(pattern[i],pattern[j],#<true>);
-	if (Config.trace)
-	    System.out.print("join "+pattern[i]+" with "+pattern[j]);
-	pattern[i] = merge_patterns(pattern[i],pattern[j]);
-	if (Config.trace)
-	    System.out.println(" to get "+pattern[i]+" with body "+body);
-	return #<join(lambda(`pi,`keyi),
-		      lambda(`pj,`keyj),
-		      lambda(tuple(`left,`right),`body),
-		      `(plan[i]),
-		      `(plan[j]))>;
+        Tree pi = pattern(pattern[i],false);
+        Tree pj = pattern(pattern[j],false);
+        Tree keyi = make_key(predicate[i][j],variables[i]);
+        Tree keyj = make_key(predicate[i][j],variables[j]);
+        Tree left = pattern_head(pattern[i],false);
+        Tree right = pattern_head(pattern[j],true);
+        Tree body = join_body(pattern[i],pattern[j],#<true>);
+        if (Config.trace)
+            System.out.print("join "+pattern[i]+" with "+pattern[j]);
+        pattern[i] = merge_patterns(pattern[i],pattern[j]);
+        if (Config.trace)
+            System.out.println(" to get "+pattern[i]+" with body "+body);
+        return #<join(lambda(`pi,`keyi),
+                      lambda(`pj,`keyj),
+                      lambda(tuple(`left,`right),`body),
+                      `(plan[i]),
+                      `(plan[j]))>;
     }
 
     private static Tree top_pattern_variables ( Tree pat ) {
-	match pat {
-	case _(...ts):
-	    Trees ps = #[];
-	    for ( Tree t: ts )
-		match t {
-		case `f(...): ps = ps.append(#<`f>);
-		case _: ps = ps.append(t);
-		};
-	    if (ps.length() > 1)
-		return #<tuple(...ps)>;
-	    else return ps.head();
-	};
-	return pat;
+        match pat {
+        case _(...ts):
+            Trees ps = #[];
+            for ( Tree t: ts )
+                match t {
+                case `f(...): ps = ps.append(#<`f>);
+                case _: ps = ps.append(t);
+                };
+            if (ps.length() > 1)
+                return #<tuple(...ps)>;
+            else return ps.head();
+        };
+        return pat;
     }
 
     static Tree make_unnest ( int i, int j ) {
-	Tree body = null;
-	if (Config.trace)
-	    System.out.print("unnest "+pattern[i]+" -> "+pattern[j]);
-	if (!no_grouping && depth[i] < depth[j]) {
-	    // Changed 6/13/13: must rearrange binding variables in nested queries based on join order
-	    //body = subst_expr(pattern_head(pattern[j],false),plan[j],plan[i]);
-	    body = subst_header(pattern_head(pattern[j],false),top_pattern_variables(pattern[j]),plan[j],plan[i]);
-	    // new pattern[i] is the old pattern[i]
-	} else {
-	    body = join_body(pattern[j],pattern[i],predicate[i][j]);
-	    body = prime(pattern[i],body);
-	    body = subst_expr(pattern_head(pattern[j],false),plan[j],
-			      subst_expr(pattern_head(pattern[i],true),plan[i],body));
-	    pattern[i] = merge_patterns(pattern[j],pattern[i]);
-	};
-	if (Config.trace)
-	    System.out.println(" to get "+pattern[i]+" with body "+body);
-	return body;
+        Tree body = null;
+        if (Config.trace)
+            System.out.print("unnest "+pattern[i]+" -> "+pattern[j]);
+        if (!no_grouping && depth[i] < depth[j]) {
+            // Changed 6/13/13: must rearrange binding variables in nested queries based on join order
+            //body = subst_expr(pattern_head(pattern[j],false),plan[j],plan[i]);
+            body = subst_header(pattern_head(pattern[j],false),top_pattern_variables(pattern[j]),plan[j],plan[i]);
+            // new pattern[i] is the old pattern[i]
+        } else {
+            body = join_body(pattern[j],pattern[i],predicate[i][j]);
+            body = prime(pattern[i],body);
+            body = subst_expr(pattern_head(pattern[j],false),plan[j],
+                              subst_expr(pattern_head(pattern[i],true),plan[i],body));
+            pattern[i] = merge_patterns(pattern[j],pattern[i]);
+        };
+        if (Config.trace)
+            System.out.println(" to get "+pattern[i]+" with body "+body);
+        return body;
     }
 
     static Tree make_map_join ( int i, int j ) {
-	Tree body = join_body(pattern[i],pattern[j],predicate[i][j]);
-	Tree left = pattern_head(pattern[i],false);
-	Tree right = pattern_head(pattern[j],true);
-	match body {
-	case cmap(lambda(`x,cmap(lambda(`y,`b),`xx)),`yy):
-	    if (!xx.equals(right) || !yy.equals(left))
-		fail;
-	    Tree nb = Meta.subst_expr(x,left,Meta.subst_expr(y,right,b));
-	    body = #<crossProduct(lambda(x,bag(x)),
-				  lambda(x,bag(x)),
-				  lambda(tuple(`left,`right),`nb),
-				  `(plan[i]),
-				  `(plan[j]))>;
-	case cmap(lambda(`x,`b),`xx):
-	    if (!xx.equals(left))
-		fail;
-	    body = Meta.subst_expr(x,xx,b);
-	    body = #<groupBy(crossProduct(lambda(x,bag(x)),
-					  lambda(x,bag(x)),
-					  lambda(tuple(`left,`right),`body),
-					  `(plan[i]),
-					  `(plan[j])))>;
-	case _:
-	    body = prime(pattern[j],body);
-	    body = subst_expr(pattern_head(pattern[j],true),plan[j],
-			      subst_expr(pattern_head(pattern[i],false),plan[i],body));
-	};
-	if (Config.trace)
-	    System.out.print("cross product "+pattern[i]+" with "+pattern[j]);
-	pattern[i] = merge_patterns(pattern[i],pattern[j]);
-	if (Config.trace)
-	    System.out.println(" to get "+pattern[i]+" with body "+body);
-	return body;
+        Tree body = join_body(pattern[i],pattern[j],predicate[i][j]);
+        Tree left = pattern_head(pattern[i],false);
+        Tree right = pattern_head(pattern[j],true);
+        match body {
+        case cmap(lambda(`x,cmap(lambda(`y,`b),`xx)),`yy):
+            if (!xx.equals(right) || !yy.equals(left))
+                fail;
+            Tree nb = Meta.subst_expr(x,left,Meta.subst_expr(y,right,b));
+            body = #<crossProduct(lambda(x,bag(x)),
+                                  lambda(x,bag(x)),
+                                  lambda(tuple(`left,`right),`nb),
+                                  `(plan[i]),
+                                  `(plan[j]))>;
+        case cmap(lambda(`x,`b),`xx):
+            if (!xx.equals(left))
+                fail;
+            body = Meta.subst_expr(x,xx,b);
+            body = #<groupBy(crossProduct(lambda(x,bag(x)),
+                                          lambda(x,bag(x)),
+                                          lambda(tuple(`left,`right),`body),
+                                          `(plan[i]),
+                                          `(plan[j])))>;
+        case _:
+            body = prime(pattern[j],body);
+            body = subst_expr(pattern_head(pattern[j],true),plan[j],
+                              subst_expr(pattern_head(pattern[i],false),plan[i],body));
+        };
+        if (Config.trace)
+            System.out.print("cross product "+pattern[i]+" with "+pattern[j]);
+        pattern[i] = merge_patterns(pattern[i],pattern[j]);
+        if (Config.trace)
+            System.out.println(" to get "+pattern[i]+" with body "+body);
+        return body;
     }
 
     static Tree make_plan ( int i, int j ) {
-	if (depends[i].get(j))
-	    return make_unnest(i,j);
-	else if (predicate[i][j].equals(#<true>))
-	    return make_map_join(i,j);
-	else return make_join(i,j);
+        if (depends[i].get(j))
+            return make_unnest(i,j);
+        else if (predicate[i][j].equals(#<true>))
+            return make_map_join(i,j);
+        else return make_join(i,j);
     }
 
     /** node i should not have any join predicate with a node other than j */
     static boolean no_neighbors ( int i, int j, int n ) {
-	for (int k = 0; k < n; k++)
-	    if (k != i && k != j && !predicate[i][k].equals(#<true>))
-		return false;
-	return true;
+        for (int k = 0; k < n; k++)
+            if (k != i && k != j && !predicate[i][k].equals(#<true>))
+                return false;
+        return true;
     }
 
     static boolean eligible ( int i, int j, int n ) {
-	if (!depends[j].isEmpty())                 // j must not have any dependency
-	    return false;
-	else if (depends[i].isEmpty()              // a join between i and j (neither i nor j have any dependency)
-		 || (depends[i].nextSetBit(0) == j
-		     && depends[i].nextSetBit(j+1) < 0)) {         // i depends only on j
-	    if (no_grouping)
-		return true;
-	    else if (depth[i] == depth[j])
-		return true;
-	    else if (depth[i] < depth[j])
-		return no_neighbors(j,i,n);
-	    else return no_neighbors(i,j,n);
-	};
-	return false;
+        if (!depends[j].isEmpty())                 // j must not have any dependency
+            return false;
+        else if (depends[i].isEmpty()              // a join between i and j (neither i nor j have any dependency)
+                 || (depends[i].nextSetBit(0) == j
+                     && depends[i].nextSetBit(j+1) < 0)) {         // i depends only on j
+            if (no_grouping)
+                return true;
+            else if (depth[i] == depth[j])
+                return true;
+            else if (depth[i] < depth[j])
+                return no_neighbors(j,i,n);
+            else return no_neighbors(i,j,n);
+        };
+        return false;
     }
 
     static Tree subst_header ( Tree var, Tree pat, Tree plan, Tree header ) {
-	match header {
-	case bind(`p,`w):
-	    if (w.equals(var))
-		return #<bind(`pat,`plan)>;
-	    else fail
-	case `f(...al):
-	    Trees bl = #[];
-	    for (Tree a: al)
-		bl = bl.append(subst_header(var,pat,plan,a));
-	    return #<`f(...bl)>;
-	};
-	return header;
+        match header {
+        case bind(`p,`w):
+            if (w.equals(var))
+                return #<bind(`pat,`plan)>;
+            else fail
+        case `f(...al):
+            Trees bl = #[];
+            for (Tree a: al)
+                bl = bl.append(subst_header(var,pat,plan,a));
+            return #<`f(...bl)>;
+        };
+        return header;
     }
 
     static Tree ordered_tuple ( Trees xs ) {
-	if (xs.length() == 1)
-	    return xs.head();
-	Trees res = #[];
-	for ( Tree v: query_variables )
-	    if (xs.member(v))
-		res = res.append(v);
-	return #<tuple(...res)>;
+        if (xs.length() == 1)
+            return xs.head();
+        Trees res = #[];
+        for ( Tree v: query_variables )
+            if (xs.member(v))
+                res = res.append(v);
+        return #<tuple(...res)>;
     }
 
     /** group-by the plan so that the flat results in xs are grouped at their proper level */
     static Tree final_groupBy ( int level, Trees xs, Tree plan ) {
-	Trees rest = #[];
-	Trees group_by_vars = #[];
-	Trees pvars = #[];
-	for ( Tree x: xs ) {
-	    String v = pattern_head(x);
-	    pvars = pvars.append(#<`v>);
-	    if (depth(v) == level)
-		group_by_vars = group_by_vars.cons(#<`v>);
-	    else rest = rest.append(#<`v>);
-	};
-	if (!rest.is_empty()) {
-	    if (pvars.is_empty())
-		return final_groupBy(level+1,rest,plan);
-	    Tree nv = new_var();
-	    Tree tp = (pvars.length()==1) ? pvars.head() : #<tuple(...pvars)>;
-	    Tree tg = ordered_tuple(group_by_vars);
-	    Tree tr = ordered_tuple(rest);
-	    Tree new_plan = #<groupBy(cmap(lambda(`tp,bag(tuple(`tg,`tr))),`plan))>;
-	    Tree p = final_groupBy(level+1,rest,nv);
-	    return #<cmap(lambda(tuple(`tg,`nv),bag(tuple(`tg,`p))),`new_plan)>;
-	} else return plan;
+        Trees rest = #[];
+        Trees group_by_vars = #[];
+        Trees pvars = #[];
+        for ( Tree x: xs ) {
+            String v = pattern_head(x);
+            pvars = pvars.append(#<`v>);
+            if (depth(v) == level)
+                group_by_vars = group_by_vars.cons(#<`v>);
+            else rest = rest.append(#<`v>);
+        };
+        if (!rest.is_empty()) {
+            if (pvars.is_empty())
+                return final_groupBy(level+1,rest,plan);
+            Tree nv = new_var();
+            Tree tp = (pvars.length()==1) ? pvars.head() : #<tuple(...pvars)>;
+            Tree tg = ordered_tuple(group_by_vars);
+            Tree tr = ordered_tuple(rest);
+            Tree new_plan = #<groupBy(cmap(lambda(`tp,bag(tuple(`tg,`tr))),`plan))>;
+            Tree p = final_groupBy(level+1,rest,nv);
+            return #<cmap(lambda(tuple(`tg,`nv),bag(tuple(`tg,`p))),`new_plan)>;
+        } else return plan;
     }
 
     static Tree final_groupBy ( Tree plan, Tree pattern ) {
-	match pattern {
-	case `f(...r):
-	    return final_groupBy(1,r,plan);
-	};
-	throw new Error("Wrong pattern in final group-by: "+pattern);
+        match pattern {
+        case `f(...r):
+            return final_groupBy(1,r,plan);
+        };
+        throw new Error("Wrong pattern in final group-by: "+pattern);
     }
 
     /** plan cost */
     static double cost ( int i, int j ) {
-	return size[i]*size[j]*selectivity[i][j];
+        return size[i]*size[j]*selectivity[i][j];
     }
 
     public static Tree best_plan ( Tree e ) {
-	Trees binds = all_binds(e,#[]);
-	if (binds.equals(#[]))
-	    return e;
-	int N = binds.length();
-	if (N==0)
-	    return e;
-	predicate = new Tree[N][];
-	selectivity = new double[N][];
-	plan = new Tree[N];
-	var = new String[N];
-	variables = new BitSet[N];
-	pattern = new Tree[N];
-	depth = new int[N];
-	size = new double[N];
-	depends = new BitSet[N];
-	filter = new Tree[N];
-	depths = new HashMap<String,Integer>();
-	Trees al = binds;
-	for ( int i = 0; i < N; i++, al = al.tail() ) {
-	    match al.head() {
-	    case bind(`v,`d):
-		var[i] = ((VariableLeaf) v).value();
-		variables[i] = new BitSet();
-		variables[i].set(i);
-		pattern[i] = #<`v>;
-		filter[i] = #<true>;
-	    };
-	    predicate[i] = new Tree[N];
-	    selectivity[i] = new double[N];
-	    for ( int j = 0; j < N; j++ ) {
-		predicate[i][j] = #<true>;
-		selectivity[i][j] = 1.0;
-	    };
-	    depends[i] = new BitSet();
-	};
-	header_binds = new SymbolTable();
-	query_variables = #[];
-	Header h = build_graph(e,0);
-	for ( int i = 0; i < N; i++ ) {
-	    if (depends[i].isEmpty())
-		size[i] = 1000;
-	    else size[i] = 100;
-	};
-	header = h.header;
-	if (Config.trace) {
-	    System.out.println("Optimizing MRQL query:\n"+e.pretty(0));
-	    System.out.println("Query Header:\n"+header.pretty(0));
-	    System.out.println("Query bindings:");
-	    header_binds.display();
-	    System.out.print("Variable/nesting: ");
-	    for (String k: depths.keySet())
-		System.out.print(k+"/"+depths.get(k)+" ");
-	    System.out.println();
-	    dump(N);
-	};
-	no_grouping = false;
-	for ( int n = N; n > 1; n-- ) {
-	    int mi = -1;
-	    int mj = -1;
-	    double min = Double.MAX_VALUE;
-	    for ( int i = 0; i < n; i++ )
-		for ( int j = 0; j < n; j++ ) {
-		    if (i != j && eligible(i,j,n)) {
-			double cost = cost(i,j);
-			if (Config.trace)
-			    System.out.println("Cost "+i+" "+j+" = "+cost);
-			if (cost < min) {
-			    min = cost;
-			    mi = i;
-			    mj = j;
-			}
-		    }
-		};
-	    if (mi < 0 || mj < 0) {
-		// irreducible graph;
-		// from now on, we operate without grouping and we group-by at the end
-		if (Config.trace)
-		    System.out.println("Switching to flat mode (no grouping during operations)");
-		no_grouping = true;
-		n++;
-		continue;
-	    };
-	    if (Config.trace)
-		System.out.println("Reduce "+mi+" with "+mj+" into "+mi);
-	    // merge node mi with node mj into node mi
-	    plan[mi] = make_plan(mi,mj);
-	    depth[mi] = Math.min(depth[mi],depth[mj]);
-	    variables[mi].or(variables[mj]);
-	    size[mi] = size[mi]*size[mj]*selectivity[mi][mj];
-	    depends[mi].clear(mj);
-	    filter[mi] = #<true>;
-	    for ( int k = 0; k < n; k++ )
-		if (k != mi) {
-		    selectivity[mi][k] = selectivity[k][mi] = selectivity[mi][k]*selectivity[mj][k];
-		    predicate[mi][k] = predicate[k][mi] = and(predicate[mi][k],predicate[mj][k]);
-		    if (depends[k].get(mj)) {
-			depends[k].clear(mj);
-			depends[k].set(mi);
-		    }
-		};
-	    // replace node mj with node n-1 (last node)
-	    plan[mj] = plan[n-1];
-	    depth[mj] = depth[n-1];
-	    pattern[mj] = pattern[n-1];
-	    filter[mj] = filter[n-1];
-	    depends[mj] = depends[n-1];
-	    variables[mj] = variables[n-1];
-	    for ( int k = 0; k < n-1; k++ )
-		if (k != mj) {
-		    selectivity[mj][k] = selectivity[k][mj] = selectivity[n-1][k];
-		    predicate[mj][k] = predicate[k][mj] = predicate[n-1][k];
-		    if (depends[k].get(n-1)) {
-			depends[k].clear(n-1);
-			depends[k].set(mj);
-		    }
-		};
-	    size[mj] = size[n-1];
-	    if (Config.trace)
-		dump(n-1);
-	};
-	// forced group-by
-	if (no_grouping) {
-	    plan[0] = final_groupBy(plan[0],pattern[0]);
-	    if (h.pattern.length() == 1)
-		match h.pattern.head() {
-		case bind(`v,`p):
-		    return Meta.subst_expr(v,plan[0],h.header);
-	        };
-	};
-	Tree np = pattern(pattern[0],false);
-	if (h.pattern.length() == 1)
-	    match h.pattern.head() {
-	    case bind(`v,`p):
-		return subst_header(v,np,plan[0],h.header);
-	    };
-	return e;
+        Trees binds = all_binds(e,#[]);
+        if (binds.equals(#[]))
+            return e;
+        int N = binds.length();
+        if (N==0)
+            return e;
+        predicate = new Tree[N][];
+        selectivity = new double[N][];
+        plan = new Tree[N];
+        var = new String[N];
+        variables = new BitSet[N];
+        pattern = new Tree[N];
+        depth = new int[N];
+        size = new double[N];
+        depends = new BitSet[N];
+        filter = new Tree[N];
+        depths = new HashMap<String,Integer>();
+        Trees al = binds;
+        for ( int i = 0; i < N; i++, al = al.tail() ) {
+            match al.head() {
+            case bind(`v,`d):
+                var[i] = ((VariableLeaf) v).value();
+                variables[i] = new BitSet();
+                variables[i].set(i);
+                pattern[i] = #<`v>;
+                filter[i] = #<true>;
+            };
+            predicate[i] = new Tree[N];
+            selectivity[i] = new double[N];
+            for ( int j = 0; j < N; j++ ) {
+                predicate[i][j] = #<true>;
+                selectivity[i][j] = 1.0;
+            };
+            depends[i] = new BitSet();
+        };
+        header_binds = new SymbolTable();
+        query_variables = #[];
+        Header h = build_graph(e,0);
+        for ( int i = 0; i < N; i++ ) {
+            if (depends[i].isEmpty())
+                size[i] = 1000;
+            else size[i] = 100;
+        };
+        header = h.header;
+        if (Config.trace) {
+            System.out.println("Optimizing MRQL query:\n"+e.pretty(0));
+            System.out.println("Query Header:\n"+header.pretty(0));
+            System.out.println("Query bindings:");
+            header_binds.display();
+            System.out.print("Variable/nesting: ");
+            for (String k: depths.keySet())
+                System.out.print(k+"/"+depths.get(k)+" ");
+            System.out.println();
+            dump(N);
+        };
+        no_grouping = false;
+        for ( int n = N; n > 1; n-- ) {
+            int mi = -1;
+            int mj = -1;
+            double min = Double.MAX_VALUE;
+            for ( int i = 0; i < n; i++ )
+                for ( int j = 0; j < n; j++ ) {
+                    if (i != j && eligible(i,j,n)) {
+                        double cost = cost(i,j);
+                        if (Config.trace)
+                            System.out.println("Cost "+i+" "+j+" = "+cost);
+                        if (cost < min) {
+                            min = cost;
+                            mi = i;
+                            mj = j;
+                        }
+                    }
+                };
+            if (mi < 0 || mj < 0) {
+                // irreducible graph;
+                // from now on, we operate without grouping and we group-by at the end
+                if (Config.trace)
+                    System.out.println("Switching to flat mode (no grouping during operations)");
+                no_grouping = true;
+                n++;
+                continue;
+            };
+            if (Config.trace)
+                System.out.println("Reduce "+mi+" with "+mj+" into "+mi);
+            // merge node mi with node mj into node mi
+            plan[mi] = make_plan(mi,mj);
+            depth[mi] = Math.min(depth[mi],depth[mj]);
+            variables[mi].or(variables[mj]);
+            size[mi] = size[mi]*size[mj]*selectivity[mi][mj];
+            depends[mi].clear(mj);
+            filter[mi] = #<true>;
+            for ( int k = 0; k < n; k++ )
+                if (k != mi) {
+                    selectivity[mi][k] = selectivity[k][mi] = selectivity[mi][k]*selectivity[mj][k];
+                    predicate[mi][k] = predicate[k][mi] = and(predicate[mi][k],predicate[mj][k]);
+                    if (depends[k].get(mj)) {
+                        depends[k].clear(mj);
+                        depends[k].set(mi);
+                    }
+                };
+            // replace node mj with node n-1 (last node)
+            plan[mj] = plan[n-1];
+            depth[mj] = depth[n-1];
+            pattern[mj] = pattern[n-1];
+            filter[mj] = filter[n-1];
+            depends[mj] = depends[n-1];
+            variables[mj] = variables[n-1];
+            for ( int k = 0; k < n-1; k++ )
+                if (k != mj) {
+                    selectivity[mj][k] = selectivity[k][mj] = selectivity[n-1][k];
+                    predicate[mj][k] = predicate[k][mj] = predicate[n-1][k];
+                    if (depends[k].get(n-1)) {
+                        depends[k].clear(n-1);
+                        depends[k].set(mj);
+                    }
+                };
+            size[mj] = size[n-1];
+            if (Config.trace)
+                dump(n-1);
+        };
+        // forced group-by
+        if (no_grouping) {
+            plan[0] = final_groupBy(plan[0],pattern[0]);
+            if (h.pattern.length() == 1)
+                match h.pattern.head() {
+                case bind(`v,`p):
+                    return Meta.subst_expr(v,plan[0],h.header);
+                };
+        };
+        Tree np = pattern(pattern[0],false);
+        if (h.pattern.length() == 1)
+            match h.pattern.head() {
+            case bind(`v,`p):
+                return subst_header(v,np,plan[0],h.header);
+            };
+        return e;
     }
 }
 
     private static Tree process_repeat_plan ( Tree e ) {
-	match e {
-	case repeat(lambda(`x,`step),`init,...r):
-	    Tree ns = SingleQueryPlan.best_plan(step);
-	    repeat_plans.put(x.toString(),ns);
-	    return #<repeat(lambda(`x,step(`x)),`init,...r)>;
-	case closure(lambda(`x,`step),`init,...r):
-	    Tree ns = SingleQueryPlan.best_plan(step);
-	    repeat_plans.put(x.toString(),ns);
-	    return #<closure(lambda(`x,cstep(`x)),`init,...r)>;
-	case `f(...al):
-	    Trees bl = #[];
-	    for (Tree a: al)
-		bl = bl.append(process_repeat_plan(a));
-	    return #<`f(...bl)>;
-	};
-	return e;
+        match e {
+        case repeat(lambda(`x,`step),`init,...r):
+            Tree ns = SingleQueryPlan.best_plan(step);
+            repeat_plans.put(x.toString(),ns);
+            return #<repeat(lambda(`x,step(`x)),`init,...r)>;
+        case closure(lambda(`x,`step),`init,...r):
+            Tree ns = SingleQueryPlan.best_plan(step);
+            repeat_plans.put(x.toString(),ns);
+            return #<closure(lambda(`x,cstep(`x)),`init,...r)>;
+        case `f(...al):
+            Trees bl = #[];
+            for (Tree a: al)
+                bl = bl.append(process_repeat_plan(a));
+            return #<`f(...bl)>;
+        };
+        return e;
     }
 
     private static Tree process_nested_plan ( Tree e ) {
-	match e {
-	case select(`u,from(...bl),where(`p)):
-	    return SingleQueryPlan.best_plan(e);
-	case `f(...al):
-	    Trees bl = #[];
-	    for (Tree a: al)
-		bl = bl.append(process_nested_plan(a));
-	    return #<`f(...bl)>; 
-	};
-	return e;
+        match e {
+        case select(`u,from(...bl),where(`p)):
+            return SingleQueryPlan.best_plan(e);
+        case `f(...al):
+            Trees bl = #[];
+            for (Tree a: al)
+                bl = bl.append(process_nested_plan(a));
+            return #<`f(...bl)>; 
+        };
+        return e;
     }
 
     public static Tree best_plan ( Tree e ) {
-	repeat_plans = new Hashtable<String,Tree>();
-	Tree np = process_nested_plan(process_repeat_plan(e));
-	for ( String s: repeat_plans.keySet() )
-	    np = Meta.subst_expr(#<step(`s)>,repeat_plans.get(s),
-				 Meta.subst_expr(#<cstep(`s)>,repeat_plans.get(s),np));
-	return np;
+        repeat_plans = new Hashtable<String,Tree>();
+        Tree np = process_nested_plan(process_repeat_plan(e));
+        for ( String s: repeat_plans.keySet() )
+            np = Meta.subst_expr(#<step(`s)>,repeat_plans.get(s),
+                                 Meta.subst_expr(#<cstep(`s)>,repeat_plans.get(s),np));
+        return np;
     }
 }

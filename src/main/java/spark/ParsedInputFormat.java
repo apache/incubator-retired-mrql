@@ -29,69 +29,69 @@ import org.apache.hadoop.conf.Configuration;
 /** A FileInputFormat for text files (CVS, XML, JSON, ...) */
 final public class ParsedInputFormat extends MRQLFileInputFormat {
     public static class ParsedRecordReader implements RecordReader<MRContainer,MRContainer> {
-	final FSDataInputStream fsin;
-	final long start;
-	final long end;
-	Iterator<MRData> result;
-	Parser parser;
+        final FSDataInputStream fsin;
+        final long start;
+        final long end;
+        Iterator<MRData> result;
+        Parser parser;
 
-	public ParsedRecordReader ( FileSplit split,
-				    Configuration conf,
-				    Class<? extends Parser> parser_class,
-				    Trees args ) throws IOException {
-	    start = split.getStart();
-	    end = start + split.getLength();
-	    Path file = split.getPath();
-	    FileSystem fs = file.getFileSystem(conf);
-	    fsin = fs.open(split.getPath());
-	    try {
-		parser = parser_class.newInstance();
-	    } catch (Exception ex) {
-		throw new Error("Unrecognized parser:"+parser_class);
-	    };
-	    parser.initialize(args);
-	    parser.open(fsin,start,end);
-	    result = null;
-	}
+        public ParsedRecordReader ( FileSplit split,
+                                    Configuration conf,
+                                    Class<? extends Parser> parser_class,
+                                    Trees args ) throws IOException {
+            start = split.getStart();
+            end = start + split.getLength();
+            Path file = split.getPath();
+            FileSystem fs = file.getFileSystem(conf);
+            fsin = fs.open(split.getPath());
+            try {
+                parser = parser_class.newInstance();
+            } catch (Exception ex) {
+                throw new Error("Unrecognized parser:"+parser_class);
+            };
+            parser.initialize(args);
+            parser.open(fsin,start,end);
+            result = null;
+        }
 
         public MRContainer createKey () {
-	    return new MRContainer();
-	}
+            return new MRContainer();
+        }
 
-	public MRContainer createValue () {
-	    return new MRContainer();
-	}
+        public MRContainer createValue () {
+            return new MRContainer();
+        }
 
-	public synchronized boolean next ( MRContainer key, MRContainer value ) throws IOException {
-	    while (result == null || !result.hasNext()) {
-		String s = parser.slice();
-		if (s == null)
-		    return false;
-		result = parser.parse(s).iterator();
-	    };
-	    value.set((MRData)result.next());
-	    key.set(new MR_long(fsin.getPos()));
-	    return true;
-	}
+        public synchronized boolean next ( MRContainer key, MRContainer value ) throws IOException {
+            while (result == null || !result.hasNext()) {
+                String s = parser.slice();
+                if (s == null)
+                    return false;
+                result = parser.parse(s).iterator();
+            };
+            value.set((MRData)result.next());
+            key.set(new MR_long(fsin.getPos()));
+            return true;
+        }
 
-	public synchronized long getPos () throws IOException { return fsin.getPos(); }
+        public synchronized long getPos () throws IOException { return fsin.getPos(); }
 
-	public synchronized void close () throws IOException { fsin.close(); }
+        public synchronized void close () throws IOException { fsin.close(); }
 
-	public float getProgress () throws IOException {
-	    if (end == start)
-		return 0.0f;
-	    else return Math.min(1.0f, (getPos() - start) / (float)(end - start));
-	}
+        public float getProgress () throws IOException {
+            if (end == start)
+                return 0.0f;
+            else return Math.min(1.0f, (getPos() - start) / (float)(end - start));
+        }
     }
 
     public RecordReader<MRContainer,MRContainer>
-	      getRecordReader ( InputSplit split,
-				JobConf job,
-				Reporter reporter ) throws IOException {
-	Evaluator.load_source_dir();  // load the parsed source parameters from a file
-	String path = ((FileSplit)split).getPath().toString();
-	ParsedDataSource ds = (ParsedDataSource)DataSource.get(path,Plan.conf);
-	return new ParsedRecordReader((FileSplit)split,job,ds.parser,(Trees)ds.args);
+              getRecordReader ( InputSplit split,
+                                JobConf job,
+                                Reporter reporter ) throws IOException {
+        Evaluator.load_source_dir();  // load the parsed source parameters from a file
+        String path = ((FileSplit)split).getPath().toString();
+        ParsedDataSource ds = (ParsedDataSource)DataSource.get(path,Plan.conf);
+        return new ParsedRecordReader((FileSplit)split,job,ds.parser,(Trees)ds.args);
     }
 }

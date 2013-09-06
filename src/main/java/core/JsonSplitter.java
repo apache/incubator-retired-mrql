@@ -37,100 +37,100 @@ final public class JsonSplitter implements Iterator<DataOutputBuffer> {
     final DataOutputBuffer buffer;
 
     JsonSplitter ( String[] tags, FSDataInputStream fsin, long start, long end,
-		  DataOutputBuffer buffer ) {
-	in_memory = false;
-	this.tags = tags;
-	this.fsin = fsin;
-	this.start = start;
-	this.end = end;
-	this.buffer = buffer;
-	scanner = new JSONLex(fsin);
-	try {
-	    fsin.seek(start);
-	} catch ( IOException e ) {
-	    System.err.println("*** Cannot parse the data split: "+fsin);
-	}
+                  DataOutputBuffer buffer ) {
+        in_memory = false;
+        this.tags = tags;
+        this.fsin = fsin;
+        this.start = start;
+        this.end = end;
+        this.buffer = buffer;
+        scanner = new JSONLex(fsin);
+        try {
+            fsin.seek(start);
+        } catch ( IOException e ) {
+            System.err.println("*** Cannot parse the data split: "+fsin);
+        }
     }
 
     JsonSplitter ( String[] tags, String file, DataOutputBuffer buffer ) {
-	in_memory = true;
-	try {
-	    in = new FileInputStream(file);
-	} catch ( Exception e ) {
-	    throw new Error("Cannot open the file: "+file);
-	};
-	this.tags = tags;
-	this.buffer = buffer;
-	scanner = new JSONLex(in);
+        in_memory = true;
+        try {
+            in = new FileInputStream(file);
+        } catch ( Exception e ) {
+            throw new Error("Cannot open the file: "+file);
+        };
+        this.tags = tags;
+        this.buffer = buffer;
+        scanner = new JSONLex(in);
     }
 
     public boolean hasNext () {
-	try {
-	    if (in_memory || fsin.getPos() < end)
-		if (skip())
-		    return store();
-	    return false;
-	} catch (Exception e) {
-	    System.err.println(e);
-	    return false;
-	}
+        try {
+            if (in_memory || fsin.getPos() < end)
+                if (skip())
+                    return store();
+            return false;
+        } catch (Exception e) {
+            System.err.println(e);
+            return false;
+        }
     }
 
     public DataOutputBuffer next () {
-	return buffer;
+        return buffer;
     }
 
     public void remove () { }
 
     boolean is_start_tag ( String tagname ) {
-	if (tags == null)
-	    return true;
-	for (String tag: tags)
-	    if (tag.contentEquals(tagname))
-		return true;
-	return false;
+        if (tags == null)
+            return true;
+        for (String tag: tags)
+            if (tag.contentEquals(tagname))
+                return true;
+        return false;
     }
 
     /** skip until the beginning of a split element */
     boolean skip () throws IOException {
-	while (true) {
-	    Symbol s = scanner.next_token();
-	    if (s.sym == jsym.EOF || (!in_memory && fsin.getPos() >= end))
-		return false;
-	    if (s.sym == jsym.STRING && is_start_tag((String)s.value)) {
-		String tag = (String)s.value;
-		if (scanner.next_token().sym == jsym.COLON) {
-		    buffer.reset();
-		    buffer.write('{');
-		    buffer.write('\"');
-		    for ( int i = 0; i < tag.length(); i++ )
-			buffer.write(tag.charAt(i));
-		    buffer.write('\"');
-		    buffer.write(':');
-		    return true;
-		}
-	    }
-	}
+        while (true) {
+            Symbol s = scanner.next_token();
+            if (s.sym == jsym.EOF || (!in_memory && fsin.getPos() >= end))
+                return false;
+            if (s.sym == jsym.STRING && is_start_tag((String)s.value)) {
+                String tag = (String)s.value;
+                if (scanner.next_token().sym == jsym.COLON) {
+                    buffer.reset();
+                    buffer.write('{');
+                    buffer.write('\"');
+                    for ( int i = 0; i < tag.length(); i++ )
+                        buffer.write(tag.charAt(i));
+                    buffer.write('\"');
+                    buffer.write(':');
+                    return true;
+                }
+            }
+        }
     }
 
     /** store one split element into the buffer; may cross split boundaries */
     boolean store () throws IOException {
-	int nest = 0;
-	while (true) {
-	    Symbol s = scanner.next_token();
-	    if (s.sym == jsym.EOF)
-		return false;
-	    if (s.sym == jsym.O_BEGIN || s.sym == jsym.A_BEGIN)
-		nest++;
-	    else if (s.sym == jsym.O_END || s.sym == jsym.A_END)
-		nest--;
-	    String text = scanner.text();
-	    for ( int i = 0; i < text.length(); i++ )
-		buffer.write(text.charAt(i));
-	    if (nest == 0) {
-		buffer.write('}');
-		return true;
-	    }
-	}
+        int nest = 0;
+        while (true) {
+            Symbol s = scanner.next_token();
+            if (s.sym == jsym.EOF)
+                return false;
+            if (s.sym == jsym.O_BEGIN || s.sym == jsym.A_BEGIN)
+                nest++;
+            else if (s.sym == jsym.O_END || s.sym == jsym.A_END)
+                nest--;
+            String text = scanner.text();
+            for ( int i = 0; i < text.length(); i++ )
+                buffer.write(text.charAt(i));
+            if (nest == 0) {
+                buffer.write('}');
+                return true;
+            }
+        }
     }
 }

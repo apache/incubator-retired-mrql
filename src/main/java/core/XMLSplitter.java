@@ -41,116 +41,116 @@ final public class XMLSplitter implements Iterator<DataOutputBuffer> {
     final DataOutputBuffer buffer;
 
     XMLSplitter ( String[] tags, FSDataInputStream fsin, long start, long end,
-		  DataOutputBuffer buffer ) {
-	in_memory = false;
-	this.tags = tags;
-	this.fsin = fsin;
-	this.start = start;
-	this.end = end;
-	this.buffer = buffer;
-	try {
-	    fsin.seek(start);
-	} catch ( IOException e ) {
-	    System.err.println("*** Cannot parse the data split: "+fsin);
-	}
+                  DataOutputBuffer buffer ) {
+        in_memory = false;
+        this.tags = tags;
+        this.fsin = fsin;
+        this.start = start;
+        this.end = end;
+        this.buffer = buffer;
+        try {
+            fsin.seek(start);
+        } catch ( IOException e ) {
+            System.err.println("*** Cannot parse the data split: "+fsin);
+        }
     }
 
     XMLSplitter ( String[] tags, String file, DataOutputBuffer buffer ) {
-	in_memory = true;
-	try {
-	    in = new BufferedReader(new InputStreamReader(new FileInputStream(file)),
-				    100000);
-	} catch ( Exception e ) {
-	    throw new Error("Cannot open the file: "+file);
-	};
-	this.tags = tags;
-	this.buffer = buffer;
+        in_memory = true;
+        try {
+            in = new BufferedReader(new InputStreamReader(new FileInputStream(file)),
+                                    100000);
+        } catch ( Exception e ) {
+            throw new Error("Cannot open the file: "+file);
+        };
+        this.tags = tags;
+        this.buffer = buffer;
     }
 
     public boolean hasNext () {
-	try {
-	    if (in_memory || fsin.getPos() < end)
-		if (skip())
-		    return store();
-	    return false;
-	} catch (Exception e) {
-	    System.err.println(e);
-	    return false;
-	}
+        try {
+            if (in_memory || fsin.getPos() < end)
+                if (skip())
+                    return store();
+            return false;
+        } catch (Exception e) {
+            System.err.println(e);
+            return false;
+        }
     }
 
     public DataOutputBuffer next () {
-	return buffer;
+        return buffer;
     }
 
     public void remove () { }
 
     boolean is_start_tag () {
-	for (String tag: tags)
-	    if (tag.contentEquals(tagname))
-		return true;
-	return false;
+        for (String tag: tags)
+            if (tag.contentEquals(tagname))
+                return true;
+        return false;
     }
 
     char read_tag () throws IOException {
-	tagname.setLength(0);
-	while (true) {
-	    int b = in_memory ? in.read() : fsin.read();
-	    if (b == -1)
-		return ' ';
-	    else if (!Character.isLetterOrDigit(b) && b != ':' && b != '_')
-		return (char)b;
-	    tagname.append((char)b);
-	}
+        tagname.setLength(0);
+        while (true) {
+            int b = in_memory ? in.read() : fsin.read();
+            if (b == -1)
+                return ' ';
+            else if (!Character.isLetterOrDigit(b) && b != ':' && b != '_')
+                return (char)b;
+            tagname.append((char)b);
+        }
     }
 
     /** skip until the beginning of a split element */
     boolean skip () throws IOException {
-	while (true) {
-	    int b = in_memory ? in.read() : fsin.read();
-	    if (b == -1 || (!in_memory && fsin.getPos() >= end))
-		return false;
-	    else if (b == '<') {
-		b = read_tag();
-		if (is_start_tag()) {
-		    buffer.reset();
-		    buffer.write('<');
-		    for ( int i = 0; i < tagname.length(); i++ )
-			buffer.write(tagname.charAt(i));
-		    buffer.write(b);
-		    start_tagname = new String(tagname);
-		    return true;
-		}
-	    }
-	}
+        while (true) {
+            int b = in_memory ? in.read() : fsin.read();
+            if (b == -1 || (!in_memory && fsin.getPos() >= end))
+                return false;
+            else if (b == '<') {
+                b = read_tag();
+                if (is_start_tag()) {
+                    buffer.reset();
+                    buffer.write('<');
+                    for ( int i = 0; i < tagname.length(); i++ )
+                        buffer.write(tagname.charAt(i));
+                    buffer.write(b);
+                    start_tagname = new String(tagname);
+                    return true;
+                }
+            }
+        }
     }
 
     /** store one split element into the buffer; may cross split boundaries */
     boolean store () throws IOException {
-	while (true) {
-	    int b = in_memory ? in.read() : fsin.read();
-	    if (b == -1)
-		return false;
-	    if (b == '&') {  // don't validate external XML references
-		buffer.write('&');buffer.write('a');buffer.write('m');buffer.write('p');buffer.write(';');
-	    } else buffer.write(b);
-	    if (b == '<') {
-		b = in_memory ? in.read() : fsin.read();
-		buffer.write(b);
-		if (b == '/') {
-		    b = read_tag();
-		    for ( int i = 0; i < tagname.length(); i++ )
-			buffer.write(tagname.charAt(i));
-		    buffer.write(b);
-		    if (start_tagname.contentEquals(tagname)) {
-			while (b != '>') {
-			    b = fsin.read();
-			    buffer.write(b);
-			};
-			return true;
-		    }
-		}
-	    }
-	}
+        while (true) {
+            int b = in_memory ? in.read() : fsin.read();
+            if (b == -1)
+                return false;
+            if (b == '&') {  // don't validate external XML references
+                buffer.write('&');buffer.write('a');buffer.write('m');buffer.write('p');buffer.write(';');
+            } else buffer.write(b);
+            if (b == '<') {
+                b = in_memory ? in.read() : fsin.read();
+                buffer.write(b);
+                if (b == '/') {
+                    b = read_tag();
+                    for ( int i = 0; i < tagname.length(); i++ )
+                        buffer.write(tagname.charAt(i));
+                    buffer.write(b);
+                    if (start_tagname.contentEquals(tagname)) {
+                        while (b != '>') {
+                            b = fsin.read();
+                            buffer.write(b);
+                        };
+                        return true;
+                    }
+                }
+            }
+        }
     }
 }

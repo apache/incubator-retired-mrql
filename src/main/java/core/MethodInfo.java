@@ -28,30 +28,30 @@ final public class MethodInfo implements Comparable<MethodInfo> {
     public Method method;
 
     MethodInfo ( String n, Trees s, Method m ) {
-	name = n;
-	signature = s;
-	method = m;
+        name = n;
+        signature = s;
+        method = m;
     }
 
     public int compareTo ( MethodInfo x )  {
-	int c = name.compareTo(x.name);
-	if (c != 0)
-	    return c;
-	if (signature.length() < x.signature.length())
-	    return -1;
-	if (signature.length() > x.signature.length())
-	    return 1;
-	// handles overloading: more specific method signatures first
-	for ( int i = 1; i < signature.length(); i++ ) {
-	    int ct = TypeInference.compare_types(signature.nth(i),x.signature.nth(i));
-	    if (ct != 0)
-		return ct;
-	};
-	return TypeInference.compare_types(signature.nth(0),x.signature.nth(0));
+        int c = name.compareTo(x.name);
+        if (c != 0)
+            return c;
+        if (signature.length() < x.signature.length())
+            return -1;
+        if (signature.length() > x.signature.length())
+            return 1;
+        // handles overloading: more specific method signatures first
+        for ( int i = 1; i < signature.length(); i++ ) {
+            int ct = TypeInference.compare_types(signature.nth(i),x.signature.nth(i));
+            if (ct != 0)
+                return ct;
+        };
+        return TypeInference.compare_types(signature.nth(0),x.signature.nth(0));
     }
 
     public boolean equals ( Object x ) {
-	return name.equals(((MethodInfo)x).name)
-	       && signature.equals(((MethodInfo)x).signature);
+        return name.equals(((MethodInfo)x).name)
+               && signature.equals(((MethodInfo)x).signature);
     }
 }

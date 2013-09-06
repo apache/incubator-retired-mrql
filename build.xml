@@ -124,6 +124,7 @@
 	  description="Clean the build directories">
     <delete dir="classes"/>
     <delete dir="tmp"/>
+    <mkdir dir="lib"/>
     <mkdir dir="classes"/>
     <mkdir dir="tmp"/>
     <mkdir dir="tests/results"/>

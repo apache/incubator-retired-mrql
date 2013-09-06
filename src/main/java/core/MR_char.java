@@ -37,35 +37,35 @@ final public class MR_char extends MRData {
     public void set ( char v ) { value = v; }
 
     final public void write ( DataOutput out ) throws IOException {
-	out.writeByte(MRContainer.CHAR);
-	out.writeChar(value);
+        out.writeByte(MRContainer.CHAR);
+        out.writeChar(value);
     }
 
     final public static MR_char read ( DataInput in ) throws IOException {
-	return new MR_char(in.readChar());
+        return new MR_char(in.readChar());
     }
 
     public void readFields ( DataInput in ) throws IOException {
-	value = in.readChar();
+        value = in.readChar();
     }
 
     public int compareTo ( MRData x ) {
-	assert(x instanceof MR_char);
-	return value-((MR_char) x).value;
+        assert(x instanceof MR_char);
+        return value-((MR_char) x).value;
     }
 
     final public static int compare ( byte[] x, int xs, int xl, byte[] y, int ys, int yl, int[] size ) {
-	size[0] = 2;
-	return x[xs]-y[ys];
+        size[0] = 2;
+        return x[xs]-y[ys];
     }
 
     public boolean equals ( Object x ) {
-	return x instanceof MR_char && ((MR_char)x).value==value;
+        return x instanceof MR_char && ((MR_char)x).value==value;
     }
 
     public int hashCode () { return value; }
 
     public String toString () {
-	return Character.toString(value);
+        return Character.toString(value);
     }
 }

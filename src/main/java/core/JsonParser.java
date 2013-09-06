@@ -31,60 +31,60 @@ public class JsonParser implements Parser {
     JsonSplitter splitter;
 
     public void initialize ( Trees args ) {
-	try {
-	    if (args.length() > 0) {
-		if (!(args.nth(0) instanceof Node)
-		    || !(((Node)args.nth(0)).name().equals("list")
-			 || ((Node)args.nth(0)).name().equals("bag")))
-		    throw new Error("Expected a bag of synchronization tagnames in JSON source: "+args.nth(0));
-		Trees ts = ((Node)args.nth(0)).children();
-		if (ts.length() == 0)
-		    throw new Error("Expected at least one synchronization tagname in JSON source: "+ts);
-		tags = new String[ts.length()];
-		for ( int i = 0; i < tags.length; i++ )
-		    if (ts.nth(i) instanceof StringLeaf)
-			tags[i] = ((StringLeaf)(ts.nth(i))).value();
-		    else throw new Error("Expected a synchronization tagname in JSON source: "+ts.nth(i));
-	    }
-	} catch (Exception e) {
-	    throw new Error(e);
-	}
+        try {
+            if (args.length() > 0) {
+                if (!(args.nth(0) instanceof Node)
+                    || !(((Node)args.nth(0)).name().equals("list")
+                         || ((Node)args.nth(0)).name().equals("bag")))
+                    throw new Error("Expected a bag of synchronization tagnames in JSON source: "+args.nth(0));
+                Trees ts = ((Node)args.nth(0)).children();
+                if (ts.length() == 0)
+                    throw new Error("Expected at least one synchronization tagname in JSON source: "+ts);
+                tags = new String[ts.length()];
+                for ( int i = 0; i < tags.length; i++ )
+                    if (ts.nth(i) instanceof StringLeaf)
+                        tags[i] = ((StringLeaf)(ts.nth(i))).value();
+                    else throw new Error("Expected a synchronization tagname in JSON source: "+ts.nth(i));
+            }
+        } catch (Exception e) {
+            throw new Error(e);
+        }
     }
 
     public void open ( String file ) {
-	try {
-	    splitter = new JsonSplitter(tags,file,new DataOutputBuffer());
-	} catch (Exception e) {
-	    throw new Error(e);
-	}
+        try {
+            splitter = new JsonSplitter(tags,file,new DataOutputBuffer());
+        } catch (Exception e) {
+            throw new Error(e);
+        }
     }
 
     public void open ( FSDataInputStream fsin, long start, long end ) {
-	try {
-	    splitter = new JsonSplitter(tags,fsin,start,end,new DataOutputBuffer());
-	} catch (Exception e) {
-	    throw new Error(e);
-	}
+        try {
+            splitter = new JsonSplitter(tags,fsin,start,end,new DataOutputBuffer());
+        } catch (Exception e) {
+            throw new Error(e);
+        }
     }
 
     public Tree type () { return new VariableLeaf("JSON"); }
 
     public String slice () {
-	if (splitter.hasNext()) {
-	    DataOutputBuffer b = splitter.next();
-	    return new String(b.getData(),0,b.getLength());
-	} else return null;
+        if (splitter.hasNext()) {
+            DataOutputBuffer b = splitter.next();
+            return new String(b.getData(),0,b.getLength());
+        } else return null;
     }
 
     public Bag parse ( String s ) {
-	try {
-	    JSONLex scanner = new JSONLex(new StringReader(s));
-	    JSONParser parser = new JSONParser(scanner);
-	    parser.parse();
-	    return new Bag(parser.top_level);
-	} catch (Exception e) {
-	    System.err.println(e);
-	    return new Bag();
-	}
+        try {
+            JSONLex scanner = new JSONLex(new StringReader(s));
+            JSONParser parser = new JSONParser(scanner);
+            parser.parse();
+            return new Bag(parser.top_level);
+        } catch (Exception e) {
+            System.err.println(e);
+            return new Bag();
+        }
     }
 }

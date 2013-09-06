@@ -38,36 +38,36 @@ final public class MR_byte extends MRData {
     public void set ( byte v ) { value = v; }
 
     final public void write ( DataOutput out ) throws IOException {
-	out.writeByte(MRContainer.BYTE);
-	out.writeByte(value);
+        out.writeByte(MRContainer.BYTE);
+        out.writeByte(value);
     }
 
     final public static MR_byte read ( DataInput in ) throws IOException {
-	return new MR_byte(in.readByte());
+        return new MR_byte(in.readByte());
     }
 
     public void readFields ( DataInput in ) throws IOException {
-	value = in.readByte();
+        value = in.readByte();
     }
 
     public int compareTo ( MRData x ) {
-	assert(x instanceof MR_byte);
-	byte v = ((MR_byte) x).value;
-	return (value == v) ? 0 : ((value < v) ? -1 : 1);
+        assert(x instanceof MR_byte);
+        byte v = ((MR_byte) x).value;
+        return (value == v) ? 0 : ((value < v) ? -1 : 1);
     }
 
     final public static int compare ( byte[] x, int xs, int xl, byte[] y, int ys, int yl, int[] size ) {
-	size[0] = 2;
-	return x[xs]-y[ys];
+        size[0] = 2;
+        return x[xs]-y[ys];
     }
 
     public boolean equals ( Object x ) {
-	return x instanceof MR_byte && ((MR_byte)x).value==value;
+        return x instanceof MR_byte && ((MR_byte)x).value==value;
     }
 
     public int hashCode () { return Math.abs(value); }
 
     public String toString () {
-	return Integer.toString(value);
+        return Integer.toString(value);
     }
 }

@@ -33,72 +33,72 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 final public class ParsedInputFormat extends MRQLFileInputFormat {
 
     public static class ParsedRecordReader extends RecordReader<MRContainer,MRContainer> {
-	final FSDataInputStream fsin;
-	final long start;
-	final long end;
-	Iterator<MRData> result;
-	MRData data;
-	Parser parser;
+        final FSDataInputStream fsin;
+        final long start;
+        final long end;
+        Iterator<MRData> result;
+        MRData data;
+        Parser parser;
 
-	public ParsedRecordReader ( FileSplit split,
-				    TaskAttemptContext context,
-				    Class<? extends Parser> parser_class,
-				    Trees args ) throws IOException {
-	    Configuration conf = context.getConfiguration();
-	    start = split.getStart();
-	    end = start + split.getLength();
-	    Path file = split.getPath();
-	    FileSystem fs = file.getFileSystem(conf);
-	    fsin = fs.open(split.getPath());
-	    try {
-		parser = parser_class.newInstance();
-	    } catch (Exception ex) {
-		throw new Error("Unrecognized parser:"+parser_class);
-	    };
-	    parser.initialize(args);
-	    parser.open(fsin,start,end);
-	    result = null;
-	}
+        public ParsedRecordReader ( FileSplit split,
+                                    TaskAttemptContext context,
+                                    Class<? extends Parser> parser_class,
+                                    Trees args ) throws IOException {
+            Configuration conf = context.getConfiguration();
+            start = split.getStart();
+            end = start + split.getLength();
+            Path file = split.getPath();
+            FileSystem fs = file.getFileSystem(conf);
+            fsin = fs.open(split.getPath());
+            try {
+                parser = parser_class.newInstance();
+            } catch (Exception ex) {
+                throw new Error("Unrecognized parser:"+parser_class);
+            };
+            parser.initialize(args);
+            parser.open(fsin,start,end);
+            result = null;
+        }
 
-	public boolean nextKeyValue () throws IOException {
-	    while (result == null || !result.hasNext()) {
-		String s = parser.slice();
-		if (s == null)
-		    return false;
-		result = parser.parse(s).iterator();
-	    };
-	    data = (MRData)result.next();
-	    return true;
-	}
+        public boolean nextKeyValue () throws IOException {
+            while (result == null || !result.hasNext()) {
+                String s = parser.slice();
+                if (s == null)
+                    return false;
+                result = parser.parse(s).iterator();
+            };
+            data = (MRData)result.next();
+            return true;
+        }
 
         public MRContainer getCurrentKey () throws IOException {
-	    return new MRContainer(new MR_long(fsin.getPos()));
-	}
+            return new MRContainer(new MR_long(fsin.getPos()));
+        }
 
-	public MRContainer getCurrentValue () throws IOException {
-	    return new MRContainer(data);
-	}
+        public MRContainer getCurrentValue () throws IOException {
+            return new MRContainer(data);
+        }
 
-	public long getPos () throws IOException { return fsin.getPos(); }
+        public long getPos () throws IOException { return fsin.getPos(); }
 
-	public void close () throws IOException { fsin.close(); }
+        public void close () throws IOException { fsin.close(); }
 
-	public float getProgress () throws IOException {
-	    if (end == start)
-		return 0.0f;
-	    else return Math.min(1.0f, (getPos() - start) / (float)(end - start));
-	}
+        public float getProgress () throws IOException {
+            if (end == start)
+                return 0.0f;
+            else return Math.min(1.0f, (getPos() - start) / (float)(end - start));
+        }
 
-	public void initialize ( InputSplit split, TaskAttemptContext context ) throws IOException { }
+        public void initialize ( InputSplit split, TaskAttemptContext context ) throws IOException { }
     }
 
     public RecordReader<MRContainer,MRContainer>
-	      createRecordReader ( InputSplit split,
-				   TaskAttemptContext context ) throws IOException, InterruptedException {
-	Configuration conf = context.getConfiguration();
-	String path = ((FileSplit)split).getPath().toString();
-	ParsedDataSource ds = (ParsedDataSource)DataSource.get(path,conf);
-	return new ParsedRecordReader((FileSplit)split,context,ds.parser,(Trees)ds.args);
+              createRecordReader ( InputSplit split,
+                                   TaskAttemptContext context ) throws IOException, InterruptedException {
+        Configuration conf = context.getConfiguration();
+        String path = ((FileSplit)split).getPath().toString();
+        ParsedDataSource ds = (ParsedDataSource)DataSource.get(path,conf);
+        return new ParsedRecordReader((FileSplit)split,context,ds.parser,(Trees)ds.args);
     }
 
     /** Find the parser associated with each file in the path and parse the file,
@@ -107,33 +107,33 @@ final public class ParsedInputFormat extends MRQLFileInputFormat {
      * @return a Bag that contains all data
      */
     Bag materialize ( final Path path ) throws IOException {
-	Configuration conf = Plan.conf;
-	ParsedDataSource ds = (ParsedDataSource)DataSource.get(path.toString(),conf);
-	FileSystem fs = path.getFileSystem(conf);
-	FSDataInputStream fsin = fs.open(path);
-	Parser p;
-	try {
-	    p = ds.parser.newInstance();
-	} catch (Exception ex) {
-	    throw new Error("Unrecognized parser:"+ds.parser);
-	};
-	final Parser parser = p;
-	parser.initialize(ds.args);
-	parser.open(fsin,0,Long.MAX_VALUE);
-	return new Bag(new BagIterator () {
-		Iterator<MRData> iter;
-		public boolean hasNext () {
-		    while (iter == null || !iter.hasNext()) {
-			String line = parser.slice();
-			if (line == null)
-			    return false;
-			iter = parser.parse(line).iterator();
-		    };
-		    return true;
-		}
-		public MRData next () {
-		    return iter.next();
-		}
-	    });
+        Configuration conf = Plan.conf;
+        ParsedDataSource ds = (ParsedDataSource)DataSource.get(path.toString(),conf);
+        FileSystem fs = path.getFileSystem(conf);
+        FSDataInputStream fsin = fs.open(path);
+        Parser p;
+        try {
+            p = ds.parser.newInstance();
+        } catch (Exception ex) {
+            throw new Error("Unrecognized parser:"+ds.parser);
+        };
+        final Parser parser = p;
+        parser.initialize(ds.args);
+        parser.open(fsin,0,Long.MAX_VALUE);
+        return new Bag(new BagIterator () {
+                Iterator<MRData> iter;
+                public boolean hasNext () {
+                    while (iter == null || !iter.hasNext()) {
+                        String line = parser.slice();
+                        if (line == null)
+                            return false;
+                        iter = parser.parse(line).iterator();
+                    };
+                    return true;
+                }
+                public MRData next () {
+                    return iter.next();
+                }
+            });
     }
 }

@@ -25,13 +25,13 @@ final public class Condition {
     public final String pred;
     public final int unmatched_brackets;
     public Condition ( String s, String p, int n ) {
-	stmt = s;
-	pred = p;
-	unmatched_brackets = n;
+        stmt = s;
+        pred = p;
+        unmatched_brackets = n;
     }
     public String and () {
-	if (pred.equals("true"))
-	    return "";
-	else return " && " + pred;
+        if (pred.equals("true"))
+            return "";
+        else return " && " + pred;
     }
 }

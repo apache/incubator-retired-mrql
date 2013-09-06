@@ -26,343 +26,343 @@ public class Normalization extends Translator {
     /** given that pattern=e, find the bindings of the pattern variables */
     static Trees bind_pattern ( Tree pattern, Tree e ) {
         Trees args = #[];
-	match pattern {
-	case tuple(...pl):
-	    int i = 0;
-	    for ( Tree p: pl ) {
-		args = args.append(bind_pattern(p,#<nth(`e,`i)>));
-		i++;
-	    }
+        match pattern {
+        case tuple(...pl):
+            int i = 0;
+            for ( Tree p: pl ) {
+                args = args.append(bind_pattern(p,#<nth(`e,`i)>));
+                i++;
+            }
         case record(...bl):
-	    Trees attrs = #[];
-	    for ( Tree b: bl )
-		match b {
-		case bind(`n,`p):
-		    args = args.append(bind_pattern(p,#<project(`e,`n)>));
-		    if (attrs.member(n))
-			error("Duplicate record attribute name: "+n);
-		    attrs = attrs.append(n);
-		};
-	case typed(`p,`t):
-	    args = bind_pattern(p,#<typed(`e,`t)>);
-	case list(...pl):
-	    int i = 0;
-	    for ( Tree p: pl ) {
-		args = args.append(bind_pattern(p,#<index(`e,`i)>));
-		i++;
-	    };
-	    args = args.append(#<call(eq,call(count,`e),`i)>);
-	case call(`c,...s):
-	    Tree ci = data_constructors.lookup(c.toString());
-	    if (ci == null)
-		error("Undefined data constructor: "+c);
-	    match ci {
-	    case `dname(`n,`tp):
-		args = args.append(#<call(eq,union_tag(`e),`n)>);
-		args = args.append(bind_pattern(s.length() == 1 ? s.head() : #<tuple(...s)>,
-						#<typed(union_value(`e),`tp)>));
-	    };
+            Trees attrs = #[];
+            for ( Tree b: bl )
+                match b {
+                case bind(`n,`p):
+                    args = args.append(bind_pattern(p,#<project(`e,`n)>));
+                    if (attrs.member(n))
+                        error("Duplicate record attribute name: "+n);
+                    attrs = attrs.append(n);
+                };
+        case typed(`p,`t):
+            args = bind_pattern(p,#<typed(`e,`t)>);
+        case list(...pl):
+            int i = 0;
+            for ( Tree p: pl ) {
+                args = args.append(bind_pattern(p,#<index(`e,`i)>));
+                i++;
+            };
+            args = args.append(#<call(eq,call(count,`e),`i)>);
+        case call(`c,...s):
+            Tree ci = data_constructors.lookup(c.toString());
+            if (ci == null)
+                error("Undefined data constructor: "+c);
+            match ci {
+            case `dname(`n,`tp):
+                args = args.append(#<call(eq,union_tag(`e),`n)>);
+                args = args.append(bind_pattern(s.length() == 1 ? s.head() : #<tuple(...s)>,
+                                                #<typed(union_value(`e),`tp)>));
+            };
         case any: ;
-	case `v:
-	    if (!v.is_variable())    // constant in pattern
-		args = #[call(eq,`e,`v)];
-	    else if (st.lookup(v.toString()) != null    // repeated pattern variable
-		     && !(e.is_variable() && st.lookup(v.toString()).is_variable()))  // exception
-		args = #[call(eq,`e,`(st.lookup(v.toString())))];
-	    else st.insert(v.toString(),e);    // new pattern variable
-	};
-	return args;
+        case `v:
+            if (!v.is_variable())    // constant in pattern
+                args = #[call(eq,`e,`v)];
+            else if (st.lookup(v.toString()) != null    // repeated pattern variable
+                     && !(e.is_variable() && st.lookup(v.toString()).is_variable()))  // exception
+                args = #[call(eq,`e,`(st.lookup(v.toString())))];
+            else st.insert(v.toString(),e);    // new pattern variable
+        };
+        return args;
     }
 
     private static Tree make_tuple ( Trees pl ) {
-    	if (pl.length() == 1)
-	    return pl.head();
-	return #<tuple(...pl)>;
+        if (pl.length() == 1)
+            return pl.head();
+        return #<tuple(...pl)>;
     }
 
     /** remove group-bys and order-bys from the MRQL queries */
     static Tree remove_groupby ( Tree e ) {
-    	Tree ret = #<error>;
-	match e {
-	case select(distinct,`u,from(...bl),where(`c),groupby(...gl),orderby(...ol)):
-	    ret = #<select(none,tuple(`u,`u),from(...bl),where(`c),groupby(...gl),orderby(...ol))>;
-	    ret = #<cmap(lambda(tuple(key,group),list(key)),groupBy(`ret))>;
-	    return remove_groupby(ret);
-	case select(none,`u,from(...bl),where(`c),groupby(),orderby()):
-	    return remove_groupby(#<select(`u,from(...bl),where(`c))>);
-	case select(none,`u,from(...bl),where(`c),groupby(...gl),orderby(`l,...ol)):
-	    Tree tol = make_tuple(ol);
-	    ret = #<cmap(lambda(tuple(key,group),group),
-			 orderBy(select(none,tuple(`tol,`u),
-					from(...bl),
-					where(`c),groupby(...gl),orderby())))>;
-	    return (l.equals(#<none>))
-		   ? remove_groupby(ret)
-		   : #<range(`(remove_groupby(ret)),0,`l)>;
-	case select(none,`u,from(...bl),where(`c),groupby(`h,...gl),orderby()):
-	    Trees pl = #[];
-	    Trees ul = #[];
-	    Trees ql = #[];
-	    for ( Tree b: bl )
-		match b {
-		case bind(`p,`d):
-		    pl = pl.append(p);
-		};
-	    Trees pvs = #[];
-	    for ( Tree g: gl )
-		match g {
-		case bind(`p,`d):
-		    ql = ql.append(p);
-		    ul = ul.append(d);
-		    pvs = pvs.append(pattern_variables(p));
-		};
-	    Tree tql = make_tuple(ql);
-	    Tree tul = make_tuple(ul);
-	    Tree tpl = make_tuple(pl);
-	    Trees xl = #[];
-	    Trees partl = #[];
-	    for ( Tree x: pattern_variables(#<tuple(...pl)>) )
-		if (!pvs.member(x)) {
-		    partl = partl.append(#<bind(`x,`x)>);
-		    match rename(#<select(`x,from(bind(`tpl,group)),where(true))>) {
-		    case select(`hd,`binds,...):
-			xl = xl.append(#<bind(`x,bag(select(`hd,`binds,where(true))))>);
-		    }
-		};
-	    match rename(#<select(record(...partl),from(bind(`tpl,group)),where(true))>) {
-	    case select(`hd,`binds,...):
-		xl = xl.cons(#<bind(partition,bag(select(`hd,`binds,where(true))))>);
-	    }
-	    tpl = subst(#<any>,#<0>,tpl);
-	    ret = #<select(`u,from(bind(tuple(`tql,group),
-					groupBy(select(tuple(`tul,`tpl),from(...bl),where(`c)))),
-				   ...xl),where(`h))>;
-	    return remove_groupby(ret);
-	case intersect(`x,`y):
-	    return remove_groupby(#<select(x,from(bind(x,`x),bind(y,`y)),
-					   where(call(eq,x,y)))>);
-	case except(`x,`y):
-	    return remove_groupby(#<select(x,from(bind(x,`x)),
-					   where(call(not,call(exists,select(y,from(bind(y,`y)),
-									     where(call(eq,x,y)))))))>);
-	case member(`x,`y):
-	    return remove_groupby(#<call(exists,select(y,from(bind(y,`y)),
-						       where(call(eq,y,`x))))>);
-	case call(gen,`min,`max,`size):
-	    return #<gen(`(remove_groupby(min)),`(remove_groupby(max)),`(remove_groupby(size)))>;
-	case call(avg,`s):
-	    return remove_groupby(#<call(avg_value,call(avg_aggr,`s))>);
-	case call(`f,...al):
-	    Tree macro = global_macros.lookup(f.toString());
-	    if (macro == null)
-		fail;
-	    match macro {
-	    case macro(params(...pl),`body):
-		Tree b = rename(remove_groupby(body));
-		if (pl.length() != al.length())
-		    fail;
-		for ( ; !pl.is_empty(); pl = pl.tail(), al = al.tail() )
-		    b = subst(pl.head(),remove_groupby(al.head()),b);
-		return b;
-	    }
-	case call(`f,...al):
-	    if (#[cmap,join,mapReduce,mapReduce2,groupBy,orderBy,tuple,bag,list,set].member(f))
-		return remove_groupby(#<`(f.toString())(...al)>);
-	    else fail
-	case project(`x,`a):
-	    return #<project(`(remove_groupby(x)),`a)>;
-	case `f(...al):
-	    Trees bl = #[];
-	    for ( Tree a: al )
-		bl = bl.append(remove_groupby(a));
-	    return #<`f(...bl)>;
-	case `v:
-	    if (v.is_variable()) {
-		ret = global_vars.lookup(v.toString());
-		if (ret == null)
-		    return v;
-		else if (!v.equals(ret))
-		    return remove_groupby(ret);
-	    }
-	};
-	return e;
+        Tree ret = #<error>;
+        match e {
+        case select(distinct,`u,from(...bl),where(`c),groupby(...gl),orderby(...ol)):
+            ret = #<select(none,tuple(`u,`u),from(...bl),where(`c),groupby(...gl),orderby(...ol))>;
+            ret = #<cmap(lambda(tuple(key,group),list(key)),groupBy(`ret))>;
+            return remove_groupby(ret);
+        case select(none,`u,from(...bl),where(`c),groupby(),orderby()):
+            return remove_groupby(#<select(`u,from(...bl),where(`c))>);
+        case select(none,`u,from(...bl),where(`c),groupby(...gl),orderby(`l,...ol)):
+            Tree tol = make_tuple(ol);
+            ret = #<cmap(lambda(tuple(key,group),group),
+                         orderBy(select(none,tuple(`tol,`u),
+                                        from(...bl),
+                                        where(`c),groupby(...gl),orderby())))>;
+            return (l.equals(#<none>))
+                   ? remove_groupby(ret)
+                   : #<range(`(remove_groupby(ret)),0,`l)>;
+        case select(none,`u,from(...bl),where(`c),groupby(`h,...gl),orderby()):
+            Trees pl = #[];
+            Trees ul = #[];
+            Trees ql = #[];
+            for ( Tree b: bl )
+                match b {
+                case bind(`p,`d):
+                    pl = pl.append(p);
+                };
+            Trees pvs = #[];
+            for ( Tree g: gl )
+                match g {
+                case bind(`p,`d):
+                    ql = ql.append(p);
+                    ul = ul.append(d);
+                    pvs = pvs.append(pattern_variables(p));
+                };
+            Tree tql = make_tuple(ql);
+            Tree tul = make_tuple(ul);
+            Tree tpl = make_tuple(pl);
+            Trees xl = #[];
+            Trees partl = #[];
+            for ( Tree x: pattern_variables(#<tuple(...pl)>) )
+                if (!pvs.member(x)) {
+                    partl = partl.append(#<bind(`x,`x)>);
+                    match rename(#<select(`x,from(bind(`tpl,group)),where(true))>) {
+                    case select(`hd,`binds,...):
+                        xl = xl.append(#<bind(`x,bag(select(`hd,`binds,where(true))))>);
+                    }
+                };
+            match rename(#<select(record(...partl),from(bind(`tpl,group)),where(true))>) {
+            case select(`hd,`binds,...):
+                xl = xl.cons(#<bind(partition,bag(select(`hd,`binds,where(true))))>);
+            }
+            tpl = subst(#<any>,#<0>,tpl);
+            ret = #<select(`u,from(bind(tuple(`tql,group),
+                                        groupBy(select(tuple(`tul,`tpl),from(...bl),where(`c)))),
+                                   ...xl),where(`h))>;
+            return remove_groupby(ret);
+        case intersect(`x,`y):
+            return remove_groupby(#<select(x,from(bind(x,`x),bind(y,`y)),
+                                           where(call(eq,x,y)))>);
+        case except(`x,`y):
+            return remove_groupby(#<select(x,from(bind(x,`x)),
+                                           where(call(not,call(exists,select(y,from(bind(y,`y)),
+                                                                             where(call(eq,x,y)))))))>);
+        case member(`x,`y):
+            return remove_groupby(#<call(exists,select(y,from(bind(y,`y)),
+                                                       where(call(eq,y,`x))))>);
+        case call(gen,`min,`max,`size):
+            return #<gen(`(remove_groupby(min)),`(remove_groupby(max)),`(remove_groupby(size)))>;
+        case call(avg,`s):
+            return remove_groupby(#<call(avg_value,call(avg_aggr,`s))>);
+        case call(`f,...al):
+            Tree macro = global_macros.lookup(f.toString());
+            if (macro == null)
+                fail;
+            match macro {
+            case macro(params(...pl),`body):
+                Tree b = rename(remove_groupby(body));
+                if (pl.length() != al.length())
+                    fail;
+                for ( ; !pl.is_empty(); pl = pl.tail(), al = al.tail() )
+                    b = subst(pl.head(),remove_groupby(al.head()),b);
+                return b;
+            }
+        case call(`f,...al):
+            if (#[cmap,join,mapReduce,mapReduce2,groupBy,orderBy,tuple,bag,list,set].member(f))
+                return remove_groupby(#<`(f.toString())(...al)>);
+            else fail
+        case project(`x,`a):
+            return #<project(`(remove_groupby(x)),`a)>;
+        case `f(...al):
+            Trees bl = #[];
+            for ( Tree a: al )
+                bl = bl.append(remove_groupby(a));
+            return #<`f(...bl)>;
+        case `v:
+            if (v.is_variable()) {
+                ret = global_vars.lookup(v.toString());
+                if (ret == null)
+                    return v;
+                else if (!v.equals(ret))
+                    return remove_groupby(ret);
+            }
+        };
+        return e;
     }
 
     private static Tree make_and ( Trees tests ) {
         if (tests.is_empty())
-	    return #<true>;
-	Tree e = tests.head();
-	for ( Tree t: tests.tail() )
-	    e = #<call(and,`e,`t)>;
-	return e;
+            return #<true>;
+        Tree e = tests.head();
+        for ( Tree t: tests.tail() )
+            e = #<call(and,`e,`t)>;
+        return e;
     }
 
     private static Trees rename_list ( Trees al ) {
-	Trees bl = #[];
-	for ( Tree a: al )
-	    bl = bl.append(rename(a));
-	return bl;
+        Trees bl = #[];
+        for ( Tree a: al )
+            bl = bl.append(rename(a));
+        return bl;
     }
 
     /** compile away patterns and rename local variables of an MRQL expression e with unique names */
     static Tree rename ( Tree e ) {
-    	Tree ret = #<error>;
-	match e {
-	case `v:
-	    if (!v.is_variable())
-		fail;
-	    ret = st.lookup(v.toString());
-	    if (ret==null)
-		return v;
-	    else return ret;
-	case select(`u,from(...bl),where(`c)):
-	    st.begin_scope();
-	    Trees binds = #[];
-	    Trees tests = #[];
-	    for ( Tree b: bl )
-		match b {
-		case bind(`p,`d):
-		    Tree x = new_var();
-		    binds = binds.append(#<bind(`x,`(rename(d)))>);
-		    tests = tests.append(bind_pattern(p,x));
-		};
-	    c = make_and(tests.cons(c));
-	    ret = #<select(`(rename(u)),
-			   from(...binds),
-			   where(`(rename(c))))>;
-	    st.end_scope();
-	    return ret;
+        Tree ret = #<error>;
+        match e {
+        case `v:
+            if (!v.is_variable())
+                fail;
+            ret = st.lookup(v.toString());
+            if (ret==null)
+                return v;
+            else return ret;
+        case select(`u,from(...bl),where(`c)):
+            st.begin_scope();
+            Trees binds = #[];
+            Trees tests = #[];
+            for ( Tree b: bl )
+                match b {
+                case bind(`p,`d):
+                    Tree x = new_var();
+                    binds = binds.append(#<bind(`x,`(rename(d)))>);
+                    tests = tests.append(bind_pattern(p,x));
+                };
+            c = make_and(tests.cons(c));
+            ret = #<select(`(rename(u)),
+                           from(...binds),
+                           where(`(rename(c))))>;
+            st.end_scope();
+            return ret;
         case lambda(`p,`b):
-	    st.begin_scope();
-	    Tree nv = new_var();
-	    if (!bind_pattern(p,nv).is_empty())
-		error("Lambda patterns must be irrefutable: "+print_query(e));
-	    ret = #<lambda(`nv,`(rename(b)))>;
-	    st.end_scope();
-	    return ret;
+            st.begin_scope();
+            Tree nv = new_var();
+            if (!bind_pattern(p,nv).is_empty())
+                error("Lambda patterns must be irrefutable: "+print_query(e));
+            ret = #<lambda(`nv,`(rename(b)))>;
+            st.end_scope();
+            return ret;
        case function(tuple(...params),`outp,`body):
-	    st.begin_scope();
-	    Trees ps = #[];
-	    Trees vs = #[];
-	    for ( Tree p: params )
-		match p {
-		case `bind(`v,`tp):
-		    Tree nv = new_var();
-		    if (vs.member(v))
-			error("Duplicate function parameters: "+print_query(e));
-		    vs = vs.append(v);
-		    ps = ps.append(#<`bind(`nv,`tp)>);
-		    st.insert(v.toString(),nv);
-		};
-	    ret = #<function(tuple(...ps),`outp,`(rename(body)))>;
-	    st.end_scope();
-	    return ret;
-	case let(`p,`u,`b):
-	    Tree ne = rename(u);
-	    st.begin_scope();
-	    Tree nv = new_var();
-	    if (!bind_pattern(p,nv).is_empty())
-		error("Let patterns must be irrefutable: "+print_query(e));
-	    ret = #<let(`nv,`ne,`(rename(b)))>;
-	    st.end_scope();
-	    return ret;
-	case case(`u,...cs):
-	    Trees rs = cs.reverse();
-	    Tree nu = rename(u);
-	    match rs.head() {
-	    case case(`p,`b):
-		Trees conds = bind_pattern(p,nu);
-		if (!conds.is_empty())
-		    error("Non-exhaustive case "+print_query(p)+" in "+print_query(e));
-		ret = b;
-	    };
-	    for ( Tree c: rs.tail() )
-		match c {
-		case case(`p,`b):
-		    Trees conds = bind_pattern(p,nu);
-		    if (!conds.is_empty())
-			ret = #<if(`(make_and(conds)),`b,`ret)>;
-		    else error("Unreachable case "+print_query(p)+" in "+print_query(e));
-		};
-	    return rename(ret);
-	case project(`u,`a):
-	    return #<project(`(rename(u)),`a)>;
-	case bind(`a,`u):
-	    return #<bind(`a,`(rename(u)))>;
-	case loop(lambda(tuple(...vs),`b),`s,`n):
-	    return #<loop(lambda(tuple(...vs),`(rename(b))),`(rename(s)),`n)>;
-	case `f(...al):
-	    Trees bl = rename_list(al);
-	    return #<`f(...bl)>;
-	};
-	return e;
+            st.begin_scope();
+            Trees ps = #[];
+            Trees vs = #[];
+            for ( Tree p: params )
+                match p {
+                case `bind(`v,`tp):
+                    Tree nv = new_var();
+                    if (vs.member(v))
+                        error("Duplicate function parameters: "+print_query(e));
+                    vs = vs.append(v);
+                    ps = ps.append(#<`bind(`nv,`tp)>);
+                    st.insert(v.toString(),nv);
+                };
+            ret = #<function(tuple(...ps),`outp,`(rename(body)))>;
+            st.end_scope();
+            return ret;
+        case let(`p,`u,`b):
+            Tree ne = rename(u);
+            st.begin_scope();
+            Tree nv = new_var();
+            if (!bind_pattern(p,nv).is_empty())
+                error("Let patterns must be irrefutable: "+print_query(e));
+            ret = #<let(`nv,`ne,`(rename(b)))>;
+            st.end_scope();
+            return ret;
+        case case(`u,...cs):
+            Trees rs = cs.reverse();
+            Tree nu = rename(u);
+            match rs.head() {
+            case case(`p,`b):
+                Trees conds = bind_pattern(p,nu);
+                if (!conds.is_empty())
+                    error("Non-exhaustive case "+print_query(p)+" in "+print_query(e));
+                ret = b;
+            };
+            for ( Tree c: rs.tail() )
+                match c {
+                case case(`p,`b):
+                    Trees conds = bind_pattern(p,nu);
+                    if (!conds.is_empty())
+                        ret = #<if(`(make_and(conds)),`b,`ret)>;
+                    else error("Unreachable case "+print_query(p)+" in "+print_query(e));
+                };
+            return rename(ret);
+        case project(`u,`a):
+            return #<project(`(rename(u)),`a)>;
+        case bind(`a,`u):
+            return #<bind(`a,`(rename(u)))>;
+        case loop(lambda(tuple(...vs),`b),`s,`n):
+            return #<loop(lambda(tuple(...vs),`(rename(b))),`(rename(s)),`n)>;
+        case `f(...al):
+            Trees bl = rename_list(al);
+            return #<`f(...bl)>;
+        };
+        return e;
     }
 
     private static Trees has_existential ( Tree e ) {
-	match e {
+        match e {
         case call(and(`x,`y)):
-	    Trees xs = has_existential(x);
-	    Trees ys = has_existential(y);
-	    return #[call(and(`(xs.head()),`(ys.head())),...(xs.tail()),...(ys.tail()))];
-	case call(exists,select(...)):
-	    return #[true,`e];
-	case call(not,call(all,select(...l))):
-	    return #[true,call(exists,select(...l))];
-	};
-	return #[`e];
+            Trees xs = has_existential(x);
+            Trees ys = has_existential(y);
+            return #[call(and(`(xs.head()),`(ys.head())),...(xs.tail()),...(ys.tail()))];
+        case call(exists,select(...)):
+            return #[true,`e];
+        case call(not,call(all,select(...l))):
+            return #[true,call(exists,select(...l))];
+        };
+        return #[`e];
     }
 
     /** normalize algebraic expressions to more efficient forms using heuristic rules */
     public static Tree normalize ( Tree e ) {
-	match e {
-	case select(`u,from(),where(true)):
-	    return normalize(#<bag(`u)>);
-	case select(`u,from(),where(`p)):
-	    return normalize(#<if(`p,bag(`u),bag())>);
-	case select(`u,from(bind(`v,`d)),where(true)):
-	    if (u.equals(v))
-		return normalize(d);
-	    else fail
-	case select(`u,from(...bl,bind(`v,select(`iu,from(...ibl),where(`ic))),...al),where(`c)):
-	    return normalize(#<select(`u,from(...bl,...ibl,bind(`v,bag(`iu)),...al),
-				      where(call(and,`c,`ic)))>);
+        match e {
+        case select(`u,from(),where(true)):
+            return normalize(#<bag(`u)>);
+        case select(`u,from(),where(`p)):
+            return normalize(#<if(`p,bag(`u),bag())>);
+        case select(`u,from(bind(`v,`d)),where(true)):
+            if (u.equals(v))
+                return normalize(d);
+            else fail
+        case select(`u,from(...bl,bind(`v,select(`iu,from(...ibl),where(`ic))),...al),where(`c)):
+            return normalize(#<select(`u,from(...bl,...ibl,bind(`v,bag(`iu)),...al),
+                                      where(call(and,`c,`ic)))>);
         case select(`u,from(...bl,bind(`v,bag(`d)),...al),`c):
-	    if (!is_pure(d) && occurences(v,#<f(`c,`u,...al)>) > 1)  // duplicated side-effects
-		fail;
-	    return normalize(#<select(`(subst(v,d,u)),
-				      from(...bl,...(subst_list(v,d,al))),
-				      `(subst(v,d,c)))>);
+            if (!is_pure(d) && occurences(v,#<f(`c,`u,...al)>) > 1)  // duplicated side-effects
+                fail;
+            return normalize(#<select(`(subst(v,d,u)),
+                                      from(...bl,...(subst_list(v,d,al))),
+                                      `(subst(v,d,c)))>);
         case select(`u,from(...bl),where(`c)):
-	    Trees es = has_existential(c);
-	    if (es.length() <= 1)
-		fail;
-	    Trees binds = bl;
-	    Trees preds = #[`(es.head())];
-	    for ( Tree x: es.tail() )
-		match x {
-		case call(exists,select(`p,from(...bl2),where(`c2))):
-		    preds = preds.cons(p).cons(c2);
-		    binds = binds.append(bl2);
-		};
-	    return normalize(#<select(`u,from(...binds),where(`(make_and(preds))))>);
-	case let_bind(`v,`x,`y):
-	    return #<let(`v,`(normalize(x)),`(normalize(y)))>;
-	case call(eq,tuple(...l),`x):
-	    Tree pl = #<true>;
-	    int i = 0;
-	    for ( Tree y: l ) {
-		pl = #<call(and,`pl,call(eq,`y,nth(`x,`i)))>;
-		i++;
-	    };
-	    return normalize(pl);
-	case call(eq,`x,tuple(...l)):
-	    Tree pl = #<true>;
-	    int i = 0;
-	    for (Tree y: l) {
-		pl = #<call(and,`pl,call(eq,nth(`x,`i),`y))>;
-		i++;
-	    };
-	    return normalize(pl);
+            Trees es = has_existential(c);
+            if (es.length() <= 1)
+                fail;
+            Trees binds = bl;
+            Trees preds = #[`(es.head())];
+            for ( Tree x: es.tail() )
+                match x {
+                case call(exists,select(`p,from(...bl2),where(`c2))):
+                    preds = preds.cons(p).cons(c2);
+                    binds = binds.append(bl2);
+                };
+            return normalize(#<select(`u,from(...binds),where(`(make_and(preds))))>);
+        case let_bind(`v,`x,`y):
+            return #<let(`v,`(normalize(x)),`(normalize(y)))>;
+        case call(eq,tuple(...l),`x):
+            Tree pl = #<true>;
+            int i = 0;
+            for ( Tree y: l ) {
+                pl = #<call(and,`pl,call(eq,`y,nth(`x,`i)))>;
+                i++;
+            };
+            return normalize(pl);
+        case call(eq,`x,tuple(...l)):
+            Tree pl = #<true>;
+            int i = 0;
+            for (Tree y: l) {
+                pl = #<call(and,`pl,call(eq,nth(`x,`i),`y))>;
+                i++;
+            };
+            return normalize(pl);
         case call(and,true,`u): return normalize(u);
         case call(and,`u,true): return normalize(u);
         case call(and,false,`u): return #<false>;
@@ -371,36 +371,36 @@ public class Normalization extends Translator {
         case call(or,`u,true): return #<true>;
         case call(or,false,`u): return normalize(u);
         case call(or,`u,false): return normalize(u);
-	case call(not,true): return #<false>;
-	case call(not,false): return #<true>;
-	case if(true,`e1,`e2): return normalize(e1);
-	case if(false,`e1,`e2): return normalize(e2);
-	case nth(tuple(...al),`n):
-	    if (!n.is_long())
-		fail;
-	    int i = (int)n.longValue();
-	    if ( i >= 0 && i < al.length() )
-		return normalize(al.nth(i));
-	case project(record(...bl),`a):
-	    for ( Tree b: bl )
-		match b {
-		case bind(`v,`u): if (v.equals(a)) return normalize(u);
-		};
-	    error("Wrong projection: "+print_query(e));
-	case `f(...al):
-	    Trees bl = #[];
-	    for ( Tree a: al )
-		bl = bl.append(normalize(a));
-	    return #<`f(...bl)>;
-	};
-	return e;
+        case call(not,true): return #<false>;
+        case call(not,false): return #<true>;
+        case if(true,`e1,`e2): return normalize(e1);
+        case if(false,`e1,`e2): return normalize(e2);
+        case nth(tuple(...al),`n):
+            if (!n.is_long())
+                fail;
+            int i = (int)n.longValue();
+            if ( i >= 0 && i < al.length() )
+                return normalize(al.nth(i));
+        case project(record(...bl),`a):
+            for ( Tree b: bl )
+                match b {
+                case bind(`v,`u): if (v.equals(a)) return normalize(u);
+                };
+            error("Wrong projection: "+print_query(e));
+        case `f(...al):
+            Trees bl = #[];
+            for ( Tree a: al )
+                bl = bl.append(normalize(a));
+            return #<`f(...bl)>;
+        };
+        return e;
     }
 
     /** normalize algebraic expressions to more efficient forms using heuristic rules */
     public static Tree normalize_all ( Tree e ) {
-	Tree ne = normalize(e);
-	if (e.equals(ne))
-	    return e;
-	else return normalize(ne);
+        Tree ne = normalize(e);
+        if (e.equals(ne))
+            return e;
+        else return normalize(ne);
     }
 }

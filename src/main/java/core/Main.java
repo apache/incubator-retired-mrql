@@ -36,128 +36,128 @@ final public class Main {
     public static String query_file = "";
 
     public static void include_file ( String file ) {
-	try {
-	    MRQLParser old_parser = parser;
-	    boolean old_interactive = Config.interactive;
-	    try {
-		parser = new MRQLParser(new MRQLLex(new FileInputStream(file)));
-	    } catch (Exception e) {
-		Path path = new Path(file);
-		FileSystem fs = path.getFileSystem(conf);
-		parser = new MRQLParser(new MRQLLex(fs.open(path)));
-	    };
-	    Config.interactive = false;
-	    parser.parse();
-	    Config.interactive = old_interactive;
-	    parser = old_parser;
-	} catch (Exception ex) {
-	    ex.printStackTrace(System.err);
-	    throw new Error(ex);
-	}
+        try {
+            MRQLParser old_parser = parser;
+            boolean old_interactive = Config.interactive;
+            try {
+                parser = new MRQLParser(new MRQLLex(new FileInputStream(file)));
+            } catch (Exception e) {
+                Path path = new Path(file);
+                FileSystem fs = path.getFileSystem(conf);
+                parser = new MRQLParser(new MRQLLex(fs.open(path)));
+            };
+            Config.interactive = false;
+            parser.parse();
+            Config.interactive = old_interactive;
+            parser = old_parser;
+        } catch (Exception ex) {
+            ex.printStackTrace(System.err);
+            throw new Error(ex);
+        }
     }
 
     public static void main ( String[] args ) throws Exception {
-	boolean hadoop = false;
-	for ( String arg: args )
-	    hadoop |= arg.equals("-local") || arg.equals("-dist");
-	if (hadoop) {
-	    conf = Evaluator.new_configuration();
-	    GenericOptionsParser gop = new GenericOptionsParser(conf,args);
-	    conf = gop.getConfiguration();
-	    args = gop.getRemainingArgs();
-	};
-	Config.parse_args(args,conf);
-	Config.hadoop_mode = Config.local_mode || Config.distributed_mode;
-	if (!Config.info) {
-	    for ( Enumeration en = LogManager.getCurrentLoggers(); en.hasMoreElements(); )
-		((Logger)en.nextElement()).setLevel(Level.WARN);
-	    LogManager.getRootLogger().setLevel(Level.WARN);
-	};
+        boolean hadoop = false;
+        for ( String arg: args )
+            hadoop |= arg.equals("-local") || arg.equals("-dist");
+        if (hadoop) {
+            conf = Evaluator.new_configuration();
+            GenericOptionsParser gop = new GenericOptionsParser(conf,args);
+            conf = gop.getConfiguration();
+            args = gop.getRemainingArgs();
+        };
+        Config.parse_args(args,conf);
+        Config.hadoop_mode = Config.local_mode || Config.distributed_mode;
+        if (!Config.info) {
+            for ( Enumeration en = LogManager.getCurrentLoggers(); en.hasMoreElements(); )
+                ((Logger)en.nextElement()).setLevel(Level.WARN);
+            LogManager.getRootLogger().setLevel(Level.WARN);
+        };
         Evaluator.init(conf);
-	new TopLevel();
-	System.out.print("Apache MRQL version "+version+" (");
-	if (Config.compile_functional_arguments)
-	    System.out.print("compiled ");
-	else System.out.print("interpreted ");
-	if (hadoop) {
-	    if (Config.local_mode)
-		System.out.print("local ");
-	    else if (Config.distributed_mode)
-		System.out.print("distributed ");
-	    if (Config.spark_mode)
-		System.out.println("Spark mode using "+Config.nodes+" workers)");
-	    else if (Config.bsp_mode)
-		System.out.println("Hama BSP mode over "+Config.nodes+" BSP tasks)");
-	    else if (Config.nodes > 0)
-		System.out.println("Hadoop MapReduce mode with "+Config.nodes+" reducers)");
-	    else if (!Config.local_mode)
-		System.out.println("Hadoop MapReduce mode with 1 reducer, use -nodes to change it)");
-	    else System.out.println("Hadoop MapReduce mode)");
-	} else if (Config.bsp_mode)
-	    System.out.println("in-memory BSP mode)");
-	else System.out.println("in-memory MapReduce mode)");
-	if (Config.interactive) {
-	    System.out.println("Type quit to exit");
-	    ConsoleReader reader = new ConsoleReader();
-	    reader.setBellEnabled(false);
-	    History history = new History(new File(System.getProperty("user.home")+"/.mrqlhistory"));
-	    reader.setHistory(history);
-	    reader.setUseHistory(false);
-	    try {
-	    loop: while (true) {
-		String line = "";
-		String s = "";
-		try {
-		    if (hadoop && Config.bsp_mode)
-			Config.write(Plan.conf);
-		    do {
-			s = reader.readLine("> ");
-			if (s != null && (s.equals("quit") || s.equals("exit")))
-			    break loop;
-			if (s != null)
-			    line += " "+s;
-		    } while (s == null || s.indexOf(";") <= 0);
-		    line = line.substring(1);
-		    history.addToHistory(line);
-		    parser = new MRQLParser(new MRQLLex(new StringReader(line)));
-		    MRQLLex.reset();
-		    parser.parse();
-		} catch (EOFException x) {
-		    break;
-		} catch (Exception x) {
-		    if (x.getMessage() != null)
-			System.out.println(x);
-		} catch (Error x) {
-		    System.out.println(x);
-		}
-		}
-	    } finally {
-		if (hadoop) {
-		    Plan.clean();
-		    Evaluator.shutdown(Plan.conf);
-		};
-		if (Config.compile_functional_arguments)
-		    Compiler.clean();
-	    }
-	} else try {
-		if (hadoop && Config.bsp_mode)
-		    Config.write(Plan.conf);
-		try {
-		    parser = new MRQLParser(new MRQLLex(new FileInputStream(query_file)));
-		} catch (Exception e) {
-		    // when the query file is in HDFS
-		    Path path = new Path(query_file);
-		    FileSystem fs = path.getFileSystem(conf);
-		    parser = new MRQLParser(new MRQLLex(fs.open(path)));
-		};
-		parser.parse();
-	    } finally {
-		if (hadoop) {
-		    Plan.clean();
-		    Evaluator.shutdown(Plan.conf);
-		};
-		if (Config.compile_functional_arguments)
-		    Compiler.clean();
-	    }
+        new TopLevel();
+        System.out.print("Apache MRQL version "+version+" (");
+        if (Config.compile_functional_arguments)
+            System.out.print("compiled ");
+        else System.out.print("interpreted ");
+        if (hadoop) {
+            if (Config.local_mode)
+                System.out.print("local ");
+            else if (Config.distributed_mode)
+                System.out.print("distributed ");
+            if (Config.spark_mode)
+                System.out.println("Spark mode using "+Config.nodes+" workers)");
+            else if (Config.bsp_mode)
+                System.out.println("Hama BSP mode over "+Config.nodes+" BSP tasks)");
+            else if (Config.nodes > 0)
+                System.out.println("Hadoop MapReduce mode with "+Config.nodes+" reducers)");
+            else if (!Config.local_mode)
+                System.out.println("Hadoop MapReduce mode with 1 reducer, use -nodes to change it)");
+            else System.out.println("Hadoop MapReduce mode)");
+        } else if (Config.bsp_mode)
+            System.out.println("in-memory BSP mode)");
+        else System.out.println("in-memory MapReduce mode)");
+        if (Config.interactive) {
+            System.out.println("Type quit to exit");
+            ConsoleReader reader = new ConsoleReader();
+            reader.setBellEnabled(false);
+            History history = new History(new File(System.getProperty("user.home")+"/.mrqlhistory"));
+            reader.setHistory(history);
+            reader.setUseHistory(false);
+            try {
+            loop: while (true) {
+                String line = "";
+                String s = "";
+                try {
+                    if (hadoop && Config.bsp_mode)
+                        Config.write(Plan.conf);
+                    do {
+                        s = reader.readLine("> ");
+                        if (s != null && (s.equals("quit") || s.equals("exit")))
+                            break loop;
+                        if (s != null)
+                            line += " "+s;
+                    } while (s == null || s.indexOf(";") <= 0);
+                    line = line.substring(1);
+                    history.addToHistory(line);
+                    parser = new MRQLParser(new MRQLLex(new StringReader(line)));
+                    MRQLLex.reset();
+                    parser.parse();
+                } catch (EOFException x) {
+                    break;
+                } catch (Exception x) {
+                    if (x.getMessage() != null)
+                        System.out.println(x);
+                } catch (Error x) {
+                    System.out.println(x);
+                }
+                }
+            } finally {
+                if (hadoop) {
+                    Plan.clean();
+                    Evaluator.shutdown(Plan.conf);
+                };
+                if (Config.compile_functional_arguments)
+                    Compiler.clean();
+            }
+        } else try {
+                if (hadoop && Config.bsp_mode)
+                    Config.write(Plan.conf);
+                try {
+                    parser = new MRQLParser(new MRQLLex(new FileInputStream(query_file)));
+                } catch (Exception e) {
+                    // when the query file is in HDFS
+                    Path path = new Path(query_file);
+                    FileSystem fs = path.getFileSystem(conf);
+                    parser = new MRQLParser(new MRQLLex(fs.open(path)));
+                };
+                parser.parse();
+            } finally {
+                if (hadoop) {
+                    Plan.clean();
+                    Evaluator.shutdown(Plan.conf);
+                };
+                if (Config.compile_functional_arguments)
+                    Compiler.clean();
+            }
     }
 }

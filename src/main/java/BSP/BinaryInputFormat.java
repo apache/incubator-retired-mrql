@@ -29,32 +29,32 @@ import org.apache.hama.HamaConfiguration;
 /** Input format for hadoop sequence files */
 final public class BinaryInputFormat extends MRQLFileInputFormat {
     public static class BinaryInputRecordReader extends SequenceFileRecordReader<MRContainer,MRContainer> {
-	final MRContainer result = new MRContainer();
-	final MRData source_num_data;
-	final int source_number;
+        final MRContainer result = new MRContainer();
+        final MRData source_num_data;
+        final int source_number;
 
-	public BinaryInputRecordReader ( FileSplit split,
-					 BSPJob job,
-					 int source_number ) throws IOException {
-	    super(BSPPlan.getConfiguration(job),split);
-	    this.source_number = source_number;
-	    source_num_data = new MR_int(source_number);
-	}
+        public BinaryInputRecordReader ( FileSplit split,
+                                         BSPJob job,
+                                         int source_number ) throws IOException {
+            super(BSPPlan.getConfiguration(job),split);
+            this.source_number = source_number;
+            source_num_data = new MR_int(source_number);
+        }
 
-	@Override
-	public synchronized boolean next ( MRContainer key, MRContainer value ) throws IOException {
-		boolean b = super.next(key,result);
-		value.set(new Tuple(source_num_data,result.data()));
-		return b;
-	}
+        @Override
+        public synchronized boolean next ( MRContainer key, MRContainer value ) throws IOException {
+                boolean b = super.next(key,result);
+                value.set(new Tuple(source_num_data,result.data()));
+                return b;
+        }
     }
 
     public RecordReader<MRContainer,MRContainer>
-	      getRecordReader ( InputSplit split,
-				BSPJob job ) throws IOException {
-	Configuration conf = BSPPlan.getConfiguration(job);
-	String path = ((FileSplit)split).getPath().toString();
-	BinaryDataSource ds = (BinaryDataSource)DataSource.get(path,conf);
-	return new BinaryInputRecordReader((FileSplit)split,job,ds.source_num);
+              getRecordReader ( InputSplit split,
+                                BSPJob job ) throws IOException {
+        Configuration conf = BSPPlan.getConfiguration(job);
+        String path = ((FileSplit)split).getPath().toString();
+        BinaryDataSource ds = (BinaryDataSource)DataSource.get(path,conf);
+        return new BinaryInputRecordReader((FileSplit)split,job,ds.source_num);
     }
 }

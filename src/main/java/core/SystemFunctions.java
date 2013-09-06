@@ -34,18 +34,18 @@ final public class SystemFunctions {
     final static MR_bool false_value = new MR_bool(false);
 
     private static void error ( String s ) {
-	System.err.println("*** "+s);
-	throw new Error(s);
+        System.err.println("*** "+s);
+        throw new Error(s);
     }
 
     static Random random = new Random();
 
     public static MR_bool synchronize ( MR_string peerName, MR_bool mr_exit ) {
-	return Evaluator.synchronize(peerName,mr_exit);
+        return Evaluator.synchronize(peerName,mr_exit);
     }
 
     public static Bag distribute ( MR_string peerName, Bag s ) {
-	return Evaluator.distribute(peerName,s);
+        return Evaluator.distribute(peerName,s);
     }
 
     public static MR_bool lt ( MR_short x, MR_short y ) { return (x.get() < y.get()) ? true_value : false_value; }
@@ -180,8 +180,8 @@ final public class SystemFunctions {
     public static MR_double toDouble ( MR_string s ) { return new MR_double(Double.parseDouble(s.get())); }
 
     public static MR_int random ( MR_int n ) {
-	int v = random.nextInt(n.get());
-	return new MR_int(v);
+        int v = random.nextInt(n.get());
+        return new MR_int(v);
     }
 
     public static MR_float log ( MR_float n ) { return new MR_float(Math.log(n.get())); }
@@ -196,272 +196,272 @@ final public class SystemFunctions {
     public static MR_string substring ( MR_string x, MR_int b, MR_int e ) { return new MR_string(x.get().substring(b.get(),e.get())); }
 
     public static MR_bool exists ( Bag s ) {
-	return (s.iterator().hasNext()) ? true_value : false_value;
+        return (s.iterator().hasNext()) ? true_value : false_value;
     }
 
     public static MR_bool some ( Bag x ) {
-	for ( MRData e: x )
-	    if (e instanceof MR_bool)
-		if (((MR_bool)e).get())
-		    return true_value;
-	return false_value;
+        for ( MRData e: x )
+            if (e instanceof MR_bool)
+                if (((MR_bool)e).get())
+                    return true_value;
+        return false_value;
     }
 
     public static MR_bool all ( Bag x ) {
-	for ( MRData e: x )
-	    if (e instanceof MR_bool)
-		if (!((MR_bool)e).get())
-		    return false_value;
-	return true_value;
+        for ( MRData e: x )
+            if (e instanceof MR_bool)
+                if (!((MR_bool)e).get())
+                    return false_value;
+        return true_value;
     }
 
     public static MR_bool member ( MRData e, Bag s ) {
-	return (s.contains(e)) ? true_value : false_value;
+        return (s.contains(e)) ? true_value : false_value;
     }
 
     public static MR_long count ( Bag s ) {
-	if (s.materialized())
-	    return new MR_long(s.size());
-	long i = 0;
-	for ( MRData e: s )
-	    i++;
-	return new MR_long(i);
+        if (s.materialized())
+            return new MR_long(s.size());
+        long i = 0;
+        for ( MRData e: s )
+            i++;
+        return new MR_long(i);
     }
 
     public static MR_long hash_code ( MRData x ) {
-	return new MR_long(x.hashCode());
+        return new MR_long(x.hashCode());
     }
 
     public static MRData index ( Bag b, MR_int mi ) {
-	int i = mi.get();
-	if (i < 0)
-	    throw new Error("wrong index: "+i);
-	if (b.materialized())
-	    return b.get(i);
-	int k = 0;
-	for ( MRData e: b )
-	    if (k++ == i)
-		return e;
-	throw new Error("wrong index: "+i);
+        int i = mi.get();
+        if (i < 0)
+            throw new Error("wrong index: "+i);
+        if (b.materialized())
+            return b.get(i);
+        int k = 0;
+        for ( MRData e: b )
+            if (k++ == i)
+                return e;
+        throw new Error("wrong index: "+i);
     }
 
     public static Bag range ( Bag b, MR_int mi, MR_int mj ) {
-	int i = mi.get();
-	int j = mj.get();
-	if (j < i)
-	    throw new Error("wrong range indexes: "+i+","+j);
-	Bag bag = new Bag(j-i+1);
-	int k = 0;
-	for ( MRData e: b ) {
-	    if (k >= i && k <= j)
-		bag.add(e);
-	    k++;
-	};
-	return bag;
+        int i = mi.get();
+        int j = mj.get();
+        if (j < i)
+            throw new Error("wrong range indexes: "+i+","+j);
+        Bag bag = new Bag(j-i+1);
+        int k = 0;
+        for ( MRData e: b ) {
+            if (k >= i && k <= j)
+                bag.add(e);
+            k++;
+        };
+        return bag;
     }
 
     public static Bag union ( Bag x, Bag y ) {
-	return x.union(y);
+        return x.union(y);
     }
 
     public static Bag intersect ( Bag x, Bag y ) {
-	x.materialize();
-	Bag s = new Bag();
-	for ( MRData e: y )
-	    if (x.contains(e))
-		s.add(e);
-	return s;
+        x.materialize();
+        Bag s = new Bag();
+        for ( MRData e: y )
+            if (x.contains(e))
+                s.add(e);
+        return s;
     }
 
     public static Bag except ( Bag x, Bag y ) {
-	y.materialize();
-	Bag s = new Bag();
-	for ( MRData e: x )
-	    if (!y.contains(e))
-		s.add(e);
-	return s;
+        y.materialize();
+        Bag s = new Bag();
+        for ( MRData e: x )
+            if (!y.contains(e))
+                s.add(e);
+        return s;
     }
 
     public static Bag materialize ( Bag x ) {
-	x.materialize();
-	return x;
+        x.materialize();
+        return x;
     }
 
     /** coerce a basic type to a new type indicated by the basic type number */
     public static MRData coerce ( MRData from, MR_int type ) {
-	byte tp = (byte)type.get();
-	if (from instanceof MR_short) {
-	    if (tp == MRContainer.BYTE)
-		return new MR_byte((byte)((MR_short)from).get());
-	    else if (tp == MRContainer.SHORT)
-		return from;
-	    else if (tp == MRContainer.INT)
-		return new MR_int((int)((MR_short)from).get());
-	    else if (tp == MRContainer.LONG)
-		return new MR_long((long)((MR_short)from).get());
-	    else if (tp == MRContainer.FLOAT)
-		return new MR_float((float)((MR_short)from).get());
-	    else if (tp == MRContainer.DOUBLE)
-		return new MR_double((double)((MR_short)from).get());
-	} else if (from instanceof MR_int) {
-	    if (tp == MRContainer.BYTE)
-		return new MR_byte((byte)((MR_int)from).get());
-	    else if (tp == MRContainer.SHORT)
-		return new MR_short((short)((MR_int)from).get());
-	    else if (tp == MRContainer.INT)
-		return from;
-	    else if (tp == MRContainer.LONG)
-		return new MR_long((long)((MR_int)from).get());
-	    else if (tp == MRContainer.FLOAT)
-		return new MR_float((float)((MR_int)from).get());
-	    else if (tp == MRContainer.DOUBLE)
-		return new MR_double((double)((MR_int)from).get());
-	} else if (from instanceof MR_long) {
-	    if (tp == MRContainer.BYTE)
-		return new MR_byte((byte)((MR_long)from).get());
-	    else if (tp == MRContainer.SHORT)
-		return new MR_short((short)((MR_long)from).get());
-	    else if (tp == MRContainer.INT)
-		return new MR_int((int)((MR_long)from).get());
-	    else if (tp == MRContainer.LONG)
-		return from;
-	    else if (tp == MRContainer.FLOAT)
-		return new MR_float((float)((MR_long)from).get());
-	    else if (tp == MRContainer.DOUBLE)
-		return new MR_double((double)((MR_long)from).get());
-	} else if (from instanceof MR_float) {
-	    if (tp == MRContainer.BYTE)
-		return new MR_byte((byte)((MR_float)from).get());
-	    else if (tp == MRContainer.SHORT)
-		return new MR_short((short)((MR_float)from).get());
-	    else if (tp == MRContainer.INT)
-		return new MR_int((int)((MR_float)from).get());
-	    else if (tp == MRContainer.LONG)
-		return new MR_long((long)((MR_float)from).get());
-	    if (tp == MRContainer.FLOAT)
-		return from;
-	    else if (tp == MRContainer.DOUBLE)
-		return new MR_double((double)((MR_float)from).get());
-	} else if (from instanceof MR_double) {
-	    if (tp == MRContainer.BYTE)
-		return new MR_byte((byte)((MR_double)from).get());
-	    else if (tp == MRContainer.SHORT)
-		return new MR_short((short)((MR_double)from).get());
-	    else if (tp == MRContainer.INT)
-		return new MR_int((int)((MR_double)from).get());
-	    else if (tp == MRContainer.LONG)
-		return new MR_long((long)((MR_double)from).get());
-	    if (tp == MRContainer.FLOAT)
-		return new MR_float((float)((MR_double)from).get());
-	    if (tp == MRContainer.DOUBLE)
-		return from;
-	};
-	error("Cannot up-coerce the numerical value "+from);
-	return null;
+        byte tp = (byte)type.get();
+        if (from instanceof MR_short) {
+            if (tp == MRContainer.BYTE)
+                return new MR_byte((byte)((MR_short)from).get());
+            else if (tp == MRContainer.SHORT)
+                return from;
+            else if (tp == MRContainer.INT)
+                return new MR_int((int)((MR_short)from).get());
+            else if (tp == MRContainer.LONG)
+                return new MR_long((long)((MR_short)from).get());
+            else if (tp == MRContainer.FLOAT)
+                return new MR_float((float)((MR_short)from).get());
+            else if (tp == MRContainer.DOUBLE)
+                return new MR_double((double)((MR_short)from).get());
+        } else if (from instanceof MR_int) {
+            if (tp == MRContainer.BYTE)
+                return new MR_byte((byte)((MR_int)from).get());
+            else if (tp == MRContainer.SHORT)
+                return new MR_short((short)((MR_int)from).get());
+            else if (tp == MRContainer.INT)
+                return from;
+            else if (tp == MRContainer.LONG)
+                return new MR_long((long)((MR_int)from).get());
+            else if (tp == MRContainer.FLOAT)
+                return new MR_float((float)((MR_int)from).get());
+            else if (tp == MRContainer.DOUBLE)
+                return new MR_double((double)((MR_int)from).get());
+        } else if (from instanceof MR_long) {
+            if (tp == MRContainer.BYTE)
+                return new MR_byte((byte)((MR_long)from).get());
+            else if (tp == MRContainer.SHORT)
+                return new MR_short((short)((MR_long)from).get());
+            else if (tp == MRContainer.INT)
+                return new MR_int((int)((MR_long)from).get());
+            else if (tp == MRContainer.LONG)
+                return from;
+            else if (tp == MRContainer.FLOAT)
+                return new MR_float((float)((MR_long)from).get());
+            else if (tp == MRContainer.DOUBLE)
+                return new MR_double((double)((MR_long)from).get());
+        } else if (from instanceof MR_float) {
+            if (tp == MRContainer.BYTE)
+                return new MR_byte((byte)((MR_float)from).get());
+            else if (tp == MRContainer.SHORT)
+                return new MR_short((short)((MR_float)from).get());
+            else if (tp == MRContainer.INT)
+                return new MR_int((int)((MR_float)from).get());
+            else if (tp == MRContainer.LONG)
+                return new MR_long((long)((MR_float)from).get());
+            if (tp == MRContainer.FLOAT)
+                return from;
+            else if (tp == MRContainer.DOUBLE)
+                return new MR_double((double)((MR_float)from).get());
+        } else if (from instanceof MR_double) {
+            if (tp == MRContainer.BYTE)
+                return new MR_byte((byte)((MR_double)from).get());
+            else if (tp == MRContainer.SHORT)
+                return new MR_short((short)((MR_double)from).get());
+            else if (tp == MRContainer.INT)
+                return new MR_int((int)((MR_double)from).get());
+            else if (tp == MRContainer.LONG)
+                return new MR_long((long)((MR_double)from).get());
+            if (tp == MRContainer.FLOAT)
+                return new MR_float((float)((MR_double)from).get());
+            if (tp == MRContainer.DOUBLE)
+                return from;
+        };
+        error("Cannot up-coerce the numerical value "+from);
+        return null;
     }
  
     /** used in avg */
     public static MR_double avg_value ( MRData t ) {
-	MR_double sum = (MR_double)((Tuple)t).first();
-	MR_long count = (MR_long)((Tuple)t).second();
-	return new MR_double(sum.get()/count.get());
+        MR_double sum = (MR_double)((Tuple)t).first();
+        MR_long count = (MR_long)((Tuple)t).second();
+        return new MR_double(sum.get()/count.get());
     }
 
     public static MR_string text ( Union node ) {
-	if (node.tag() == 1)
-	    return (MR_string)(node.value());
-	Bag b = (Bag)((Tuple)node.value()).get(2);
-	String s = "";
-	for ( MRData e: b )
-	    if (((Union)e).tag() == 1)
-		s += ((MR_string)(((Union)e).value())).get();
-	return new MR_string(s);
+        if (node.tag() == 1)
+            return (MR_string)(node.value());
+        Bag b = (Bag)((Tuple)node.value()).get(2);
+        String s = "";
+        for ( MRData e: b )
+            if (((Union)e).tag() == 1)
+                s += ((MR_string)(((Union)e).value())).get();
+        return new MR_string(s);
     }
 
     public static MR_string text ( Bag nodes ) {
-	MR_string b = new MR_string("");
-	for ( MRData e: nodes )
-	    b = plus(b,text((Union)e));
-	return b;
+        MR_string b = new MR_string("");
+        for ( MRData e: nodes )
+            b = plus(b,text((Union)e));
+        return b;
     }
 
     public static MR_string tag ( Union node ) {
-	if (node.tag() == 1)
-	    error("Cannot extract the tagname of a CData: "+node);
-	return (MR_string)((Tuple) node.value()).get(0);
+        if (node.tag() == 1)
+            error("Cannot extract the tagname of a CData: "+node);
+        return (MR_string)((Tuple) node.value()).get(0);
     }
 
     public static MR_string XMLattribute ( MR_string tagname, Union node ) {
-	if (node.tag() == 1)
-	    error("Element "+node+" does not have attributes");
-	Tuple t = (Tuple)node.value();
-	String tag = tagname.get();
-	for ( MRData c: (Bag)t.get(1) ) {
-	    Tuple p = (Tuple)c;
-	    if (tag.equals(((MR_string)(p.get(0))).get()))
-		return new MR_string(((MR_string)p.get(1)).get());
-	};
-	error("Element "+node+" does not have attribute "+tagname);
-	return null;
+        if (node.tag() == 1)
+            error("Element "+node+" does not have attributes");
+        Tuple t = (Tuple)node.value();
+        String tag = tagname.get();
+        for ( MRData c: (Bag)t.get(1) ) {
+            Tuple p = (Tuple)c;
+            if (tag.equals(((MR_string)(p.get(0))).get()))
+                return new MR_string(((MR_string)p.get(1)).get());
+        };
+        error("Element "+node+" does not have attribute "+tagname);
+        return null;
     }
 
     public static Bag XMLattributes ( MR_string tagname, Union node ) {
-	if (node.tag() == 1)
-	    return new Bag();
-	Tuple t = (Tuple)node.value();
-	Bag b = new Bag();
-	String tag = tagname.get();
-	for ( MRData c: (Bag)t.get(1) ) {
-	    Tuple p = (Tuple)c;
-	    if (tag.equals("*") || tag.equals(((MR_string)(p.get(0))).get()))
-		b.add(p.get(1));
-	};
-	return b;
+        if (node.tag() == 1)
+            return new Bag();
+        Tuple t = (Tuple)node.value();
+        Bag b = new Bag();
+        String tag = tagname.get();
+        for ( MRData c: (Bag)t.get(1) ) {
+            Tuple p = (Tuple)c;
+            if (tag.equals("*") || tag.equals(((MR_string)(p.get(0))).get()))
+                b.add(p.get(1));
+        };
+        return b;
     }
 
     public static Bag XMLattributes ( MR_string tagname, Bag nodes ) {
-	Bag b = new Bag();
-	for ( MRData e: nodes )
-	    for (MRData c: XMLattributes(tagname,(Union)e))
-		b.add(c);
-	return b;
+        Bag b = new Bag();
+        for ( MRData e: nodes )
+            for (MRData c: XMLattributes(tagname,(Union)e))
+                b.add(c);
+        return b;
     }
 
     public static Bag XMLattribute ( MR_string tagname, Bag nodes ) {
-	Bag b = new Bag();
-	for ( MRData e: nodes )
-	    for (MRData c: XMLattributes(tagname,(Union)e))
-		b.add(c);
-	return b;
+        Bag b = new Bag();
+        for ( MRData e: nodes )
+            for (MRData c: XMLattributes(tagname,(Union)e))
+                b.add(c);
+        return b;
     }
 
     public static Bag XMLchildren ( MR_string tagname, Union node ) {
-	if (node.tag() == 1)
-	    return new Bag();
-	Tuple t = (Tuple)node.value();
-	Bag b = new Bag();
-	String tag = tagname.get();
-	for ( MRData c: (Bag)t.get(2) )
-	    if (((Union)c).tag() == 0) {
-		Tuple s = (Tuple)(((Union)c).value());
-		if (tag.equals("*") || (((MR_string)(s.get(0))).get()).equals(tag))
-		    b.add(c);
-	    };
-	return b;
+        if (node.tag() == 1)
+            return new Bag();
+        Tuple t = (Tuple)node.value();
+        Bag b = new Bag();
+        String tag = tagname.get();
+        for ( MRData c: (Bag)t.get(2) )
+            if (((Union)c).tag() == 0) {
+                Tuple s = (Tuple)(((Union)c).value());
+                if (tag.equals("*") || (((MR_string)(s.get(0))).get()).equals(tag))
+                    b.add(c);
+            };
+        return b;
     }
 
     public static Bag XMLchildren ( MR_string tagname, Bag nodes ) {
-	Bag b = new Bag();
-	for ( MRData e: nodes )
-	    for (MRData c: XMLchildren(tagname,(Union)e))
-		b.add(c);
-	return b;
+        Bag b = new Bag();
+        for ( MRData e: nodes )
+            for (MRData c: XMLchildren(tagname,(Union)e))
+                b.add(c);
+        return b;
     }
 
     public static MRData fold ( Lambda c, MRData z, Bag s ) {
-	MRData v = z;
-	for ( MRData e: s )
-	    z = c.lambda().eval(new Tuple(z,e));
-	return z;
+        MRData v = z;
+        for ( MRData e: s )
+            z = c.lambda().eval(new Tuple(z,e));
+        return z;
     }
 }

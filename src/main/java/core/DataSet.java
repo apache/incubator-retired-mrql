@@ -33,10 +33,10 @@ public class DataSet {
      * @param records total number of dataset records
      */
     DataSet ( DataSource s, long counter, long records ) {
-	source = new ArrayList<DataSource>();
-	source.add(s);
-	this.counter = counter;
-	this.records = records;
+        source = new ArrayList<DataSource>();
+        source.add(s);
+        this.counter = counter;
+        this.records = records;
     }
 
     /** Construct a set of DataSources
@@ -44,44 +44,44 @@ public class DataSet {
      * @param records total number of dataset records
      */
     DataSet ( long counter, long records ) {
-	source = new ArrayList<DataSource>();
-	this.counter = counter;
-	this.records = records;
+        source = new ArrayList<DataSource>();
+        this.counter = counter;
+        this.records = records;
     }
 
     /** add a DataSource to this DataSet */
     public void add ( DataSource s ) {
-	source.add(s);
+        source.add(s);
     }
 
     /** merge this DataSet with the given DataSet */
     public void merge ( DataSet ds ) {
-	source.addAll(ds.source);
-	counter += ds.counter;
-	records += ds.records;
+        source.addAll(ds.source);
+        counter += ds.counter;
+        records += ds.records;
     }
 
     /** dataset size in bytes */
     public long size ( Configuration conf ) {
-	long n = 0;
-	for (DataSource s: source)
-	    n += s.size(conf);
-	return n;
+        long n = 0;
+        for (DataSource s: source)
+            n += s.size(conf);
+        return n;
     }
 
     /** return a single DataSource path by merging all the DataSource paths in this DataSet */
     public String merge () {
-	Object[] ds = source.toArray();
-	String path = ((DataSource)ds[0]).path.toString();
-	for ( int i = 1; i < ds.length; i++ )
-	    path += ","+((DataSource)ds[i]).path;
-	return path;
+        Object[] ds = source.toArray();
+        String path = ((DataSource)ds[0]).path.toString();
+        for ( int i = 1; i < ds.length; i++ )
+            path += ","+((DataSource)ds[i]).path;
+        return path;
     }
 
     public String toString () {
-	String p = "<"+counter;
-	for (DataSource s: source)
-	    p += ","+s;
-	return p+">";
+        String p = "<"+counter;
+        for (DataSource s: source)
+            p += ","+s;
+        return p+">";
     }
 }

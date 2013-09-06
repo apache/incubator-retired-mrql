@@ -20,23 +20,23 @@ package org.apache.mrql.gen;
 final public class DoubleLeaf extends Tree {
     public double value;
     public DoubleLeaf ( float n ) {
-	super();
-	value = (double)n;
+        super();
+        value = (double)n;
     }
     public DoubleLeaf ( double n ) {
-	super();
-	value = n;
+        super();
+        value = n;
     }
     public double value () { return value; }
     public boolean equals ( Tree e ) {
-	return (e instanceof DoubleLeaf)
-	    && value==((DoubleLeaf) e).value;
+        return (e instanceof DoubleLeaf)
+            && value==((DoubleLeaf) e).value;
     }
     protected int size () { return toString().length(); }
     public String toString () {
-	return Double.toString(value);
+        return Double.toString(value);
     }
     public String pretty ( int position ) {
-	return toString();
+        return toString();
     }
 }

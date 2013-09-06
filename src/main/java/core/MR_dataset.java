@@ -35,22 +35,22 @@ final public class MR_dataset extends MRData {
     public DataSet dataset () { return dataset; }
 
     final public void write ( DataOutput out ) throws IOException {
-	try {
-	    Plan.collect(dataset).write(out);
-	} catch (Exception ex) {
-	    throw new Error(ex);
-	}
+        try {
+            Plan.collect(dataset).write(out);
+        } catch (Exception ex) {
+            throw new Error(ex);
+        }
     }
 
     public void readFields ( DataInput in ) throws IOException {
-	throw new Error("DataSets are not serializable");
+        throw new Error("DataSets are not serializable");
     }
 
     public int compareTo ( MRData x ) {
-	throw new Error("DataSets cannot be compared");
+        throw new Error("DataSets cannot be compared");
     }
 
     public boolean equals ( Object x ) {
-	throw new Error("DataSets cannot be compared");
+        throw new Error("DataSets cannot be compared");
     }
 }

@@ -32,8 +32,8 @@ abstract public class MRQLFileInputFormat extends FileInputFormat<MRContainer,MR
 
     /** record reader for map-reduce */
     abstract public RecordReader<MRContainer,MRContainer>
-	createRecordReader ( InputSplit split,
-			     TaskAttemptContext context ) throws IOException, InterruptedException;
+        createRecordReader ( InputSplit split,
+                             TaskAttemptContext context ) throws IOException, InterruptedException;
 
     /** materialize the input file into a memory Bag */
     abstract Bag materialize ( final Path path ) throws IOException;
@@ -44,11 +44,11 @@ abstract public class MRQLFileInputFormat extends FileInputFormat<MRContainer,MR
      * @return the Bag that contains the collected values
      */
     public final static Bag collect ( final DataSet x, boolean strip ) throws Exception {
-	Bag res = new Bag();
-	for ( DataSource s: x.source )
-	    if (s.to_be_merged)
-		res = res.union(Plan.merge(s));
-	    else res = res.union(s.inputFormat.newInstance().materialize(new Path(s.path)));
-	return res;
+        Bag res = new Bag();
+        for ( DataSource s: x.source )
+            if (s.to_be_merged)
+                res = res.union(Plan.merge(s));
+            else res = res.union(s.inputFormat.newInstance().materialize(new Path(s.path)));
+        return res;
     }
 }

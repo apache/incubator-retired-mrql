@@ -29,12 +29,12 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 /** Input format for hadoop sequence files */
 final public class BinaryInputFormat extends MRQLFileInputFormat {
     final static SequenceFileInputFormat<MRContainer,MRContainer> inputFormat
-	                       = new SequenceFileInputFormat<MRContainer,MRContainer>();
+                               = new SequenceFileInputFormat<MRContainer,MRContainer>();
 
     public RecordReader<MRContainer,MRContainer>
-	      createRecordReader ( InputSplit split,
-				   TaskAttemptContext context ) throws IOException, InterruptedException {
-	return inputFormat.createRecordReader(split,context);
+              createRecordReader ( InputSplit split,
+                                   TaskAttemptContext context ) throws IOException, InterruptedException {
+        return inputFormat.createRecordReader(split,context);
     }
 
     /** collect the data from multiple sequence files at the path directory into a Bag
@@ -42,39 +42,39 @@ final public class BinaryInputFormat extends MRQLFileInputFormat {
      * @return a Bag that contains all data
      */
     public Bag materialize ( final Path path ) throws IOException {
-	final FileSystem fs = path.getFileSystem(Plan.conf);
-	final FileStatus[] ds
-	           = fs.listStatus(path,
-				   new PathFilter () {
-				       public boolean accept ( Path path ) {
-					   return !path.getName().startsWith("_");
-				       }
-				   });
-	if (ds.length > 0)
-	    return new Bag(new BagIterator () {
-		    SequenceFile.Reader reader = new SequenceFile.Reader(fs,ds[0].getPath(),Plan.conf);
-		    MRContainer key = new MRContainer(new MR_int(0));
-		    MRContainer value = new MRContainer(new MR_int(0));
-		    int i = 1;
-		    public boolean hasNext () {
-			try {
-			    if (reader.next(key,value))
-				return true;
-			    do {
-				if (i >= ds.length)
-				    return false;
-				reader.close();
-				reader = new SequenceFile.Reader(fs,ds[i++].getPath(),Plan.conf);
-			    } while (!reader.next(key,value));
-			    return true;
-			} catch (IOException e) {
-			    throw new Error("Cannot collect values from an intermediate result");
-			}
-		    }
-		    public MRData next () {
-			return value.data();
-		    }
-		});
-	return new Bag();
+        final FileSystem fs = path.getFileSystem(Plan.conf);
+        final FileStatus[] ds
+                   = fs.listStatus(path,
+                                   new PathFilter () {
+                                       public boolean accept ( Path path ) {
+                                           return !path.getName().startsWith("_");
+                                       }
+                                   });
+        if (ds.length > 0)
+            return new Bag(new BagIterator () {
+                    SequenceFile.Reader reader = new SequenceFile.Reader(fs,ds[0].getPath(),Plan.conf);
+                    MRContainer key = new MRContainer(new MR_int(0));
+                    MRContainer value = new MRContainer(new MR_int(0));
+                    int i = 1;
+                    public boolean hasNext () {
+                        try {
+                            if (reader.next(key,value))
+                                return true;
+                            do {
+                                if (i >= ds.length)
+                                    return false;
+                                reader.close();
+                                reader = new SequenceFile.Reader(fs,ds[i++].getPath(),Plan.conf);
+                            } while (!reader.next(key,value));
+                            return true;
+                        } catch (IOException e) {
+                            throw new Error("Cannot collect values from an intermediate result");
+                        }
+                    }
+                    public MRData next () {
+                        return value.data();
+                    }
+                });
+        return new Bag();
     }
 }

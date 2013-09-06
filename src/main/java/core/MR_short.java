@@ -37,35 +37,35 @@ final public class MR_short extends MRData {
     public void set ( short v ) { value = v; }
 
     final public void write ( DataOutput out ) throws IOException {
-	out.writeByte(MRContainer.SHORT);
-	out.writeShort(value);
+        out.writeByte(MRContainer.SHORT);
+        out.writeShort(value);
     }
 
     final public static MR_short read ( DataInput in ) throws IOException {
-	return new MR_short(in.readShort());
+        return new MR_short(in.readShort());
     }
 
     public void readFields ( DataInput in ) throws IOException {
-	value = in.readShort();
+        value = in.readShort();
     }
 
     public int compareTo ( MRData x ) {
-	assert(x instanceof MR_short);
-	return value - ((MR_short) x).value;
+        assert(x instanceof MR_short);
+        return value - ((MR_short) x).value;
     }
 
     final public static int compare ( byte[] x, int xs, int xl, byte[] y, int ys, int yl, int[] size ) {
-	size[0] = (Short.SIZE >> 3)+1;
-	return WritableComparator.readUnsignedShort(x,xs) - WritableComparator.readUnsignedShort(y,ys);
+        size[0] = (Short.SIZE >> 3)+1;
+        return WritableComparator.readUnsignedShort(x,xs) - WritableComparator.readUnsignedShort(y,ys);
     }
 
     public boolean equals ( Object x ) {
-	return x instanceof MR_short && ((MR_short)x).value==value;
+        return x instanceof MR_short && ((MR_short)x).value==value;
     }
 
     public int hashCode () { return Math.abs((int)value); }
 
     public String toString () {
-	return Short.toString(value);
+        return Short.toString(value);
     }
 }

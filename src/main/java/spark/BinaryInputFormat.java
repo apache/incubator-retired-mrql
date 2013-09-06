@@ -26,28 +26,28 @@ import org.apache.hadoop.mapred.*;
 /** Input format for hadoop sequence files */
 final public class BinaryInputFormat extends MRQLFileInputFormat {
     public static class BinaryInputRecordReader extends SequenceFileRecordReader<MRContainer,MRContainer> {
-	final MRContainer result = new MRContainer();
+        final MRContainer result = new MRContainer();
 
-	public BinaryInputRecordReader ( FileSplit split,
-					 JobConf job ) throws IOException {
-	    super(job,split);
-	}
+        public BinaryInputRecordReader ( FileSplit split,
+                                         JobConf job ) throws IOException {
+            super(job,split);
+        }
 
-	@Override
-	public synchronized boolean next ( MRContainer key, MRContainer value ) throws IOException {
-		boolean b = super.next(key,result);
-		value.set(result.data());
-		return b;
-	}
+        @Override
+        public synchronized boolean next ( MRContainer key, MRContainer value ) throws IOException {
+                boolean b = super.next(key,result);
+                value.set(result.data());
+                return b;
+        }
     }
 
     @Override
     public RecordReader<MRContainer,MRContainer>
-	      getRecordReader ( InputSplit split,
-				JobConf job,
-				Reporter reporter ) throws IOException {
-	String path = ((FileSplit)split).getPath().toString();
-	BinaryDataSource ds = (BinaryDataSource)DataSource.get(path,job);
-	return new BinaryInputRecordReader((FileSplit)split,job);
+              getRecordReader ( InputSplit split,
+                                JobConf job,
+                                Reporter reporter ) throws IOException {
+        String path = ((FileSplit)split).getPath().toString();
+        BinaryDataSource ds = (BinaryDataSource)DataSource.get(path,job);
+        return new BinaryInputRecordReader((FileSplit)split,job);
     }
 }

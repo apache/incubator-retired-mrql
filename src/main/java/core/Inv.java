@@ -32,31 +32,31 @@ final public class Inv extends MRData {
     public MRData value () { return value; }
 
     final public void write ( DataOutput out ) throws IOException {
-	out.writeByte(MRContainer.INV);
-	value.write(out);
+        out.writeByte(MRContainer.INV);
+        value.write(out);
     }
 
     final public static Inv read ( DataInput in ) throws IOException {
-	return new Inv(MRContainer.read(in));
+        return new Inv(MRContainer.read(in));
     }
 
     public void readFields ( DataInput in ) throws IOException {
-	value.readFields(in);
+        value.readFields(in);
     }
 
     public int compareTo ( MRData x ) {
-	assert(x instanceof Inv);
-	return -value.compareTo(((Inv)x).value);
+        assert(x instanceof Inv);
+        return -value.compareTo(((Inv)x).value);
     }
 
     final public static int compare ( byte[] x, int xs, int xl, byte[] y, int ys, int yl, int[] size ) {
-	int n = MRContainer.compare(x,xs,xl,y,ys,yl,size);
-	size[0] += 1;
-	return -n;
+        int n = MRContainer.compare(x,xs,xl,y,ys,yl,size);
+        size[0] += 1;
+        return -n;
     }
 
     public boolean equals ( Object x ) {
-	return value.equals(((Inv)x).value);
+        return value.equals(((Inv)x).value);
     }
 
     public int hashCode () { return value.hashCode(); }

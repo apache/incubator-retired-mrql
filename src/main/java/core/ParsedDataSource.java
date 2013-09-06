@@ -29,34 +29,34 @@ public class ParsedDataSource extends DataSource {
     public Trees args;
 
     ParsedDataSource ( int source_num,
-		       String path,
-		       Class<? extends Parser> parser,
-		       Trees args,
-		       Configuration conf ) {
-	super(source_num,path,ParsedInputFormat.class,conf);
-	this.parser = parser;
-	this.args = args;
+                       String path,
+                       Class<? extends Parser> parser,
+                       Trees args,
+                       Configuration conf ) {
+        super(source_num,path,ParsedInputFormat.class,conf);
+        this.parser = parser;
+        this.args = args;
     }
 
     ParsedDataSource ( String path,
-		       Class<? extends Parser> parser,
-		       Trees args,
-		       Configuration conf ) {
-	super(-1,path,ParsedInputFormat.class,conf);
-	this.parser = parser;
-	this.args = args;
+                       Class<? extends Parser> parser,
+                       Trees args,
+                       Configuration conf ) {
+        super(-1,path,ParsedInputFormat.class,conf);
+        this.parser = parser;
+        this.args = args;
     }
 
     public String toString () {
-	try {
-	    String pn = "";
-	    for ( String k: DataSource.parserDirectory.keySet() )
-		if (DataSource.parserDirectory.get(k).equals(parser))
-		    pn = k;
-	    return "Text"+separator+source_num+separator+pn+separator+path
-		   +separator+(new Node("args",args)).toString();
-	} catch (Exception e) {
-	    throw new Error(e);
-	}
+        try {
+            String pn = "";
+            for ( String k: DataSource.parserDirectory.keySet() )
+                if (DataSource.parserDirectory.get(k).equals(parser))
+                    pn = k;
+            return "Text"+separator+source_num+separator+pn+separator+path
+                   +separator+(new Node("args",args)).toString();
+        } catch (Exception e) {
+            throw new Error(e);
+        }
     }
 }

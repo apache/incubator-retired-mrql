@@ -25,15 +25,15 @@ final public class Node extends Tree {
     public Trees children;
 
     public Node ( String name, Trees children ) {
-	super();
-	this.name = Tree.add(name);
-	this.children = children;
+        super();
+        this.name = Tree.add(name);
+        this.children = children;
     }
 
     public Node ( String name ) {
-	super();
-	this.name = name;
-	children = Trees.nil;
+        super();
+        this.name = name;
+        children = Trees.nil;
     }
 
     final public String name () { return name; }
@@ -41,37 +41,37 @@ final public class Node extends Tree {
     final public Trees children () { return children; }
 
     public boolean equals ( Tree e ) {
-	return (e instanceof Node)
-	    && name == ((Node) e).name
-	    && children.equals(((Node) e).children);
+        return (e instanceof Node)
+            && name == ((Node) e).name
+            && children.equals(((Node) e).children);
     }
 
     protected int size () {
-	return name().length()+children().size();
+        return name().length()+children().size();
     }
 
     public String toString () {
-	if (Character.isLetter(name.charAt(0))
-	    || !(children().length()==2))
-	   return name + children().toString();
-	else return "(" + children().head().toString() + name
-		 + children().tail().head().toString() + ")";
+        if (Character.isLetter(name.charAt(0))
+            || !(children().length()==2))
+           return name + children().toString();
+        else return "(" + children().head().toString() + name
+                 + children().tail().head().toString() + ")";
     }
 
     public String pretty ( int position ) {
-	if (Character.isLetter(name.charAt(0))
-	    || !(children().length()==2))
-	   return name + children().pretty(position+name.length());
-	else return "(" + children().head().toString() + name
-		 + children().tail().head().toString() + ")";
+        if (Character.isLetter(name.charAt(0))
+            || !(children().length()==2))
+           return name + children().pretty(position+name.length());
+        else return "(" + children().head().toString() + name
+                 + children().tail().head().toString() + ")";
     }
 
     private void writeObject(ObjectOutputStream out) throws IOException {
-	out.defaultWriteObject();
+        out.defaultWriteObject();
     }
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-	in.defaultReadObject();
-	name = Tree.add(name);
+        in.defaultReadObject();
+        name = Tree.add(name);
     }
 }

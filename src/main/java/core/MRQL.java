@@ -28,31 +28,31 @@ final public class MRQL extends Interpreter {
      * @return the evaluation result
      */
     public static MRData query ( String query ) {
-	evaluate("store tt := "+query+";");
-	return variable_lookup("tt",global_env);
+        evaluate("store tt := "+query+";");
+        return variable_lookup("tt",global_env);
     }
 
     /** evaluate MRQL statments in a string
      * @param command a string that contains MRQL commands separated by ;
      */
     public static void evaluate ( String command ) {
-	try {
-	    MRQLParser parser = new MRQLParser();
-	    parser.setScanner(new MRQLLex(new StringReader(command)));
-	    MRQLLex.reset();
-	    parser.parse();
-	} catch (Exception x) {
-	    x.printStackTrace();
-	    throw new Error(x);
-	}
+        try {
+            MRQLParser parser = new MRQLParser();
+            parser.setScanner(new MRQLLex(new StringReader(command)));
+            MRQLLex.reset();
+            parser.parse();
+        } catch (Exception x) {
+            x.printStackTrace();
+            throw new Error(x);
+        }
     }
 
     /** clean up the MRQL workspace */
     public static void clean () {
-	try {
-	    Plan.clean();
-	} catch (IOException ex) {
-	    throw new Error("Failed to clean-up temporary files");
-	}
+        try {
+            Plan.clean();
+        } catch (IOException ex) {
+            throw new Error("Failed to clean-up temporary files");
+        }
     }
 }

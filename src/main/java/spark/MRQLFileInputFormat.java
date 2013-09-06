@@ -30,39 +30,39 @@ abstract public class MRQLFileInputFormat extends FileInputFormat<MRContainer,MR
 
     /** record reader for spark */
     abstract public RecordReader<MRContainer,MRContainer>
-	getRecordReader ( InputSplit split, JobConf job, Reporter reporter ) throws IOException;
+        getRecordReader ( InputSplit split, JobConf job, Reporter reporter ) throws IOException;
 
     /** materialize the input file into a memory Bag */
     public Bag materialize ( final Path file ) throws Exception {
-	final JobConf job = new JobConf(Plan.conf,MRQLFileInputFormat.class);
-	setInputPaths(job,file);
-	final InputSplit[] splits = getSplits(job,1);
-	final Reporter reporter = null;
-	final RecordReader<MRContainer,MRContainer> rd = getRecordReader(splits[0],job,reporter);
-	return new Bag(new BagIterator () {
-		RecordReader<MRContainer,MRContainer> reader = rd;
-		MRContainer key = reader.createKey();
-		MRContainer value = reader.createKey();
-		int i = 0;
-		public boolean hasNext () {
-		    try {
-			if (reader.next(key,value))
-			    return true;
-			do {
-			    if (++i >= splits.length)
-				return false;
-			    reader.close();
-			    reader = getRecordReader(splits[i],job,reporter);
-			} while (!reader.next(key,value));
-			return true;
-		    } catch (IOException e) {
-			throw new Error("Cannot collect values from an intermediate result");
-		    }
-		}
-		public MRData next () {
-		    return value.data();
-		}
-	    });
+        final JobConf job = new JobConf(Plan.conf,MRQLFileInputFormat.class);
+        setInputPaths(job,file);
+        final InputSplit[] splits = getSplits(job,1);
+        final Reporter reporter = null;
+        final RecordReader<MRContainer,MRContainer> rd = getRecordReader(splits[0],job,reporter);
+        return new Bag(new BagIterator () {
+                RecordReader<MRContainer,MRContainer> reader = rd;
+                MRContainer key = reader.createKey();
+                MRContainer value = reader.createKey();
+                int i = 0;
+                public boolean hasNext () {
+                    try {
+                        if (reader.next(key,value))
+                            return true;
+                        do {
+                            if (++i >= splits.length)
+                                return false;
+                            reader.close();
+                            reader = getRecordReader(splits[i],job,reporter);
+                        } while (!reader.next(key,value));
+                        return true;
+                    } catch (IOException e) {
+                        throw new Error("Cannot collect values from an intermediate result");
+                    }
+                }
+                public MRData next () {
+                    return value.data();
+                }
+            });
     }
 
     /** materialize the entire dataset into a Bag
@@ -71,13 +71,13 @@ abstract public class MRQLFileInputFormat extends FileInputFormat<MRContainer,MR
      * @return the Bag that contains the collected values
      */
     public final static Bag collect ( final DataSet x, boolean strip ) throws Exception {
-	Bag res = new Bag();
-	for ( DataSource s: x.source )
-	    if (s instanceof RDDDataSource)
-		res = res.union(Evaluator.bag(((RDDDataSource)s).rdd));
-	    else if (s.to_be_merged)
-		res = res.union(Plan.merge(s));
-	    else res = res.union(s.inputFormat.newInstance().materialize(new Path(s.path)));
-	return res;
+        Bag res = new Bag();
+        for ( DataSource s: x.source )
+            if (s instanceof RDDDataSource)
+                res = res.union(Evaluator.bag(((RDDDataSource)s).rdd));
+            else if (s.to_be_merged)
+                res = res.union(Plan.merge(s));
+            else res = res.union(s.inputFormat.newInstance().materialize(new Path(s.path)));
+        return res;
     }
 }

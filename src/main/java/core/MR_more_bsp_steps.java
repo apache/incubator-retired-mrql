@@ -29,7 +29,7 @@ final public class MR_more_bsp_steps extends MRData {
     public void materializeAll () {};
 
     final public void write ( DataOutput out ) throws IOException {
-	out.writeByte(MRContainer.MORE_BSP_STEPS);
+        out.writeByte(MRContainer.MORE_BSP_STEPS);
     }
 
     public void readFields ( DataInput in ) throws IOException {}
@@ -40,5 +40,5 @@ final public class MR_more_bsp_steps extends MRData {
 
     public int hashCode () { return 0; }
 
-    public String toString () {	return "more_bsp_steps"; }
+    public String toString () { return "more_bsp_steps"; }
 }

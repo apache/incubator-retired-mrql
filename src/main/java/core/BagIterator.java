@@ -24,7 +24,7 @@ import java.io.*;
 /** an Iterator over Bags */
 abstract public class BagIterator implements Iterator<MRData>, Serializable {
     public void remove () {
-	throw new Error("Bag deletions are not permitted");
+        throw new Error("Bag deletions are not permitted");
     }
     public void writeObject(ObjectOutputStream out) throws IOException {}
 

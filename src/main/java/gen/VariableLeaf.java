@@ -24,15 +24,15 @@ final public class VariableLeaf extends Tree {
     public String value;
 
     public VariableLeaf ( String s ) {
-	super();
-	value = Tree.add(s);
+        super();
+        value = Tree.add(s);
     }
 
     final public String value () { return value; }
 
     public boolean equals ( Tree e ) {
-	return (e instanceof VariableLeaf)
-	    && value == ((VariableLeaf) e).value;
+        return (e instanceof VariableLeaf)
+            && value == ((VariableLeaf) e).value;
     }
 
     protected int size () { return value.length(); }
@@ -42,11 +42,11 @@ final public class VariableLeaf extends Tree {
     public String pretty ( int position ) { return value; }
 
     private void writeObject(ObjectOutputStream out) throws IOException {
-	out.defaultWriteObject();
+        out.defaultWriteObject();
     }
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-	in.defaultReadObject();
-	value = Tree.add(value);
+        in.defaultReadObject();
+        value = Tree.add(value);
     }
 }

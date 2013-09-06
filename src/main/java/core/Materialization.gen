@@ -35,100 +35,100 @@ final public class Materialization extends Translator {
 
     // is this a direct-access term? (not the results of a bulk operation)
     private static boolean access_variable ( Tree e ) {
-	match e {
-	case nth(`x,_):
-	    return access_variable(x);
-	case union_value(`x):
-	    return access_variable(x);
-	case index(`x,`n):
-	    return access_variable(x);
-	case `v:
-	    if (v.is_variable())
-		return true;
-	};
-	return false;
+        match e {
+        case nth(`x,_):
+            return access_variable(x);
+        case union_value(`x):
+            return access_variable(x);
+        case index(`x,`n):
+            return access_variable(x);
+        case `v:
+            if (v.is_variable())
+                return true;
+        };
+        return false;
     }
 
     private static Domains new_domain ( Trees vars, Tree e, Domains d ) {
-	if (!access_variable(e))
-	    return materialize(vars,e,d);
-	Domains nd = new Domains(d.domains,d.repeats);
-	if ((d.domains.member(e) || !free_variables(e,vars).is_empty())
-	    && !d.repeats.member(e))
-	    nd.repeats = nd.repeats.cons(e);
-	nd.domains = nd.domains.cons(e);
-	return nd;
+        if (!access_variable(e))
+            return materialize(vars,e,d);
+        Domains nd = new Domains(d.domains,d.repeats);
+        if ((d.domains.member(e) || !free_variables(e,vars).is_empty())
+            && !d.repeats.member(e))
+            nd.repeats = nd.repeats.cons(e);
+        nd.domains = nd.domains.cons(e);
+        return nd;
     }
 
     private static Domains union ( Domains xd, Domains yd ) {
-	Domains nd = new Domains(xd.domains,xd.repeats);
-	for ( Tree y: yd.domains )
-	    if (!nd.domains.member(y))
-		nd.domains = nd.domains.cons(y);
-	for ( Tree y: yd.repeats )
-	    if (!nd.repeats.member(y))
-		nd.repeats = nd.repeats.cons(y);
-	return nd;
+        Domains nd = new Domains(xd.domains,xd.repeats);
+        for ( Tree y: yd.domains )
+            if (!nd.domains.member(y))
+                nd.domains = nd.domains.cons(y);
+        for ( Tree y: yd.repeats )
+            if (!nd.repeats.member(y))
+                nd.repeats = nd.repeats.cons(y);
+        return nd;
     }
 
     final static int unionM = ClassImporter.find_method_number("plus",#[bag(any),bag(any)]);
 
     private static Domains materialize ( Trees vars, Tree e, Domains d ) {
-	match e {
-	case lambda(`v,`b):
-	    return materialize(#[`v],b,d);
-	case cmap(lambda(`v,`b),`s):
-	    return materialize(#[`v],b,new_domain(vars,s,d));
-	case map(lambda(`v,`b),`s):
-	    return materialize(#[`v],b,new_domain(vars,s,d));
-	case filter(lambda(`v1,`b1),lambda(`v2,`b2),`s):
-	    return materialize(#[`v1],b1,materialize(#[`v2],b2,new_domain(vars,s,d)));
-	case aggregate(lambda(`v,`b),`z,`s):
-	    return materialize(#[`v],b,new_domain(vars,s,d));
-	case groupBy(`s):
-	    return new_domain(vars,s,d);
-	case orderBy(`s):
-	    return new_domain(vars,s,d);
-	case mapReduce2(lambda(`v1,`b1),lambda(`v2,`b2),lambda(`v,`b),`x,`y,`o):
-	    return materialize(#[`v],b,materialize(#[`v1],b1,materialize(#[`v2],b2,
-					 new_domain(vars,x,new_domain(vars,y,d)))));
-	case join(lambda(`v1,`b1),lambda(`v2,`b2),lambda(`v,`b),`x,`y):
-	    return materialize(#[`v],b,materialize(#[`v1],b1,materialize(#[`v2],b2,
-					 new_domain(vars,x,new_domain(vars,y,d)))));
-	case crossProduct(lambda(`v1,`b1),lambda(`v2,`b2),lambda(`v,`b),`x,`y):
-	    return materialize(#[`v],b,materialize(#[`v1],b1,materialize(#[`v2],b2,
-					 new_domain(vars,x,new_domain(vars,y,d)))));
-	case let(`v,`x,`y):
-	    Domains nd = materialize(vars.cons(v),y,materialize(vars,x,d));
-	    Trees zs = #[];
-	    for ( Tree z: nd.repeats )
-		if (!v.equals(z))
-		    zs = zs.cons(z);
-	    nd.repeats = zs;
-	    return nd;
-	case if(`p,`x,`y):
-	    Domains nd = materialize(vars,p,d);
-	    return union(materialize(vars,x,nd),
-			 materialize(vars,y,nd));
-	case callM(union,_,`x,`y):
-	    return new_domain(vars,x,new_domain(vars,y,d));
-	case callM(_,`k,`x,`y):
-	    if (((LongLeaf)k).value() != unionM)
-		fail;
-	    return new_domain(vars,x,new_domain(vars,y,d));
-	case `f(...as):
-	    Domains nd = new Domains(d.domains,d.repeats);
-	    for ( Tree a: as )
-		nd = materialize(vars,a,nd);
-	    return nd;
-	};
-	return d;
+        match e {
+        case lambda(`v,`b):
+            return materialize(#[`v],b,d);
+        case cmap(lambda(`v,`b),`s):
+            return materialize(#[`v],b,new_domain(vars,s,d));
+        case map(lambda(`v,`b),`s):
+            return materialize(#[`v],b,new_domain(vars,s,d));
+        case filter(lambda(`v1,`b1),lambda(`v2,`b2),`s):
+            return materialize(#[`v1],b1,materialize(#[`v2],b2,new_domain(vars,s,d)));
+        case aggregate(lambda(`v,`b),`z,`s):
+            return materialize(#[`v],b,new_domain(vars,s,d));
+        case groupBy(`s):
+            return new_domain(vars,s,d);
+        case orderBy(`s):
+            return new_domain(vars,s,d);
+        case mapReduce2(lambda(`v1,`b1),lambda(`v2,`b2),lambda(`v,`b),`x,`y,`o):
+            return materialize(#[`v],b,materialize(#[`v1],b1,materialize(#[`v2],b2,
+                                         new_domain(vars,x,new_domain(vars,y,d)))));
+        case join(lambda(`v1,`b1),lambda(`v2,`b2),lambda(`v,`b),`x,`y):
+            return materialize(#[`v],b,materialize(#[`v1],b1,materialize(#[`v2],b2,
+                                         new_domain(vars,x,new_domain(vars,y,d)))));
+        case crossProduct(lambda(`v1,`b1),lambda(`v2,`b2),lambda(`v,`b),`x,`y):
+            return materialize(#[`v],b,materialize(#[`v1],b1,materialize(#[`v2],b2,
+                                         new_domain(vars,x,new_domain(vars,y,d)))));
+        case let(`v,`x,`y):
+            Domains nd = materialize(vars.cons(v),y,materialize(vars,x,d));
+            Trees zs = #[];
+            for ( Tree z: nd.repeats )
+                if (!v.equals(z))
+                    zs = zs.cons(z);
+            nd.repeats = zs;
+            return nd;
+        case if(`p,`x,`y):
+            Domains nd = materialize(vars,p,d);
+            return union(materialize(vars,x,nd),
+                         materialize(vars,y,nd));
+        case callM(union,_,`x,`y):
+            return new_domain(vars,x,new_domain(vars,y,d));
+        case callM(_,`k,`x,`y):
+            if (((LongLeaf)k).value() != unionM)
+                fail;
+            return new_domain(vars,x,new_domain(vars,y,d));
+        case `f(...as):
+            Domains nd = new Domains(d.domains,d.repeats);
+            for ( Tree a: as )
+                nd = materialize(vars,a,nd);
+            return nd;
+        };
+        return d;
     }
 
     public static Tree materialize_terms ( Tree e ) {
-	Domains d = materialize(#[],e,new Domains(#[],#[]));
-	for ( Tree x: d.repeats )
-	    e = subst(x,#<materialize(`x)>,e);
-	return e;
+        Domains d = materialize(#[],e,new Domains(#[],#[]));
+        for ( Tree x: d.repeats )
+            e = subst(x,#<materialize(`x)>,e);
+        return e;
     }
 }

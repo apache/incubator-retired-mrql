@@ -41,6 +41,6 @@ final public class MR_variable extends MRData {
     public int hashCode () { return 0; }
 
     public String toString () {
-	return "variable("+var_num+")";
+        return "variable("+var_num+")";
     }
 }

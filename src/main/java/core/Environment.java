@@ -27,17 +27,17 @@ final public class Environment implements Serializable {
     public Environment next;
 
     Environment ( String n, MRData v, Environment next ) {
-	name = n;
-	value = v;
-	this.next = next;
+        name = n;
+        value = v;
+        this.next = next;
     }
 
     private void writeObject(ObjectOutputStream out) throws IOException {
-	out.defaultWriteObject();
+        out.defaultWriteObject();
     }
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-	in.defaultReadObject();
-	name = Tree.add(name);
+        in.defaultReadObject();
+        name = Tree.add(name);
     }
 }
