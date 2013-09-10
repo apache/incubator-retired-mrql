@@ -1,32 +1,30 @@
-MRQL: an Optimization Framework for Map-Reduce Queries
+Apache MRQL 0.9.0
+=================
 
-MRQL (the Map-Reduce Query Language) is an SQL-like query language for
-large-scale, distributed data analysis. MRQL is powerful enough to
-express most common data analysis tasks over many different kinds of
-raw data, including hierarchical data and nested collections, such as
-XML data. It is more powerful than other current languages, such as
-Hive and Pig Latin, since it can operate on more complex data and
-supports more powerful query constructs, thus eliminating the need for
-using explicit map-reduce code.
+MRQL (pronounced miracle) is a query processing and optimization
+system for large-scale, distributed data analysis. MRQL (the MapReduce
+Query Language) is an SQL-like query language for large-scale data
+analysis on a cluster of computers. The MRQL query processing system
+can evaluate MRQL queries in three modes:
 
-MRQL can run in two modes: in MR (Map-Reduce) mode using Apache Hadoop
-and in BSP (Bulk Synchronous Parallel) mode using Apache Hama. Both
-modes use Apache's HDFS (the Hadoop Distributed File System) to read
-and write their data.
+* in Map-Reduce mode using Apache Hadoop,
+* in BSP mode (Bulk Synchronous Parallel mode) using Apache Hama, and
+* in Spark mode using Apache Spark.
 
-In MR mode, an MRQL query is translated to a workflow of map-reduce
-jobs, where each job reads its input and writes its output on
-HDFS. This simplifies reliability and fault tolerance but it imposes a
-high overhead to complex MR workflows and graph algorithms, such as
-PageRank, which require repetitive MR jobs. In addition, MR does not
-preserve data in memory between the map and reduce tasks or across
-consecutive MR jobs. This restriction requires to read data at every
-step, even when the data is constant. BSP, on the other hand, does not
-suffer from this restriction, and, under certain circumstances, allows
-complex repetitive algorithms to run entirely in the collective memory
-of a cluster. BSP is a good choice when fault tolerance is less
-important, data (both input and indermediate) can fit in the cluster
-memory, and data processing requires complex/repetitive steps.
+The MRQL query language is powerful enough to express most common data
+analysis tasks over many forms of raw in-situ data, such as XML and
+JSON documents, binary files, and CSV documents. MRQL is more powerful
+than other current high-level MapReduce languages, such as Hive and
+PigLatin, since it can operate on more complex data and supports more
+powerful query constructs, thus eliminating the need for using
+explicit MapReduce code. With MRQL, users are able to express complex
+data analysis tasks, such as PageRank, k-means clustering, matrix
+factorization, etc, using SQL-like queries exclusively, while the MRQL
+query processing system is able to compile these queries to efficient
+Java code.
+
+General Info
+============
 
 For the latest information about MRQL, please visit our website at:
 
@@ -36,3 +34,23 @@ and our wiki, at:
 
    http://wiki.apache.org/mrql/
 
+Getting Started
+===============
+
+- Installation Instructions and a quick tutorial:
+  http://wiki.apache.org/mrql/GettingStarted
+
+Useful mailing lists
+====================
+
+1. user@mrql.incubator.apache.org - To discuss and ask usage questions. Send an
+   empty email to user-subscribe@mrql.incubator.apache.org in order to subscribe
+   to this mailing list.
+
+2. dev@mrql.incubator.apache.org - For discussions about code, design and features.
+   Send an empty email to dev-subscribe@mrql.incubator.apache.org in order to
+   subscribe to this mailing list.
+
+3. commits@mrql.incubator.apache.org - In order to monitor commits to the source
+   repository. Send an empty email to commits-subscribe@mrql.incubator.apache.org
+   in order to subscribe to this mailing list.

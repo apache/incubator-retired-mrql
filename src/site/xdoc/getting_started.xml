@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties></properties>
+  <title>Getting Started</title>
+  <body>
+
+    <section name="Installation Instructions"></section>
+
+<p>
+Apache MRQL can run in three modes: in Map-Reduce mode using Apache Hadoop, in BSP mode (Bulk Synchronous Parallel mode) using Apache Hama, and in Spark mode using Apache Spark.
+</p>
+<p>
+The MRQL MapReduce mode has been tested on Hadoop MapReduce releases 1.0.1, and 1.0.3. You can download the latest tarball from Apache Hadoop. The BSP and Spark modes are optional. The BSP mode has been tested on Hama 0.5.0 and 0.6.2. You can download the latest tarball from Apache Hama. The Spark mode has been tested on Spark 0.7.2 and 0.7.3 in both local and standalone deploy modes.
+</p>
+<p>
+The following instructions assume that you have already installed Hadoop MapReduce and you have deployed it on your cluster successfully. Otherwise, follow the directions in <a href="http://www.michael-noll.com/tutorials/running-hadoop-on-ubuntu-linux-multi-node-cluster/">Running Hadoop On Ubuntu Linux</a>.
+</p>
+    <subsection name="How to install MRQL"></subsection>
+<p>
+Download the latest stable MRQL binary release from <a href="http://www.apache.org/dist/incubator/mrql/">http://www.apache.org/dist/incubator/mrql/</a> and extract the files. The jar files <code>mrql-mr-*.jar</code>, <code>mrql-bsp-*.jar</code>, and <code>mrql-spark-*.jar</code> in the <code>lib</code> directory contain the libraries for evaluating MRQL queries in Hadoop, Hama, and Spark modes, respectively. They can be run using the scripts <code>bin/mrql</code>, <code>bin/mrql.bsp</code>, and <code>bin/mrql.spark</code>.
+</p>
+    <subsection name="How to run MRQL on a Hadoop MapReduce cluster"></subsection>
+<p>
+Change the first lines of <code>conf/mrql-env.sh</code> to point to your directories. One of these directories must be your existing Hadoop configuration directory. For a test, run the <a href="https://wiki.apache.org/mrql/Pagerank">PageRank example</a> or the <a href="https://wiki.apache.org/mrql/Kmeans">k-means clustering example</a> on a small Hadoop MapReduce cluster.
+</p>
+    <subsection name="How to run MRQL on a Hama cluster"></subsection>
+<p>
+Follow the instructions in <a href="http://hama.apache.org/getting_started_with_hama.html">Getting Started with Hama</a> to set up and start Hama.
+Change the first lines of <code>conf/mrql-env.sh</code> to point to your directories. One of these directories must be your existing Hama configuration directory.
+For a test, run the <a href="https://wiki.apache.org/mrql/Pagerank">PageRank example</a> or the <a href="https://wiki.apache.org/mrql/Kmeans">k-means clustering example</a> on a Hama cluster.
+</p>
+    <subsection name="How to run MRQL on a Spark standalone cluster"></subsection>
+<p>
+Follow the instructions in <a href="http://spark-project.org/docs/latest/spark-standalone.html">Spark Standalone Mode</a> to set up and start Spark in standalone deploy mode.
+Change the first lines of <code>conf/mrql-env.sh</code> to point to the Scala and Spark installation directories.
+For a test, run the <a href="https://wiki.apache.org/mrql/Pagerank">PageRank example</a> or the <a href="https://wiki.apache.org/mrql/Kmeans">k-means clustering example</a> on a Spark cluster.
+</p>
+    <section name="How to Recompile MRQL"></section>
+<p>
+Download the latest stable MRQL source release from <a href="http://www.apache.org/dist/incubator/mrql/">http://www.apache.org/dist/incubator/mrql/</a> and extract the files. You can get the latest source code using:
+<pre>
+git clone https://git-wip-us.apache.org/repos/asf/incubator-mrql.git
+</pre>
+To build MRQL using maven, use <code>mvn package</code>. To validate the installation use <code>mvn verify</code>, which runs the queries in <code>tests/queries</code> in memory, local Hadoop mode, local Hama mode, and Spark standalone mode.
+</p>
+<p>
+Alternatively, you may use <code>make</code> or <code>ant</code> to rebuild MRQL. Change the first lines of <code>conf/mrql-env.sh</code> and <code>conf/mrql-ant-env.sh</code> to point to your directories. <code>make</code> or <code>ant</code> rebuilds the <code>lib/mrql.jar</code>. <code>make bsp</code> or <code>ant bsp</code> rebuilds the <code>lib/mrql-bsp.jar</code>. <code>make spark</code> or <code>ant spark</code> rebuilds the <code>lib/mrql-spark.jar</code>.
+</p>
+
+  </body>
+</document>

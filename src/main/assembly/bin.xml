@@ -30,6 +30,8 @@
         <include>README*</include>
         <include>LICENSE*</include>
         <include>NOTICE*</include>
+        <include>DISCLAIMER*</include>
+        <include>RELEASE_NOTES*</include>
         <include>conf/mrql-env.sh</include>
         <include>**/apidocs/**</include>
       </includes>

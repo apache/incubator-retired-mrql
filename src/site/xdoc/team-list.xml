@@ -72,7 +72,7 @@ xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd
         </tr>
        <tr valign="top">
           <td align="center">fegaras</td>
-          <td align="center">Leonidas Fegaras</td>
+          <td align="center"><a href="http://lambda.uta.edu/">Leonidas Fegaras</a></td>
           <td align="center">University of Texas at Arlington</td>
           <td align="center">committer</td>
         </tr>

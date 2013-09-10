@@ -1,0 +1,29 @@
+Release Notes - MRQL 0.9.0
+
+New Features
+
+[MRQL-1] New MRQL website
+[MRQL-4] Create a testbed for MRQL queries using JUnit
+
+Bugs
+
+[MRQL-2] Mavenize MRQL
+[MRQL-5] JSON parser has a null scanner
+[MRQL-7] Refactor directory layout to be more Maven compliant
+[MRQL-9] Make BSP mode compatible with Hama 0.7.0
+[MRQL-10] Add dist module to generate release tarball
+
+Improvements
+
+[MRQL-3] some trivial code improvements
+[MRQL-6] Add developers guide to the website
+[MRQL-8] Overload projections to work on JSON data
+[MRQL-12] Support query evaluation in Spark mode
+
+Tasks
+
+[MRQL-11] Establish whether "Apache MRQL" is a suitable name
+[MRQL-13] Umbrella task for first Apache MRQL release
+[MRQL-14] Add the "-SNAPSHOT" suffix
+[MRQL-15] Setup svnpubsub for the MRQL dist directory
+[MRQL-16] correct source files. ASF licenses, and POMs for release

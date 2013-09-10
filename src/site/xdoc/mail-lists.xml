@@ -23,6 +23,17 @@ xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd
   <body>
 
     <section name="Mailing Lists"></section>
+    <subsection name="MRQL User List"></subsection>
+    <p>
+    If you'd like to use MRQL, please subscribe to the MRQL user mailing list.<br /> 
+    The MRQL user mailing list is : 
+    <a href="mailto:user@mrql.incubator.apache.org">user@mrql.incubator.apache.org</a>.
+    </p>
+    <ul>
+    <li><a href="mailto:user-subscribe@mrql.incubator.apache.org">Subscribe to List</a></li>
+    <li><a href="mailto:user-unsubscribe@mrql.incubator.apache.org">Unsubscribe from List</a></li>
+    </ul>
+
     <subsection name="MRQL Developer List"></subsection>
     <p>
     If you'd like to contribute to MRQL, please subscribe to the MRQL developer mailing list.<br /> 
@@ -45,7 +56,6 @@ xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd
     <li><a href="mailto:commits-subscribe@mrql.incubator.apache.org">Subscribe to List</a></li>
     <li><a href="mailto:commits-unsubscribe@mrql.incubator.apache.org">Unsubscribe from List</a></li>
     </ul>
-    
 
   </body>
 </document>

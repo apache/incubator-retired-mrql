@@ -30,6 +30,8 @@
         <include>README*</include>
         <include>LICENSE*</include>
         <include>NOTICE*</include>
+        <include>DISCLAIMER*</include>
+        <include>RELEASE_NOTES*</include>
         <include>Makefile</include>
         <include>**/*.xml</include>
         <include>**/apidocs/**</include>

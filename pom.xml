@@ -54,8 +54,8 @@
     <module>MapReduce</module>
     <module>BSP</module>
     <module>Spark</module>
-    <module>bin-dist</module>
-    <module>src-dist</module>
+    <module>binaries</module>
+    <module>source</module>
   </modules>
 
   <dependencies>

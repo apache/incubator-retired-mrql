@@ -45,6 +45,8 @@
     <links position="left">
       <item name="Wiki" href="http://wiki.apache.org/mrql/" />
       <item name="JIRA" href="https://issues.apache.org/jira/browse/MRQL" />
+      <item name="GIT" href="https://git-wip-us.apache.org/repos/asf?p=incubator-mrql.git" />
+      <item name="Twitter" href="http://twitter.com/apacheMRQL" />
     </links>
 
    <breadcrumbs position="left">
@@ -52,14 +54,33 @@
       <item name="Apache Incubator" href="http://incubator.apache.org/" />
     </breadcrumbs>
 
-    <menu name="MRQL">
+    <menu name="Information">
       <item name="Overview" href="index.html"/>
       <item name="Who We Are" href="team-list.html" />
     </menu>
 
     <menu name="Resources">
+      <item name="Developers" href="developers.html" />
       <item name="Mailing Lists" href="mail-lists.html" />
       <item name="Issue Tracking" href="issue-tracking.html" />
+    </menu>
+
+    <menu name="Documentation">
+      <item name="Getting Started" href="getting_started.html" />
+      <item name="Research Papers and Presentations" href="http://wiki.apache.org/mrql/Publications" />
+    </menu>
+
+    <menu name="Related Projects">
+      <item name="Hadoop" href="http://hadoop.apache.org/" />
+      <item name="Hama" href="http://hama.apache.org/" />
+      <item name="Spark" href="http://spark.incubator.apache.org/" />
+    </menu>
+
+    <menu name="ASF">
+      <item name="How Apache Works" href="http://www.apache.org/foundation/how-it-works.html"/>
+      <item name="Foundation" href="http://www.apache.org/foundation/"/>
+      <item name="Sponsoring Apache" href="http://www.apache.org/foundation/sponsorship.html"/>
+      <item name="Thanks" href="http://www.apache.org/foundation/thanks.html"/>
     </menu>
 
   </body>
