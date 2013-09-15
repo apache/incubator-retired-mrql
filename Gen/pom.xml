@@ -15,7 +15,8 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.mrql</groupId>
@@ -29,7 +30,7 @@
   <parent>
     <groupId>org.apache.mrql</groupId>
     <artifactId>MRQL</artifactId>
-    <version>0.9.0-incubating</version>
+    <version>0.9.0-incubating-SNAPSHOT</version>
   </parent>
 
   <build>
@@ -76,8 +77,8 @@
 	    </goals>
 	    <configuration>
               <target>
-                <taskdef name="cup" classname="java_cup.anttask.CUPTask" classpathref="maven.compile.classpath" />
-                <cup srcfile="src/main/java/gen/gen.cup" destdir="${project.build.directory}/generated-sources/parsers" nosummary="true" parser="GenParser" symbols="GenSym" />
+                <taskdef name="cup" classname="java_cup.anttask.CUPTask" classpathref="maven.compile.classpath"/>
+                <cup srcfile="src/main/java/gen/gen.cup" destdir="${project.build.directory}/generated-sources/parsers" nosummary="true" parser="GenParser" symbols="GenSym"/>
 	      </target>
   	    </configuration>
 	  </execution>
