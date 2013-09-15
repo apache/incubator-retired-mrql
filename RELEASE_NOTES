@@ -27,3 +27,4 @@ Tasks
 [MRQL-14] Add the "-SNAPSHOT" suffix
 [MRQL-15] Setup svnpubsub for the MRQL dist directory
 [MRQL-16] correct source files. ASF licenses, and POMs for release
+[MRQL-18]: correct NOTICE, DISCLAIMER, xdoc
