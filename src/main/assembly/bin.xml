@@ -14,9 +14,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
   <id>bin</id>
   <formats>
     <format>tar.gz</format>
@@ -32,18 +30,21 @@
         <include>NOTICE*</include>
         <include>DISCLAIMER*</include>
         <include>RELEASE_NOTES*</include>
-        <include>conf/mrql-env.sh</include>
+        <include>Makefile</include>
+        <include>**/*.xml</include>
         <include>**/apidocs/**</include>
       </includes>
       <excludes>
+        <exclude>**/target/**</exclude>
+        <exclude>**/dependency-reduced-pom.xml</exclude>
         <exclude>**/*~</exclude>
       </excludes>
     </fileSet>
     <fileSet>
-      <directory>../lib</directory>
-      <excludes>
-        <exclude>gen*</exclude>
-      </excludes>
+      <directory>../src</directory>
+    </fileSet>
+    <fileSet>
+      <directory>../queries</directory>
     </fileSet>
     <fileSet>
       <directory>../tests</directory>
@@ -54,7 +55,12 @@
     </fileSet>
     <fileSet>
       <directory>../bin</directory>
-      <fileMode>0755</fileMode>
    </fileSet>
+   <fileSet>
+     <directory>../conf</directory>
+   </fileSet>
+    <fileSet>
+      <directory>../lib</directory>
+    </fileSet>
   </fileSets>
 </assembly>
