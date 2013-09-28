@@ -20,7 +20,7 @@
 
   <groupId>org.apache.mrql</groupId>
   <artifactId>MRQL</artifactId>
-  <version>0.9.1-incubating-SNAPSHOT</version>
+  <version>0.9.0-incubating-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>MRQL</name>
   <description>MRQL is a query processing and optimization system for large-scale, distributed data analysis, built on top of Apache Hadoop, Hama, and Spark</description>
