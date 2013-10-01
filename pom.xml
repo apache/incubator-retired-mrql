@@ -20,7 +20,7 @@
 
   <groupId>org.apache.mrql</groupId>
   <artifactId>mrql-parent</artifactId>
-  <version>0.9.0-incubating-SNAPSHOT</version>
+  <version>0.9.0-incubating</version>
   <packaging>pom</packaging>
   <name>Apache MRQL parent POM</name>
   <description>Apache MRQL is a query processing and optimization system for large-scale, distributed data analysis, built on top of Apache Hadoop, Hama, and Spark</description>
