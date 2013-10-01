@@ -17,12 +17,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>mrql-src-dist</artifactId>
+  <artifactId>mrql-dist</artifactId>
   <packaging>pom</packaging>
+  <name>Apache MRQL assembly</name>
 
   <parent>
     <groupId>org.apache.mrql</groupId>
-    <artifactId>MRQL</artifactId>
+    <artifactId>mrql-parent</artifactId>
     <version>0.9.0-incubating-SNAPSHOT</version>
   </parent>
 
@@ -43,8 +44,23 @@
                 <descriptor>src/main/assembly/src.xml</descriptor>
               </descriptors>
               <tarLongFileMode>gnu</tarLongFileMode>
-              <appendAssemblyId>false</appendAssemblyId>
+              <appendAssemblyId>true</appendAssemblyId>
               <finalName>mrql-${project.version}-src</finalName>
+            </configuration>
+          </execution>
+          <execution>
+            <id>bin-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <descriptors>
+                <descriptor>src/main/assembly/bin.xml</descriptor>
+              </descriptors>
+              <tarLongFileMode>gnu</tarLongFileMode>
+              <appendAssemblyId>true</appendAssemblyId>
+              <finalName>mrql-${project.version}-bin</finalName>
             </configuration>
           </execution>
         </executions>

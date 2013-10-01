@@ -26,8 +26,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 
 
-/** Input format for hadoop sequence files */
-final public class BinaryInputFormat extends MRQLFileInputFormat {
+/** Input format for Apache Hadoop sequence files */
+final public class MapReduceBinaryInputFormat extends MapReduceMRQLFileInputFormat {
     final static SequenceFileInputFormat<MRContainer,MRContainer> inputFormat
                                = new SequenceFileInputFormat<MRContainer,MRContainer>();
 

@@ -18,14 +18,23 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+#--------------------------------------------------------------------------------
 #
-# Set MRQL-specific environment variables here.
+# Set Apache MRQL-specific environment variables here.
 #
 #--------------------------------------------------------------------------------
 
 
 # Required: The java installation directory
 JAVA_HOME=/root/jdk
+
+# Required: The CUP parser library
+# You may install it as a linux package or download it from http://www2.cs.tum.edu/projects/cup/
+CUP_JAR=${HOME}/.m2/repository/net/sf/squirrel-sql/thirdparty/non-maven/java-cup/11a/java-cup-11a.jar
+
+# Required: The JLine library
+# You may download from http://jline.sourceforge.net
+JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 
 
 # Required: Hadoop configuration
@@ -39,7 +48,7 @@ FS_DEFAULT_NAME=hdfs://localhost:9000/
 
 
 # Optional: Hama configuration
-HAMA_VERSION=0.5.0
+HAMA_VERSION=0.6.2
 # The Hadoop installation directory
 HAMA_HOME=${HOME}/hama-${HAMA_VERSION}
 # The Hama configuration as defined in hama-site.xml
@@ -53,6 +62,8 @@ SPARK_HOME=${HOME}/spark-0.7.3
 SCALA_LIB=/usr/share/java
 # URI of the Spark master node
 SPARK_MASTER=spark://crete:7077
+# Spark memory per node
+export SPARK_MEM="1g"
 
 
 # Claspaths

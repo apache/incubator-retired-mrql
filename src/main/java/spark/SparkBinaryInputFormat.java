@@ -24,7 +24,7 @@ import org.apache.hadoop.mapred.*;
 
 
 /** Input format for hadoop sequence files */
-final public class BinaryInputFormat extends MRQLFileInputFormat {
+final public class SparkBinaryInputFormat extends SparkMRQLFileInputFormat {
     public static class BinaryInputRecordReader extends SequenceFileRecordReader<MRContainer,MRContainer> {
         final MRContainer result = new MRContainer();
 

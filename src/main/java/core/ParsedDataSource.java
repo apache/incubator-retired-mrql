@@ -33,7 +33,7 @@ public class ParsedDataSource extends DataSource {
                        Class<? extends Parser> parser,
                        Trees args,
                        Configuration conf ) {
-        super(source_num,path,ParsedInputFormat.class,conf);
+        super(source_num,path,Evaluator.evaluator.parsedInputFormat(),conf);
         this.parser = parser;
         this.args = args;
     }
@@ -42,7 +42,7 @@ public class ParsedDataSource extends DataSource {
                        Class<? extends Parser> parser,
                        Trees args,
                        Configuration conf ) {
-        super(-1,path,ParsedInputFormat.class,conf);
+        super(-1,path,Evaluator.evaluator.parsedInputFormat(),conf);
         this.parser = parser;
         this.args = args;
     }

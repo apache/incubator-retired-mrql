@@ -169,6 +169,12 @@ final public class Config {
                     throw new Error("Expected number of reductions");
                 nodes = Integer.parseInt(args[i]);
                 i++;
+            } else if (args[i].equals("-bsp")) {
+                bsp_mode = true;
+                i++;
+            } else if (args[i].equals("-spark")) {
+                spark_mode = true;
+                i++;
             } else if (args[i].equals("-bsp_tasks")) {
                 if (++i >= args.length && Integer.parseInt(args[i]) < 1)
                     throw new Error("Expected max number of bsp tasks > 1");

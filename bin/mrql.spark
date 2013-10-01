@@ -18,7 +18,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# run MRQL in Spark mode
+#--------------------------------------------------------------------------------
+#
+# run Apache MRQL in Apache Spark mode
 #
 #--------------------------------------------------------------------------------
 
@@ -26,10 +28,13 @@ MRQL_HOME=$(dirname $(readlink -f $0))/..
 
 . $MRQL_HOME/conf/mrql-env.sh
 
+GEN_JAR=$(readlink -f $MRQL_HOME/lib/mrql-gen-*.jar)
+CORE_JAR=$(readlink -f $MRQL_HOME/lib/mrql-core-*.jar)
+SPARK_JAR=$(readlink -f $MRQL_HOME/lib/mrql-spark-*.jar)
+
+
 export SPARK_HOME FS_DEFAULT_NAME SPARK_MASTER
-export MRQL_JAR=$(readlink -f $MRQL_HOME/lib/mrql-spark-*.jar)
-export SPARK_MEM="1g"
 
-SPARK_CLASSPATH=$MRQL_JAR:$SPARK_JARS:$HADOOP_JARS
+SPARK_CLASSPATH=$CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$SPARK_JAR:$SPARK_JARS:$HADOOP_JARS
 
-$JAVA_HOME/bin/java -classpath $SPARK_CLASSPATH org.apache.mrql.Main $*
+$JAVA_HOME/bin/java -classpath $SPARK_CLASSPATH org.apache.mrql.Main -spark $*

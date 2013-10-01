@@ -19,6 +19,7 @@ package org.apache.mrql;
 
 import java_cup.runtime.*;
 import org.apache.mrql.gen.*;
+import java_cup.runtime.Scanner;
 import java.util.*;
 import java.io.*;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,65 +42,91 @@ import spark.api.java.function.Function;
 import spark.api.java.function.VoidFunction;
 
 
-/** Evaluates physical plans in Spark mode */
-final public class Evaluator extends Interpreter implements Serializable {
+/** Evaluates physical plans in Apache Spark mode */
+final public class SparkEvaluator extends Evaluator implements Serializable {
     static JavaSparkContext spark_context;
-    final static String mrql_jar = Evaluator.class.getProtectionDomain().getCodeSource().getLocation().toString();
+    final static String spark_jar = SparkEvaluator.class.getProtectionDomain().getCodeSource().getLocation().toString();
+    final static String core_jar = Interpreter.class.getProtectionDomain().getCodeSource().getLocation().toString();
+    final static String gen_jar = Tree.class.getProtectionDomain().getCodeSource().getLocation().toString();
+    final static String scanner_jar = Scanner.class.getProtectionDomain().getCodeSource().getLocation().toString();
     static String data_source_directory;
+    final static Bag empty_bag = new Bag();
 
     /** initialize the Spark evaluator */
-    final static void init ( Configuration conf ) throws IOException {
+    final public void init ( Configuration conf ) {
         Config.spark_mode = true;
-        if (Config.hadoop_mode && Config.local_mode)
-            spark_context = new JavaSparkContext("local["+Config.nodes+"]",
-                                                 "MRQL Local Spark Evaluator");
-        else if (Config.hadoop_mode) {
-            HashMap<String,String> env = new HashMap<String,String>();
-            data_source_directory = System.getenv("FS_DEFAULT_NAME")+"/"+Plan.new_path(conf);
-            env.put("mrql.data.source.directory",data_source_directory);
-            spark_context = new JavaSparkContext(System.getenv("SPARK_MASTER"),
-                                                 "MRQL Spark Evaluator",
-                                                 System.getenv("SPARK_HOME"),
-                                                 new String[]{mrql_jar},
-                                                 env);
-            Plan.conf = spark_context.hadoopConfiguration();
-            FileSystem.setDefaultUri(Plan.conf,System.getenv("FS_DEFAULT_NAME"));
+        try {
+            if (Config.hadoop_mode && Config.local_mode)
+                spark_context = new JavaSparkContext("local["+Config.nodes+"]",
+                                                     "Apache MRQL Local Spark Evaluator");
+            else if (Config.hadoop_mode) {
+                HashMap<String,String> env = new HashMap<String,String>();
+                data_source_directory = System.getenv("FS_DEFAULT_NAME")+"/"+Plan.new_path(conf);
+                env.put("mrql.data.source.directory",data_source_directory);
+                spark_context = new JavaSparkContext(System.getenv("SPARK_MASTER"),
+                                                     "Apache MRQL Spark Evaluator",
+                                                     System.getenv("SPARK_HOME"),
+                                                     new String[]{spark_jar,core_jar,gen_jar,scanner_jar},
+                                                     env);
+                Plan.conf = spark_context.hadoopConfiguration();
+                FileSystem.setDefaultUri(Plan.conf,System.getenv("FS_DEFAULT_NAME"));
+            }
+        } catch (IOException ex) {
+            throw new Error(ex);
         }
     }
 
     /** shutdown the Spark evaluator */
-    final static void shutdown ( Configuration conf ) {
+    final public void shutdown ( Configuration conf ) {
         spark_context.stop();
         spark_context = null;
         System.clearProperty("spark.driver.port");
     }
 
-    final static void initialize_query () {
+    final public void initialize_query () {
         spark_context.clearJars();
-        spark_context.addJar(mrql_jar);
+        spark_context.addJar(spark_jar);
+        spark_context.addJar(core_jar);
+        spark_context.addJar(gen_jar);
+        spark_context.addJar(scanner_jar);
         Plan.distribute_compiled_arguments(Plan.conf);
         if (Config.compile_functional_arguments)
             spark_context.addJar(Plan.conf.get("mrql.jar.path"));
     }
 
-    final static Configuration new_configuration () {
+    final public Configuration new_configuration () {
         return new Configuration();
     }
 
-    public static MR_bool synchronize ( MR_string peerName, MR_bool mr_exit ) {
+    final public MR_bool synchronize ( MR_string peerName, MR_bool mr_exit ) {
         throw new Error("You can only synchronize BSP tasks");
     }
 
-    public static Bag distribute ( MR_string peerName, Bag s ) {
+    final public Bag distribute ( MR_string peerName, Bag s ) {
         throw new Error("You can only distribute bags among BSP tasks");
     }
 
-    final static Bag collect ( final DataSet x ) throws Exception {
+    final public Bag collect ( final DataSet x ) throws Exception {
         return Plan.collect(x);
     }
 
-    final static MRData bsp ( Tree plan, Environment env ) throws Exception {
+    final public MRData bsp ( Tree plan, Environment env ) throws Exception {
         throw new Error("You can not run a BSP task in Spark mode");
+    }
+
+    /** return the FileInputFormat for parsed files (CSV, XML, JSON, etc) */
+    final public Class<? extends MRQLFileInputFormat> parsedInputFormat () {
+        return SparkParsedInputFormat.class;
+    }
+
+    /** return the FileInputFormat for binary files */
+    final public Class<? extends MRQLFileInputFormat> binaryInputFormat () {
+        return SparkBinaryInputFormat.class;
+    }
+
+    /** return the FileInputFormat for data generator files */
+    final public Class<? extends MRQLFileInputFormat> generatorInputFormat () {
+        return SparkGeneratorInputFormat.class;
     }
 
     /** used by the master to send parsing details (eg, record types) to workers */
@@ -114,12 +141,12 @@ final public class Evaluator extends Interpreter implements Serializable {
         ps.close();
     }
 
-    /** executed by a worker when reading parsed input (see ParsedInputFormat) */
+    /** executed by a worker when reading parsed input (see SparkParsedInputFormat) */
     public static void load_source_dir () throws IOException {
         if (Config.local_mode)
             return;
         if (Plan.conf == null)
-            Plan.conf = new_configuration();
+            Plan.conf = Evaluator.evaluator.new_configuration();
         // the name of the file that contains the source directory details is passed
         //   to workers through the HashMap environment in the JavaSparkContext
         Path path = new Path(System.getenv("mrql.data.source.directory"));
@@ -146,7 +173,7 @@ final public class Evaluator extends Interpreter implements Serializable {
      * @param env contains bindings fro variables to values (MRData)
      * @return the aggregation result of type T
      */
-    final static MRData aggregate ( Tree acc_fnc,
+    final public MRData aggregate ( Tree acc_fnc,
                                     Tree zero,
                                     Tree plan,
                                     Environment env ) throws Exception {
@@ -181,7 +208,7 @@ final public class Evaluator extends Interpreter implements Serializable {
     }
 
     /** Evaluate a loop a fixed # of times */
-    final static Tuple loop ( Tree e, Environment env ) throws Exception {
+    final public Tuple loop ( Tree e, Environment env ) throws Exception {
         match e {
         case Loop(lambda(tuple(...vs),tuple(...bs)),tuple(...ss),`num):
             int limit = ((MR_int)evalE(num,env)).get();
@@ -253,7 +280,7 @@ final public class Evaluator extends Interpreter implements Serializable {
      * @param counter the name of the counter used in loops
      * @return a DataSet
      */
-    final static DataSet eval ( final Tree e,
+    final public DataSet eval ( final Tree e,
                                 final Environment env,
                                 final String counter ) {
         JavaRDD<MRData> rd = eval(e,env);
@@ -278,7 +305,7 @@ final public class Evaluator extends Interpreter implements Serializable {
      * @param env contains bindings from variables to values (MRData)
      * @return a Spark RDD
      */
-    final static JavaRDD<MRData> eval ( final Tree e, final Environment env ) {
+    final public JavaRDD<MRData> eval ( final Tree e, final Environment env ) {
         if (Config.trace_execution) {
             tab_count += 3;
             System.out.println(tabs(tab_count)+print_query(e));
@@ -416,7 +443,7 @@ final public class Evaluator extends Interpreter implements Serializable {
      * @param env contains bindings fro variables to values (MRData)
      * @return a Spark RDD
      */
-    final static JavaRDD<MRData> evalD ( final Tree e, final Environment env ) {
+    final public JavaRDD<MRData> evalD ( final Tree e, final Environment env ) {
         try {
             match e {
             case MapAggregateReduce(`m,`r,null,_,`s,`o):
@@ -568,9 +595,7 @@ final public class Evaluator extends Interpreter implements Serializable {
                                             while (i.hasNext()) {
                                                 p = (Tuple)i.next();
                                                 MRData pd = built_table.get(p.first());
-                                                if (pd == null)
-                                                    continue;
-                                                Bag bb = ((Bag)fr.eval(new Tuple(p.second(),pd)));
+                                                Bag bb = ((Bag)fr.eval(new Tuple(p.second(),(pd == null) ? empty_bag : pd)));
                                                 ix = bb.iterator();
                                                 if (ix.hasNext())
                                                     return true;
@@ -596,7 +621,7 @@ final public class Evaluator extends Interpreter implements Serializable {
                     throw new Error("Unknown parser: "+parser);
                 new ParsedDataSource(path,p,args,Plan.conf);
                 dump_source_dir();
-                return containerData(spark_context.hadoopFile(path,ParsedInputFormat.class,
+                return containerData(spark_context.hadoopFile(path,SparkParsedInputFormat.class,
                                                               MRContainer.class,MRContainer.class,
                                                               Config.nodes));
             case Merge(`x,`y):
@@ -647,9 +672,9 @@ final public class Evaluator extends Interpreter implements Serializable {
                 JavaRDD<MRData> rd = null;
                 for ( DataSource d: ds.source )
                     if (rd == null)
-                        rd = containerData(spark_context.hadoopFile(d.path,GeneratorInputFormat.class,
+                        rd = containerData(spark_context.hadoopFile(d.path,SparkGeneratorInputFormat.class,
                                                                     MRContainer.class,MRContainer.class,1));
-                    else rd = rd.union(containerData(spark_context.hadoopFile(d.path,GeneratorInputFormat.class,
+                    else rd = rd.union(containerData(spark_context.hadoopFile(d.path,SparkGeneratorInputFormat.class,
                                                                               MRContainer.class,MRContainer.class,1)));
                 return rd;
             case let(`v,`u,`body):

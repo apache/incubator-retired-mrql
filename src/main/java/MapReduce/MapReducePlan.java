@@ -52,7 +52,7 @@ public class MapReducePlan extends Plan {
         Function accumulator = functional_argument(Plan.conf,acc_fnc);
         Tuple pair = new Tuple(2);
         for ( DataSource s: S.source )
-            if (s.inputFormat != BinaryInputFormat.class) {
+            if (s.inputFormat != MapReduceBinaryInputFormat.class) {
                 pair.set(0,res);
                 pair.set(1,aggregate(acc_fnc,zero,
                                      MapOperation.cMap(Interpreter.identity_mapper,acc_fnc,zero,

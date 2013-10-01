@@ -236,7 +236,7 @@ public class Bag extends MRData implements Iterable<MRData> {
         if (!spilled() && Config.hadoop_mode)
             try {
                 if (Plan.conf == null)
-                    Plan.conf = Evaluator.new_configuration();
+                    Plan.conf = Evaluator.evaluator.new_configuration();
                 final FileSystem fs = FileSystem.getLocal(Plan.conf);
                 path = new_path(fs);
                 System.err.println("*** Spilling a Bag to a local file: "+path);

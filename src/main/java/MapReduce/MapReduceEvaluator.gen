@@ -9,7 +9,7 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, softwar   if (hadoop)e
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
@@ -25,11 +25,11 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.Configuration;
 
 
-/** Evaluates physical plans in Hadoop MapReduce mode */
-final public class Evaluator extends Interpreter {
+/** Evaluates physical plans in Apache Hadoop MapReduce mode */
+final public class MapReduceEvaluator extends Evaluator {
 
     /** initialize the MapReduce evaluator */
-    final static void init ( Configuration conf ) {
+    final public void init ( Configuration conf ) {
         Config.map_reduce_mode = true;
         if (Config.hadoop_mode)
             if (Config.local_mode) {
@@ -42,30 +42,36 @@ final public class Evaluator extends Interpreter {
     }
 
     /** shutdown the MapReduce evaluator */
-    final static void shutdown ( Configuration conf ) {
+    final public void shutdown ( Configuration conf ) {
     }
 
-    final static void initialize_query () {
+    /** initialize the query evaluation */
+    final public void initialize_query () {
     }
 
-    final static Configuration new_configuration () {
+    /** create a new evaluation configuration */
+    final public Configuration new_configuration () {
         return new Configuration();
     }
 
-    public static MR_bool synchronize ( MR_string peerName, MR_bool mr_exit ) {
-        throw new Error("You can only synchronize BSP tasks");
-    }
-
-    public static Bag distribute ( MR_string peerName, Bag s ) {
-        throw new Error("You can only distribute bags among BSP tasks");
-    }
-
-    final static Bag collect ( final DataSet x ) throws Exception {
+    /** collect all data from a persistent dataset into a Bag */
+    final public Bag collect ( final DataSet x ) throws Exception {
         return MapReducePlan.collect(x);
     }
 
-    final static MRData bsp ( Tree plan, Environment env ) throws Exception {
-        throw new Error("You can not run a BSP task in Map-Reduce mode");
+    /** return the FileInputFormat for parsed files (CSV, XML, JSON, etc) */
+    final public Class<? extends MRQLFileInputFormat> parsedInputFormat () {
+        return MapReduceParsedInputFormat.class;
+    }
+
+    /** return the FileInputFormat for binary files */
+    final public Class<? extends MRQLFileInputFormat> binaryInputFormat () {
+        return MapReduceBinaryInputFormat.class;
+    }
+
+    /** return the FileInputFormat for data generator files */
+    final public Class<? extends MRQLFileInputFormat> generatorInputFormat () {
+        return MapReduceGeneratorInputFormat.class;
     }
 
     /** The Aggregate physical operator
@@ -75,15 +81,15 @@ final public class Evaluator extends Interpreter {
      * @param env contains bindings fro variables to values (MRData)
      * @return the aggregation result of type T
      */
-    final static MRData aggregate ( Tree acc_fnc,
-                                    Tree zero,
-                                    Tree plan,
-                                    Environment env ) throws Exception {
+    final public MRData aggregate ( Tree acc_fnc,
+                             Tree zero,
+                             Tree plan,
+                             Environment env ) throws Exception {
         return MapReducePlan.aggregate(acc_fnc,zero,eval(plan,env,"-"));
     }
 
     /** Evaluate a loop a fixed # of times */
-    final static Tuple loop ( Tree e, Environment env ) throws Exception {
+    final public Tuple loop ( Tree e, Environment env ) throws Exception {
         match e {
         case Loop(lambda(tuple(...vs),tuple(...bs)),tuple(...ss),`num):
             int limit = ((MR_int)evalE(num,env)).get();
@@ -107,9 +113,9 @@ final public class Evaluator extends Interpreter {
      * @param env contains bindings fro variables to values (MRData)
      * @return a DataSet (stored in HDFS)
      */
-    final static DataSet eval ( final Tree e,
-                                final Environment env,
-                                final String counter ) {
+    final public DataSet eval ( final Tree e,
+                         final Environment env,
+                         final String counter ) {
         if (Config.trace_execution) {
             tab_count += 3;
             System.out.println(tabs(tab_count)+print_query(e));
@@ -131,9 +137,9 @@ final public class Evaluator extends Interpreter {
      * @param env contains bindings fro variables to values (MRData)
      * @return a DataSet (stored in HDFS)
      */
-    final static DataSet evalD ( final Tree e,
-                                 final Environment env,
-                                 final String counter ) {
+    final DataSet evalD ( final Tree e,
+                          final Environment env,
+                          final String counter ) {
         try {
             match e {
             case cMap(`f,`s):
@@ -233,7 +239,7 @@ final public class Evaluator extends Interpreter {
                 final Tree body = b;
                 Function loop_fnc = new Function () {
                         public MRData eval ( MRData s ) {
-                            return new MR_dataset(Evaluator.eval(body,new Environment(nm,s,env),nm));
+                            return new MR_dataset(evaluator.eval(body,new Environment(nm,s,env),nm));
                         }; };
                 return MapReducePlan.repeat(loop_fnc,eval(s,env,"-"),((MR_int)evalE(n,env)).get());
             case Closure(lambda(`v,`b),`s,`n):
@@ -241,7 +247,7 @@ final public class Evaluator extends Interpreter {
                 final Tree body = b;
                 Function loop_fnc = new Function () {
                         public MRData eval ( MRData s ) {
-                            return new MR_dataset(Evaluator.eval(body,new Environment(nm,s,env),"-"));
+                            return new MR_dataset(evaluator.eval(body,new Environment(nm,s,env),"-"));
                         }; };
                 return MapReducePlan.closure(loop_fnc,eval(s,env,"-"),((MR_int)evalE(n,env)).get());
             case Generator(`min,`max,`size):

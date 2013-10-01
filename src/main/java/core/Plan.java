@@ -298,12 +298,12 @@ public class Plan {
 
     /** The collect physical operator */
     public final static Bag collect ( final DataSet x, boolean strip ) throws Exception {
-        return MRQLFileInputFormat.collect(x,strip);
+        return Evaluator.evaluator.parsedInputFormat().newInstance().collect(x,strip);
     }
 
     /** The collect physical operator */
     public final static Bag collect ( final DataSet x ) throws Exception {
-        return MRQLFileInputFormat.collect(x,true);
+        return collect(x,true);
     }
 
     /** the DataSet union physical operator */

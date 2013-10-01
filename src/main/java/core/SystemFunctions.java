@@ -41,11 +41,11 @@ final public class SystemFunctions {
     static Random random = new Random();
 
     public static MR_bool synchronize ( MR_string peerName, MR_bool mr_exit ) {
-        return Evaluator.synchronize(peerName,mr_exit);
+        return Evaluator.evaluator.synchronize(peerName,mr_exit);
     }
 
     public static Bag distribute ( MR_string peerName, Bag s ) {
-        return Evaluator.distribute(peerName,s);
+        return Evaluator.evaluator.distribute(peerName,s);
     }
 
     public static MR_bool lt ( MR_short x, MR_short y ) { return (x.get() < y.get()) ? true_value : false_value; }

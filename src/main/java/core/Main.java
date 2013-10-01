@@ -58,10 +58,20 @@ final public class Main {
 
     public static void main ( String[] args ) throws Exception {
         boolean hadoop = false;
-        for ( String arg: args )
+        for ( String arg: args ) {
             hadoop |= arg.equals("-local") || arg.equals("-dist");
+            Config.bsp_mode |= arg.equals("-bsp");
+            Config.spark_mode |= arg.equals("-spark");
+        };
+        Config.map_reduce_mode = !Config.bsp_mode && !Config.spark_mode;
+        if (Config.map_reduce_mode)
+            Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.MapReduceEvaluator").newInstance();
+        if (Config.bsp_mode)
+            Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.BSPEvaluator").newInstance();
+        if (Config.spark_mode)
+            Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.SparkEvaluator").newInstance();
         if (hadoop) {
-            conf = Evaluator.new_configuration();
+            conf = Evaluator.evaluator.new_configuration();
             GenericOptionsParser gop = new GenericOptionsParser(conf,args);
             conf = gop.getConfiguration();
             args = gop.getRemainingArgs();
@@ -73,7 +83,7 @@ final public class Main {
                 ((Logger)en.nextElement()).setLevel(Level.WARN);
             LogManager.getRootLogger().setLevel(Level.WARN);
         };
-        Evaluator.init(conf);
+        Evaluator.evaluator.init(conf);
         new TopLevel();
         System.out.print("Apache MRQL version "+version+" (");
         if (Config.compile_functional_arguments)
@@ -134,7 +144,7 @@ final public class Main {
             } finally {
                 if (hadoop) {
                     Plan.clean();
-                    Evaluator.shutdown(Plan.conf);
+                    Evaluator.evaluator.shutdown(Plan.conf);
                 };
                 if (Config.compile_functional_arguments)
                     Compiler.clean();
@@ -154,7 +164,7 @@ final public class Main {
             } finally {
                 if (hadoop) {
                     Plan.clean();
-                    Evaluator.shutdown(Plan.conf);
+                    Evaluator.evaluator.shutdown(Plan.conf);
                 };
                 if (Config.compile_functional_arguments)
                     Compiler.clean();

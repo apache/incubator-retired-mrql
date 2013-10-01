@@ -448,9 +448,9 @@ final public class GroupByJoinPlan extends Plan {
         job.setOutputFormatClass(SequenceFileOutputFormat.class);
         FileOutputFormat.setOutputPath(job,new Path(newpath));
         for (DataSource p: X.source)
-            MultipleInputs.addInputPath(job,new Path(p.path),p.inputFormat,MapperLeft.class);
+            MultipleInputs.addInputPath(job,new Path(p.path),(Class<? extends MapReduceMRQLFileInputFormat>)p.inputFormat,MapperLeft.class);
         for (DataSource p: Y.source)
-            MultipleInputs.addInputPath(job,new Path(p.path),p.inputFormat,MapperRight.class);
+            MultipleInputs.addInputPath(job,new Path(p.path),(Class<? extends MapReduceMRQLFileInputFormat>)p.inputFormat,MapperRight.class);
         job.setReducerClass(JoinReducer.class);
         if (num_reducers > 0)
             job.setNumReduceTasks(num_reducers);

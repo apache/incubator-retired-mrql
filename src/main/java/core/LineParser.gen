@@ -116,7 +116,7 @@ final public class LineParser implements Parser {
 
     public void initialize ( Trees args ) {
         if (Config.hadoop_mode && Plan.conf == null)
-            Plan.conf = Evaluator.new_configuration();
+            Plan.conf = Evaluator.evaluator.new_configuration();
         if (args.length() != 2)
             throw new Error("The line parser must have two arguments: "+args);
         if (!(args.nth(0) instanceof StringLeaf))

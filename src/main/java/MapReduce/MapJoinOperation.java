@@ -202,7 +202,7 @@ final public class MapJoinOperation extends MapReducePlan {
                 DistributedCache.addCacheFile(s.getPath().toUri(),job.getConfiguration());
         };
         for (DataSource p: probe_dataset.source)
-            MultipleInputs.addInputPath(job,new Path(p.path),p.inputFormat,mapJoinMapper.class);
+            MultipleInputs.addInputPath(job,new Path(p.path),(Class<? extends MapReduceMRQLFileInputFormat>)p.inputFormat,mapJoinMapper.class);
         FileOutputFormat.setOutputPath(job,new Path(newpath));
         job.setNumReduceTasks(0);
         job.waitForCompletion(true);

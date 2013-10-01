@@ -214,6 +214,7 @@ final public class MapReduceAlgebra {
      */
     public static Bag hash_join ( final Function kx, final Function ky, final Function f,
                                   final Bag X, final Bag Y ) {
+        final Bag empty_bag = new Bag();
         Hashtable<MRData,Bag> hashTable = new Hashtable<MRData,Bag>(1000);
         for ( MRData x: X ) {
             MRData key = kx.eval(x);
@@ -226,9 +227,10 @@ final public class MapReduceAlgebra {
         for ( MRData y: Y ) {
             MRData key = ky.eval(y);
             Bag match = hashTable.get(key);
-            if (match != null)
-                for ( MRData x: match )
-                    res.add(f.eval(new Tuple(x,y)));
+            if (match == null)
+                res.add(f.eval(new Tuple(empty_bag,y)));
+            else for ( MRData x: match )
+                     res.add(f.eval(new Tuple(x,y)));
         };
         return res;
     }

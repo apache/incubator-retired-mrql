@@ -19,11 +19,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.mrql</groupId>
-  <artifactId>MRQL</artifactId>
+  <artifactId>mrql-parent</artifactId>
   <version>0.9.0-incubating-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>MRQL</name>
-  <description>MRQL is a query processing and optimization system for large-scale, distributed data analysis, built on top of Apache Hadoop, Hama, and Spark</description>
+  <name>Apache MRQL parent POM</name>
+  <description>Apache MRQL is a query processing and optimization system for large-scale, distributed data analysis, built on top of Apache Hadoop, Hama, and Spark</description>
   <url>http://mrql.incubator.apache.org/</url>
   <inceptionYear>2013</inceptionYear>
   <licenses>
@@ -50,11 +50,11 @@
 
   <modules>
     <module>Gen</module>
+    <module>core</module>
     <module>MapReduce</module>
     <module>BSP</module>
     <module>Spark</module>
-    <module>binaries</module>
-    <module>source</module>
+    <module>dist</module>
   </modules>
 
   <dependencies>
@@ -144,8 +144,8 @@
                 <include>lib/**</include>
                 <include>tests/results/**</include>
                 <include>tests/error_log.txt</include>
-                <include>mrql-tmp</include>
-                <include>tmp</include>
+                <include>mrql-tmp/**</include>
+                <include>tmp/**</include>
                 <include>**/dependency-reduced-pom.xml</include>
                 <include>**/docs/**</include>
                 <include>**/.project</include>

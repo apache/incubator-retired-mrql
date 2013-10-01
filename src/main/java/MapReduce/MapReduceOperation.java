@@ -256,7 +256,7 @@ final public class MapReduceOperation extends MapReducePlan {
         job.setGroupingComparatorClass(MRContainerKeyComparator.class);
         job.setOutputFormatClass(SequenceFileOutputFormat.class);
         for (DataSource p: source.source)
-            MultipleInputs.addInputPath(job,new Path(p.path),p.inputFormat,MRMapper.class);
+            MultipleInputs.addInputPath(job,new Path(p.path),(Class<? extends MapReduceMRQLFileInputFormat>)p.inputFormat,MRMapper.class);
         FileOutputFormat.setOutputPath(job,new Path(newpath));
         job.setReducerClass(MRReducer.class);
         if (Config.trace && PlanGeneration.streamed_MapReduce_reducer(reduce_fnc))

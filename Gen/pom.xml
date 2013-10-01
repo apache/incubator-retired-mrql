@@ -19,16 +19,16 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.mrql</groupId>
-  <artifactId>gen</artifactId>
+  <artifactId>mrql-gen</artifactId>
   <packaging>jar</packaging>
-  <name>gen</name>
-  <description>Gen: A Java Package for Constructing and Manipulating Abstract Syntax Trees</description>
+  <name>Apache MRQL gen</name>
+  <description>Apache MRQL Gen: A Java Package for Constructing and Manipulating Abstract Syntax Trees</description>
   <url>http://mrql.incubator.apache.org/</url>
   <inceptionYear>2013</inceptionYear>
 
   <parent>
     <groupId>org.apache.mrql</groupId>
-    <artifactId>MRQL</artifactId>
+    <artifactId>mrql-parent</artifactId>
     <version>0.9.0-incubating-SNAPSHOT</version>
   </parent>
 
@@ -40,7 +40,7 @@
         <artifactId>maven-jar-plugin</artifactId>
         <version>2.4</version>
 	<configuration>
-	  <finalName>gen-${project.version}</finalName>
+	  <finalName>mrql-gen-${project.version}</finalName>
 	  <outputDirectory>${project.parent.basedir}/lib</outputDirectory>
 	  <useDefaultManifestFile>true</useDefaultManifestFile>
 	</configuration>

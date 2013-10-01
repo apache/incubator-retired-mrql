@@ -24,11 +24,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hama.HamaConfiguration;
 
 
-/** Evaluate a physical plan in BSP mode using Hama */
-final public class Evaluator extends Interpreter {
+/** Evaluate a physical plan in BSP mode using Apache Hama */
+final public class BSPEvaluator extends Evaluator {
 
     /** initialize the BSP evaluator */
-    final static void init ( Configuration conf ) {
+    final public void init ( Configuration conf ) {
         Config.bsp_mode = true;
         if (Config.hadoop_mode)
             if (Config.local_mode) {
@@ -44,24 +44,24 @@ final public class Evaluator extends Interpreter {
             }
     }
 
-    final static void initialize_query () {
+    final public void initialize_query () {
     }
 
     /** shutdown the BSP evaluator */
-    final static void shutdown ( Configuration conf ) {
+    final public void shutdown ( Configuration conf ) {
     }
 
-    final static Configuration new_configuration () {
+    final public Configuration new_configuration () {
         return new HamaConfiguration();
     }
 
-    public static MR_bool synchronize ( MR_string peerName, MR_bool mr_exit ) {
+    final public MR_bool synchronize ( MR_string peerName, MR_bool mr_exit ) {
         if (Config.hadoop_mode)
             return BSPPlan.BSPop.synchronize(peerName,mr_exit);
         else return mr_exit;
     }
 
-    public static Bag distribute ( MR_string peerName, Bag s ) {
+    final public Bag distribute ( MR_string peerName, Bag s ) {
         if (Config.hadoop_mode)
             return BSPPlan.BSPop.distribute(peerName,s);
         else return s;
@@ -72,7 +72,7 @@ final public class Evaluator extends Interpreter {
      * @param env contains bindings fro variables to values (MRData)
      * @return a DataSet (stored in HDFS)
      */
-    final static MRData bsp ( Tree plan, Environment env ) throws Exception {
+    final public MRData bsp ( Tree plan, Environment env ) throws Exception {
         match plan {
         case BSP(tuple(...ns),`superstep,`init_state,`o,...S):
             int[] os = new int[ns.length()];
@@ -99,6 +99,26 @@ final public class Evaluator extends Interpreter {
         throw new Error("Cannot perform the BSP plan: "+plan);
     }
 
+    /** collect all data from a persistent dataset into a Bag */
+    public Bag collect ( final DataSet x ) throws Exception {
+        throw new Error("method collect should be called from BSP");
+    }
+
+    /** return the FileInputFormat for parsed files (CSV, XML, JSON, etc) */
+    final public Class<? extends MRQLFileInputFormat> parsedInputFormat () {
+        return BSPParsedInputFormat.class;
+    }
+
+    /** return the FileInputFormat for binary files */
+    final public Class<? extends MRQLFileInputFormat> binaryInputFormat () {
+        return BSPBinaryInputFormat.class;
+    }
+
+    /** return the FileInputFormat for data generator files */
+    final public Class<? extends MRQLFileInputFormat> generatorInputFormat () {
+        return BSPGeneratorInputFormat.class;
+    }
+
     /** The Aggregate physical operator
      * @param acc_fnc  the accumulator function from (T,T) to T
      * @param zero  the zero element of type T
@@ -106,7 +126,7 @@ final public class Evaluator extends Interpreter {
      * @param env contains bindings fro variables to values (MRData)
      * @return the aggregation result of type T
      */
-    final static MRData aggregate ( Tree acc_fnc,
+    final public MRData aggregate ( Tree acc_fnc,
                                     Tree zero,
                                     Tree plan,
                                     Environment env ) throws Exception {
@@ -125,11 +145,11 @@ final public class Evaluator extends Interpreter {
         throw new Error("Cannot perform the aggregation: "+plan);
     }
 
-    final static Tuple loop ( Tree e, Environment env ) {
+    final public Tuple loop ( Tree e, Environment env ) {
         throw new Error("The BSP Loop was supposed to be translated to a BSP task");
     }
 
-    final static DataSet eval ( final Tree e,
+    final public DataSet eval ( final Tree e,
                                 final Environment env,
                                 final String counter ) {
         return eval(e,env);
@@ -141,7 +161,7 @@ final public class Evaluator extends Interpreter {
      * @param env contains bindings fro variables to values (MRData)
      * @return a DataSet (stored in HDFS)
      */
-    final static DataSet eval ( final Tree e, final Environment env ) {
+    final public DataSet eval ( final Tree e, final Environment env ) {
         if (Config.trace_execution) {
             tab_count += 3;
             System.out.println(tabs(tab_count)+print_query(e));
@@ -163,7 +183,7 @@ final public class Evaluator extends Interpreter {
      * @param env contains bindings fro variables to values (MRData)
      * @return a DataSet (stored in HDFS)
      */
-    final static DataSet evalD ( final Tree e, final Environment env ) {
+    final public DataSet evalD ( final Tree e, final Environment env ) {
         try {
             match e {
             case BSPSource(`n,BinarySource(`file,_)):

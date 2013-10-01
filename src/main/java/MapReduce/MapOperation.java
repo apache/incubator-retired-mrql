@@ -122,7 +122,7 @@ final public class MapOperation extends MapReducePlan {
         job.setOutputValueClass(MRContainer.class);
         job.setOutputFormatClass(SequenceFileOutputFormat.class);
         for (DataSource p: source.source)
-            MultipleInputs.addInputPath(job,new Path(p.path),p.inputFormat,cMapMapper.class);
+            MultipleInputs.addInputPath(job,new Path(p.path),(Class<? extends MapReduceMRQLFileInputFormat>)p.inputFormat,cMapMapper.class);
         FileOutputFormat.setOutputPath(job,new Path(newpath));
         job.setNumReduceTasks(0);
         job.waitForCompletion(true);

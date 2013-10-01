@@ -22,20 +22,24 @@ import java.util.Iterator;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
 
 /** the FileInputFormat for data generators: it creates HDFS files, where each file contains
  *  an (offset,size) pair that generates the range of values [offset,offset+size] */
-final public class GeneratorInputFormat extends MRQLFileInputFormat {
-    public static class GeneratorRecordReader implements RecordReader<MRContainer,MRContainer> {
+final public class MapReduceGeneratorInputFormat extends MapReduceMRQLFileInputFormat {
+    public static class GeneratorRecordReader extends RecordReader<MRContainer,MRContainer> {
         final long offset;
         final long size;
         long index;
         SequenceFile.Reader reader;
 
         public GeneratorRecordReader ( FileSplit split,
-                                       Configuration conf ) throws IOException {
+                                       TaskAttemptContext context ) throws IOException {
+            Configuration conf = context.getConfiguration();
             Path path = split.getPath();
             FileSystem fs = path.getFileSystem(conf);
             reader = new SequenceFile.Reader(path.getFileSystem(conf),path,conf);
@@ -47,34 +51,31 @@ final public class GeneratorInputFormat extends MRQLFileInputFormat {
             index = -1;
         }
 
-        public MRContainer createKey () {
-            return new MRContainer(null);
-        }
-
-        public MRContainer createValue () {
-            return new MRContainer(null);
-        }
-
-        public boolean next ( MRContainer key, MRContainer value ) throws IOException {
+        public boolean nextKeyValue () throws IOException {
             index++;
-            value.set(new MR_long(offset+index));
-            key.set(new MR_long(index));
             return index < size;
         }
 
-        public long getPos () throws IOException { return index; }
+        public MRContainer getCurrentKey () throws IOException {
+            return new MRContainer(new MR_long(index));
+        }
+
+        public MRContainer getCurrentValue () throws IOException {
+            return new MRContainer(new MR_long(offset+index));
+        }
 
         public void close () throws IOException { reader.close(); }
 
         public float getProgress () throws IOException {
             return index / (float)size;
         }
+
+        public void initialize ( InputSplit split, TaskAttemptContext context ) throws IOException { }
     }
 
     public RecordReader<MRContainer,MRContainer>
-              getRecordReader ( InputSplit split, JobConf job, Reporter reporter ) throws IOException {
-        return (RecordReader<MRContainer,MRContainer>)
-                      new GeneratorRecordReader((FileSplit)split,job);
+              createRecordReader ( InputSplit split, TaskAttemptContext context ) throws IOException {
+        return new GeneratorRecordReader((FileSplit)split,context);
     }
 
     /** Insert all results from the generators stored in path into a Bag.

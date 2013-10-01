@@ -233,6 +233,12 @@ final public class BSPPlan extends Plan {
             String tabs = "";
             int step = 0;
             boolean exit;
+            if (Evaluator.evaluator == null)
+                try {
+                    Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.BSPEvaluator").newInstance();
+                } catch (Exception ex) {
+                    throw new Error(ex);
+                };
             readLocalSources(peer);
             setPeer(peer);
             do {

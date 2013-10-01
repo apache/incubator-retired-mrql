@@ -30,7 +30,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
 
 /** A FileInputFormat for text files (CVS, XML, JSON, ...) */
-final public class ParsedInputFormat extends MRQLFileInputFormat {
+final public class MapReduceParsedInputFormat extends MapReduceMRQLFileInputFormat {
 
     public static class ParsedRecordReader extends RecordReader<MRContainer,MRContainer> {
         final FSDataInputStream fsin;
@@ -106,7 +106,7 @@ final public class ParsedInputFormat extends MRQLFileInputFormat {
      * @param path the path directory with the files
      * @return a Bag that contains all data
      */
-    Bag materialize ( final Path path ) throws IOException {
+    public Bag materialize ( final Path path ) throws IOException {
         Configuration conf = Plan.conf;
         ParsedDataSource ds = (ParsedDataSource)DataSource.get(path.toString(),conf);
         FileSystem fs = path.getFileSystem(conf);

@@ -25,11 +25,11 @@ import org.apache.hadoop.conf.Configuration;
 /** A DataSource used for processing the range min..max */
 final public class GeneratorDataSource extends DataSource {
     GeneratorDataSource ( int source_num, String path, Configuration conf ) {
-        super(source_num,path,GeneratorInputFormat.class,conf);
+        super(source_num,path,Evaluator.evaluator.generatorInputFormat(),conf);
     }
 
     GeneratorDataSource ( String path, Configuration conf ) {
-        super(-1,path,GeneratorInputFormat.class,conf);
+        super(-1,path,Evaluator.evaluator.generatorInputFormat(),conf);
     }
 
     public static long size ( Path path, Configuration conf ) throws IOException {

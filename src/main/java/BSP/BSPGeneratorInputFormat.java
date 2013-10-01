@@ -27,7 +27,7 @@ import org.apache.hama.bsp.*;
 
 /** the FileInputFormat for data generators: it creates HDFS files, where each file contains
  *  an (offset,size) pair that generates the range of values [offset,offset+size] */
-final public class GeneratorInputFormat extends MRQLFileInputFormat {
+final public class BSPGeneratorInputFormat extends BSPMRQLFileInputFormat {
     public static class GeneratorRecordReader implements RecordReader<MRContainer,MRContainer> {
         final long offset;
         final long size;

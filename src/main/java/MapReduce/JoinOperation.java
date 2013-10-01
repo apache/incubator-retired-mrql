@@ -387,9 +387,9 @@ final public class JoinOperation extends MapReducePlan {
         job.setOutputFormatClass(SequenceFileOutputFormat.class);
         FileOutputFormat.setOutputPath(job,new Path(newpath));
         for (DataSource p: X.source)
-            MultipleInputs.addInputPath(job,new Path(p.path),p.inputFormat,MapperLeft.class);
+            MultipleInputs.addInputPath(job,new Path(p.path),(Class<? extends MapReduceMRQLFileInputFormat>)p.inputFormat,MapperLeft.class);
         for (DataSource p: Y.source)
-            MultipleInputs.addInputPath(job,new Path(p.path),p.inputFormat,MapperRight.class);
+            MultipleInputs.addInputPath(job,new Path(p.path),(Class<? extends MapReduceMRQLFileInputFormat>)p.inputFormat,MapperRight.class);
         if (Config.trace && PlanGeneration.streamed_MapReduce2_reducer(reduce_fnc))
             System.err.println("*** Streamed MapReduce2 reducer");
         job.setReducerClass(JoinReducer.class);

@@ -20,35 +20,17 @@ package org.apache.mrql;
 import java.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 
 
-/** A superclass for all MRQL FileInputFormats */
-abstract public class MRQLFileInputFormat extends FileInputFormat<MRContainer,MRContainer> {
-    public MRQLFileInputFormat () {}
-
-    /** record reader for map-reduce */
-    abstract public RecordReader<MRContainer,MRContainer>
-        createRecordReader ( InputSplit split,
-                             TaskAttemptContext context ) throws IOException, InterruptedException;
-
+/** An interface for all MRQL FileInputFormats */
+public interface MRQLFileInputFormat {
     /** materialize the input file into a memory Bag */
-    abstract Bag materialize ( final Path path ) throws IOException;
+    public Bag materialize ( final Path path ) throws IOException;
 
     /** materialize the entire dataset into a Bag
      * @param x the DataSet in HDFS to collect values from
      * @param strip is not used in MapReduce mode
      * @return the Bag that contains the collected values
      */
-    public final static Bag collect ( final DataSet x, boolean strip ) throws Exception {
-        Bag res = new Bag();
-        for ( DataSource s: x.source )
-            if (s.to_be_merged)
-                res = res.union(Plan.merge(s));
-            else res = res.union(s.inputFormat.newInstance().materialize(new Path(s.path)));
-        return res;
-    }
+    public Bag collect ( final DataSet x, boolean strip ) throws Exception;
 }

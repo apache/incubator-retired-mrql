@@ -27,7 +27,7 @@ import org.apache.hama.bsp.*;
 
 
 /** A FileInputFormat for text files (CVS, XML, JSON, ...) */
-final public class ParsedInputFormat extends MRQLFileInputFormat {
+final public class BSPParsedInputFormat extends BSPMRQLFileInputFormat {
     public static class ParsedRecordReader implements RecordReader<MRContainer,MRContainer> {
         final FSDataInputStream fsin;
         final long start;

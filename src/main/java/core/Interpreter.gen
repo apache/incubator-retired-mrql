@@ -241,7 +241,7 @@ public class Interpreter extends TypeInference {
                 Function loop_fnc = new Function () {
                         public MRData eval ( MRData s ) {
                             new_global_binding(nm,s);
-                            MRData val = new MR_dataset(Evaluator.eval(body,new Environment(nm,s,env),nm));
+                            MRData val = new MR_dataset(Evaluator.evaluator.eval(body,new Environment(nm,s,env),nm));
                             return val;
                         }; };
                 return MapReduceAlgebra.repeat(loop_fnc,(Bag)evalE(s,env),((MR_int)evalE(n,env)).get());
@@ -303,17 +303,17 @@ public class Interpreter extends TypeInference {
         case Collect(`s):
             try {
                 if (Config.hadoop_mode)
-                    return Plan.collect(Evaluator.eval(s,env,"-"));
+                    return Plan.collect(Evaluator.evaluator.eval(s,env,"-"));
                 Bag b = evalS(s,env);
                 b.materialize();
                 return b;
             } catch (Exception ex) { throw new Error(ex); }
         case dataset_size(`x):
-            return new MR_long(Plan.size(Evaluator.eval(x,env,"-")) / (1024*1024));
+            return new MR_long(Plan.size(Evaluator.evaluator.eval(x,env,"-")) / (1024*1024));
         case synchronize(`peer,`b):
-            return Evaluator.synchronize(((MR_string)evalE(peer,env)),(MR_bool)evalE(b,env));
+            return Evaluator.evaluator.synchronize(((MR_string)evalE(peer,env)),(MR_bool)evalE(b,env));
         case distribute(`peer,`s):
-            return Evaluator.distribute(((MR_string)evalE(peer,env)),(Bag)evalE(s,env));
+            return Evaluator.evaluator.distribute(((MR_string)evalE(peer,env)),(Bag)evalE(s,env));
         case mapReduce(`m,`r,`s,_):
             return MapReduceAlgebra.mapReduce(evalF(m,env),
                                               evalF(r,env),
@@ -378,11 +378,11 @@ public class Interpreter extends TypeInference {
                                               (Bag)evalE(s,env));
         case Aggregate(`acc,`zero,`s):
             if (Config.hadoop_mode)
-                return Evaluator.aggregate(closure(acc,env),zero,s,env);
+                return Evaluator.evaluator.aggregate(closure(acc,env),zero,s,env);
             else return MapReduceAlgebra.aggregate(evalF(acc,env),evalE(zero,env),evalM(s,env));
         case BSP(tuple(...ns),`superstep,`state,`o,...as):
             if (Config.hadoop_mode)
-                return Evaluator.bsp(e,env);
+                return Evaluator.evaluator.bsp(e,env);
             Bag[] ds = new Bag[as.length()];
             for ( int i = 0; i < ds.length; i++ )
                 ds[i] = evalM(as.nth(i),env);
@@ -396,7 +396,7 @@ public class Interpreter extends TypeInference {
                                         ds);
         case BSP(`n,`superstep,`state,`o,...as):
             if (Config.hadoop_mode)
-                return Evaluator.bsp(e,env);
+                return Evaluator.evaluator.bsp(e,env);
             Bag[] ds = new Bag[as.length()];
             for ( int i = 0; i < ds.length; i++ )
                 ds[i] = evalM(as.nth(i),env);
@@ -407,7 +407,7 @@ public class Interpreter extends TypeInference {
                                         ds);
         case Loop(lambda(tuple(...vs),tuple(...bs)),tuple(...ss),`num):
             if (Config.hadoop_mode)
-                return Evaluator.loop(e,env);
+                return Evaluator.evaluator.loop(e,env);
             int limit = ((MR_int)evalE(num,env)).get();
             Bag[] s = new Bag[vs.length()];
             for ( int i = 0; i < vs.length(); i++ )
@@ -466,7 +466,7 @@ public class Interpreter extends TypeInference {
         case _:
             try {
                 if (Config.hadoop_mode)
-                    return new MR_dataset(Evaluator.eval(e,env,"-"));
+                    return new MR_dataset(Evaluator.evaluator.eval(e,env,"-"));
                 else return evalS(e,env);
             } catch (Exception ex) { throw new Error(ex); }
         };

@@ -19,23 +19,28 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.mrql</groupId>
-  <artifactId>mrql</artifactId>
+  <artifactId>mrql-mr</artifactId>
   <packaging>jar</packaging>
-  <name>mrql-mr</name>
-  <description>MRQL evaluation in MapReduce mode on Apache Hadoop</description>
+  <name>Apache MRQL MapReduce mode</name>
+  <description>Apache MRQL evaluation in MapReduce mode on Apache Hadoop</description>
   <url>http://mrql.incubator.apache.org/</url>
   <inceptionYear>2013</inceptionYear>
 
   <parent>
     <groupId>org.apache.mrql</groupId>
-    <artifactId>MRQL</artifactId>
+    <artifactId>mrql-parent</artifactId>
     <version>0.9.0-incubating-SNAPSHOT</version>
   </parent>
   
   <dependencies>
     <dependency>
       <groupId>org.apache.mrql</groupId>
-      <artifactId>gen</artifactId>
+      <artifactId>mrql-gen</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.mrql</groupId>
+      <artifactId>mrql-core</artifactId>
       <version>${project.version}</version>
     </dependency>
     <!-- needed for testing in local mode -->
@@ -58,8 +63,8 @@
             <goals><goal>add-source</goal></goals>
             <configuration>
               <sources>
-                <source>../src/main/java/core</source>
                 <source>../src/main/java/MapReduce</source>
+                <source>${project.build.directory}/generated-sources/org/apache/mrql</source>
               </sources>
             </configuration>
           </execution>
@@ -78,10 +83,12 @@
 	    <configuration>
              <artifactSet>
 	       <includes>
-		 <include>jline:jline</include>
-		 <include>*:java-cup</include>
 		 <include>org.apache.mrql:*</include>
 	       </includes>
+	       <excludes>
+		 <exclude>org.apache.mrql:mrql-gen</exclude>
+		 <exclude>org.apache.mrql:mrql-core</exclude>
+	       </excludes>
               </artifactSet>
 	    </configuration>
 	  </execution>
@@ -98,27 +105,6 @@
 	</configuration>
       </plugin>
       <plugin>
-        <groupId>de.jflex</groupId>
-        <artifactId>maven-jflex-plugin</artifactId>
-        <version>1.4.3</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>generate</goal>
-            </goals>
-            <configuration>
-              <lexDefinitions>
-                <lexDefinition>../src/main/java/core/mrql.lex</lexDefinition>
-                <lexDefinition>../src/main/java/core/JSON.lex</lexDefinition>
-              </lexDefinitions>
-	      <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
-	      <verbose>false</verbose>
-	      <backup>false</backup>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
 	<artifactId>maven-antrun-plugin</artifactId>
 	<version>1.7</version>
 	<executions>
@@ -130,29 +116,15 @@
 	    </goals>
 	    <configuration>
               <target>
-		<property name="compile_classpath" refid="maven.compile.classpath" />
-		<fileset id="gen.path" dir="../src/main/java/core" includes="*.gen" />
-		<pathconvert pathsep=" " property="gen.files" refid="gen.path" />
-		<java classname="org.apache.mrql.gen.Main" classpath="../lib/gen-${project.version}.jar:${compile_classpath}">
-		  <arg line="${gen.files}" />
-		  <arg line="-o" />
-		  <arg file="${project.build.directory}/generated-sources/org/apache/mrql" />
-		</java>
+                <mkdir dir="${project.build.directory}/generated-sources/org/apache/mrql" />
+                <property name="compile_classpath" refid="maven.compile.classpath" />
 		<fileset id="mr.gen.path" dir="../src/main/java/MapReduce" includes="*.gen" />
 		<pathconvert pathsep=" " property="mr.gen.files" refid="mr.gen.path" />
-		<java classname="org.apache.mrql.gen.Main" classpath="../lib/gen-${project.version}.jar:${compile_classpath}">
+		<java classname="org.apache.mrql.gen.Main" classpath="../lib/mrql-gen-${project.version}.jar:${compile_classpath}">
 		  <arg line="${mr.gen.files}" />
 		  <arg line="-o" />
 		  <arg file="${project.build.directory}/generated-sources/org/apache/mrql" />
 		</java>
-		<java classname="org.apache.mrql.gen.Main" classpath="../lib/gen-${project.version}.jar:${compile_classpath}">
-		  <arg file="../src/main/java/core/mrql.cgen" />
-		  <arg line="-o" />
-		  <arg file="${project.build.directory}/generated-sources/mrql.cup" />
-		</java>
-                <taskdef name="cup" classname="java_cup.anttask.CUPTask" classpathref="maven.compile.classpath" />
-                <cup srcfile="${project.build.directory}/generated-sources/mrql.cup" destdir="${project.build.directory}/generated-sources" nosummary="true" parser="MRQLParser" />
-                <cup srcfile="src/main/java/core/JSON.cup" destdir="${project.build.directory}/generated-sources" nosummary="true" parser="JSONParser" symbols="jsym" />
 	      </target>
 	    </configuration>
 	  </execution>
@@ -163,7 +135,7 @@
 	      <goal>run</goal>
 	    </goals>
 	    <configuration>
-	      <target name="validate_hadoop" description="Validate all test queries on Hadoop">
+	      <target name="validate_hadoop" description="Validate all test queries on Apache Hadoop">
 		<property name="runtime_classpath" refid="maven.runtime.classpath" />
 		<echo message="Evaluating test queries in memory (Map-Reduce mode):" />
 		<java classname="org.apache.mrql.Test" classpath="${runtime_classpath}" dir=".." fork="yes">
@@ -171,7 +143,7 @@
 		  <arg file="../tests/results/mr-memory" />
 		  <arg file="../tests/error_log.txt" />
 		</java>
-		<echo message="Evaluating test queries in Hadoop local mode:" />
+		<echo message="Evaluating test queries in Apache Hadoop local mode:" />
 		<java classname="org.apache.mrql.Test" classpath="../lib/mrql-mr-${project.version}.jar:${runtime_classpath}" dir=".." fork="yes" error="/dev/null">
 		  <arg line="-local" />
 		  <arg file="../tests/queries" />

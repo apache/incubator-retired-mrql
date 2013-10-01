@@ -62,7 +62,7 @@ final public class TopLevel extends Interpreter {
             if (plan == null)
                 return null;
             if (Config.hadoop_mode)
-                Evaluator.initialize_query();
+                Evaluator.evaluator.initialize_query();
             MRData res = evalE(plan,null);
             if (print) {
                 if (!Config.quiet_execution)

@@ -27,7 +27,7 @@ import org.apache.hama.HamaConfiguration;
 
 
 /** Input format for hadoop sequence files */
-final public class BinaryInputFormat extends MRQLFileInputFormat {
+final public class BSPBinaryInputFormat extends BSPMRQLFileInputFormat {
     public static class BinaryInputRecordReader extends SequenceFileRecordReader<MRContainer,MRContainer> {
         final MRContainer result = new MRContainer();
         final MRData source_num_data;

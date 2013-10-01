@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 
 
 /** A FileInputFormat for text files (CVS, XML, JSON, ...) */
-final public class ParsedInputFormat extends MRQLFileInputFormat {
+final public class SparkParsedInputFormat extends SparkMRQLFileInputFormat {
     public static class ParsedRecordReader implements RecordReader<MRContainer,MRContainer> {
         final FSDataInputStream fsin;
         final long start;
@@ -89,7 +89,7 @@ final public class ParsedInputFormat extends MRQLFileInputFormat {
               getRecordReader ( InputSplit split,
                                 JobConf job,
                                 Reporter reporter ) throws IOException {
-        Evaluator.load_source_dir();  // load the parsed source parameters from a file
+        SparkEvaluator.load_source_dir();  // load the parsed source parameters from a file
         String path = ((FileSplit)split).getPath().toString();
         ParsedDataSource ds = (ParsedDataSource)DataSource.get(path,Plan.conf);
         return new ParsedRecordReader((FileSplit)split,job,ds.parser,(Trees)ds.args);
