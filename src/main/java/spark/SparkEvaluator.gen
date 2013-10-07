@@ -26,20 +26,21 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import scala.Tuple2;
-import spark.TaskContext;
-import spark.Partition;
-import spark.Accumulator;
-import spark.broadcast.Broadcast;
-import spark.api.java.JavaRDD;
-import spark.api.java.JavaPairRDD;
-import spark.api.java.JavaSparkContext;
-import spark.api.java.function.Function2;
-import spark.api.java.function.PairFunction;
-import spark.api.java.function.FlatMapFunction;
-import spark.api.java.function.PairFlatMapFunction;
-import spark.api.java.function.Function;
-import spark.api.java.function.VoidFunction;
+import org.apache.spark.TaskContext;
+import org.apache.spark.Partition;
+import org.apache.spark.Accumulator;
+import org.apache.spark.broadcast.Broadcast;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.Function2;
+import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.api.java.function.PairFlatMapFunction;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.VoidFunction;
 
 
 /** Evaluates physical plans in Apache Spark mode */
@@ -112,6 +113,31 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
 
     final public MRData bsp ( Tree plan, Environment env ) throws Exception {
         throw new Error("You can not run a BSP task in Spark mode");
+    }
+
+    /** materialize the entire dataset into a Bag
+     * @param x the DataSet in HDFS to collect values from
+     * @param strip is not used in MapReduce mode
+     * @return the Bag that contains the collected values
+     */
+    final public Bag collect ( final DataSet x, boolean strip ) throws Exception {
+        Bag res = new Bag();
+        final MRContainer zero = new MRContainer(new MR_byte((byte)0));
+        for ( DataSource s: x.source )
+            if (s instanceof RDDDataSource) {
+		JavaPairRDD<MRContainer,MRContainer> rd
+		    = ((RDDDataSource)s).rdd.map(new PairFunction<MRData,MRContainer,MRContainer>() {
+			    public Tuple2<MRContainer,MRContainer> call ( final MRData value ) {
+				return new Tuple2<MRContainer,MRContainer>(zero,new MRContainer(value));
+			    }
+			});
+		String path = Plan.new_path(Plan.conf);
+		rd.saveAsHadoopFile(path,MRContainer.class,MRContainer.class,SequenceFileOutputFormat.class);
+		res = res.union(collect(new DataSet(new BinaryDataSource(path,Plan.conf),0,0),strip));
+            } else if (s.to_be_merged)
+                res = res.union(Plan.merge(s));
+            else res = res.union(s.inputFormat.newInstance().materialize(new Path(s.path)));
+        return res;
     }
 
     /** return the FileInputFormat for parsed files (CSV, XML, JSON, etc) */
@@ -239,7 +265,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
             });
     }
 
-    final static TaskContext context = new TaskContext(0,0,0,null);
+    final static TaskContext context = new TaskContext(0,0,(long)0,Config.local_mode,null);
 
     /** Convert a Spark RDD into a lazy bag
      * @param rdd the Spark RDD

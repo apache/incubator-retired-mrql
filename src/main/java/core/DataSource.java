@@ -98,7 +98,7 @@ public class DataSource {
     public static void loadParsers() {
         if (!loaded) {
             DataSource.parserDirectory.put("xml",XMLParser.class);
-            DataSource.parserDirectory.put("json",JsonParser.class);
+            DataSource.parserDirectory.put("json",JsonFormatParser.class);
             DataSource.parserDirectory.put("line",LineParser.class);
             loaded = true;
         }

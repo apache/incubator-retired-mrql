@@ -550,13 +550,7 @@ final public class PlanGeneration extends AlgebraicOptimization {
        case call(plus,`x,`y):
            if (!is_dataset_expr(x) || !is_dataset_expr(y))
                fail;
-           match TypeInference.type_inference2(x) {
-           case `T(_):
-               if (is_collection(T))
-                   return #<Merge(`(makePlan(x)),
-                                  `(makePlan(y)))>;
-           };
-           fail
+           return #<Merge(`(makePlan(x)),`(makePlan(y)))>;
        case call(`f,...el):
            if (!f.is_variable())
                fail;

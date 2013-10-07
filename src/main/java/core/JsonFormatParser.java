@@ -23,10 +23,11 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.DataOutputBuffer;
+import java_cup.runtime.Symbol;
 
 
 /** The JSON parser */
-public class JsonParser implements Parser {
+public class JsonFormatParser implements Parser {
     String[] tags;          // split tags
     JsonSplitter splitter;
 
@@ -36,7 +37,7 @@ public class JsonParser implements Parser {
                 if (!(args.nth(0) instanceof Node)
                     || !(((Node)args.nth(0)).name().equals("list")
                          || ((Node)args.nth(0)).name().equals("bag")))
-                    throw new Error("Expected a bag of synchronization tagnames in JSON source: "+args.nth(0));
+                    throw new Error("Must provide a bag of synchronization property names to split the JSON source: "+args.nth(0));
                 Trees ts = ((Node)args.nth(0)).children();
                 if (ts.length() == 0)
                     throw new Error("Expected at least one synchronization tagname in JSON source: "+ts);
@@ -80,8 +81,8 @@ public class JsonParser implements Parser {
         try {
             JSONLex scanner = new JSONLex(new StringReader(s));
             JSONParser parser = new JSONParser(scanner);
-            parser.parse();
-            return new Bag(parser.top_level);
+            Symbol sym = parser.parse();
+            return new Bag((MRData)sym.value);
         } catch (Exception e) {
             System.err.println(e);
             return new Bag();

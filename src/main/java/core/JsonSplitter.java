@@ -37,16 +37,17 @@ final public class JsonSplitter implements Iterator<DataOutputBuffer> {
     final DataOutputBuffer buffer;
 
     JsonSplitter ( String[] tags, FSDataInputStream fsin, long start, long end,
-                  DataOutputBuffer buffer ) {
+                   DataOutputBuffer buffer ) {
         in_memory = false;
         this.tags = tags;
         this.fsin = fsin;
-        this.start = start;
         this.end = end;
         this.buffer = buffer;
-        scanner = new JSONLex(fsin);
         try {
             fsin.seek(start);
+            this.start = (start == 0) ? start : sync(start);
+            fsin.seek(this.start);
+            scanner = new JSONLex(fsin);
         } catch ( IOException e ) {
             System.err.println("*** Cannot parse the data split: "+fsin);
         }
@@ -64,9 +65,26 @@ final public class JsonSplitter implements Iterator<DataOutputBuffer> {
         scanner = new JSONLex(in);
     }
 
+    private long sync ( long start ) {
+        try {
+            long first_quote = -1;
+            for ( long offset = 0; ; offset++ ) {
+                char c = (char)fsin.read();
+                if (c == '\"') {
+                    if (first_quote >= 0)
+                        if ((char)fsin.read() == ':')
+                            return start+first_quote;
+                    first_quote = offset;
+                }
+            }
+        } catch (IOException ex) {
+            return (long)0;
+        }
+    }
+
     public boolean hasNext () {
         try {
-            if (in_memory || fsin.getPos() < end)
+            if (in_memory || start+scanner.char_pos() < end)
                 if (skip())
                     return store();
             return false;
@@ -95,7 +113,7 @@ final public class JsonSplitter implements Iterator<DataOutputBuffer> {
     boolean skip () throws IOException {
         while (true) {
             Symbol s = scanner.next_token();
-            if (s.sym == jsym.EOF || (!in_memory && fsin.getPos() >= end))
+            if (s.sym == jsym.EOF || (!in_memory && start+scanner.char_pos() >= end))
                 return false;
             if (s.sym == jsym.STRING && is_start_tag((String)s.value)) {
                 String tag = (String)s.value;

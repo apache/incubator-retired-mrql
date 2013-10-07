@@ -22,8 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
-
-import spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaRDD;
 
 
 /** a wrapper of a JavaRDD<MRData> (stored in HDFS) as an MRData */

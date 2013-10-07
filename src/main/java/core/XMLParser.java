@@ -45,7 +45,7 @@ final public class XMLParser implements Parser {
                 if (!(args.nth(0) instanceof Node)
                     || !(((Node)args.nth(0)).name().equals("list")
                          || ((Node)args.nth(0)).name().equals("bag")))
-                    throw new Error("Expected a bag of synchronization tagnames in XML source: "+args.nth(0));
+                    throw new Error("Expected a bag of synchronization tagnames to split the XML source: "+args.nth(0));
                 Trees ts = ((Node)args.nth(0)).children();
                 if (ts.length() == 0)
                     throw new Error("Expected at least one synchronization tagname in XML source: "+ts);

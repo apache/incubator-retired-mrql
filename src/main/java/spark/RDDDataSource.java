@@ -18,8 +18,8 @@
 package org.apache.mrql;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.spark.api.java.JavaRDD;
 
-import spark.api.java.JavaRDD;
 
 final public class RDDDataSource extends DataSource {
     JavaRDD<MRData> rdd;

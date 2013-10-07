@@ -95,7 +95,7 @@ final public class Main {
             else if (Config.distributed_mode)
                 System.out.print("distributed ");
             if (Config.spark_mode)
-                System.out.println("Spark mode using "+Config.nodes+" workers)");
+                System.out.println("Spark mode using "+Config.nodes+" tasks)");
             else if (Config.bsp_mode)
                 System.out.println("Hama BSP mode over "+Config.nodes+" BSP tasks)");
             else if (Config.nodes > 0)

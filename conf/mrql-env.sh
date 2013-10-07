@@ -29,7 +29,7 @@
 JAVA_HOME=/root/jdk
 
 # Required: The CUP parser library
-# You may install it as a linux package or download it from http://www2.cs.tum.edu/projects/cup/
+# You may download it from http://www2.cs.tum.edu/projects/cup/
 CUP_JAR=${HOME}/.m2/repository/net/sf/squirrel-sql/thirdparty/non-maven/java-cup/11a/java-cup-11a.jar
 
 # Required: The JLine library
@@ -57,9 +57,7 @@ HAMA_ZOOKEEPER_QUORUM=localhost
 
 
 # Optional: Spark configuration
-SPARK_HOME=${HOME}/spark-0.7.3
-# Location of the Scala libs
-SCALA_LIB=/usr/share/java
+SPARK_HOME=${HOME}/spark-0.8.0-incubating-bin-hadoop1
 # URI of the Spark master node
 SPARK_MASTER=spark://crete:7077
 # Spark memory per node
@@ -72,4 +70,4 @@ HADOOP_JARS=${HADOOP_HOME}/hadoop-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/lib/
 
 HAMA_JAR=${HAMA_HOME}/hama-core-${HAMA_VERSION}.jar
 
-SPARK_JARS=${SCALA_LIB}/scala-library.jar:${SCALA_LIB}/scala-compiler.jar:${SPARK_HOME}/core/target/scala-2.9.3/classes:${SPARK_HOME}/lib_managed/jars/*:${SPARK_HOME}/lib_managed/bundles/*
+SPARK_JARS=${SPARK_HOME}/assembly/target/scala-2.9.3/*

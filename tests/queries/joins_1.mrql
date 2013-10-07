@@ -56,3 +56,9 @@ select (k,e) from e in E group by k: e.dno order by inv(k);
 select (k,count(e)) from e in E group by k: e.dno order by count(e);
 
 all e in E: e.dno > 1;
+
+(select e.dno from e in E)+{9,8};
+
+(select e.dno from e in E order by e.name)+[9,8];
+
+count((select e.dno from e in E)+{9,8}+(select e.dno from e in E));

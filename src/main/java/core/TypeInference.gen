@@ -154,13 +154,6 @@ public class TypeInference extends Translator {
         return -1;
     }
 
-    private static int collection_order ( String T ) {
-        return (T.equals("List") ? 0
-                : (T.equals("list") ? 1
-                : (T.equals("Bag") ? 2
-                : (T.equals("bag") ? 3 : -1))));
-    }
-
     /** type equality in MRQL is structured equality, not named equality */
     public static boolean equal_types ( Tree tx, Tree ty ) {
         tx = expand(tx);
@@ -182,9 +175,15 @@ public class TypeInference extends Translator {
         return false;
     }
 
-    /** is the collection type name S a subtype of that of T? */
+    /** is the collection type name S a subtype of that of T?
+        List \lt Bag \lt bag and List \lt list \lt bag
+     */
     public static boolean subtype ( String S, String T ) {
-        return collection_order(S) <= collection_order(T);
+        return S.equals(T)
+            || (S.equals("List") && T.equals("list"))
+            || (S.equals("List") && T.equals("Bag"))
+            || (S.equals("list") && T.equals("bag"))
+            || (S.equals("Bag") && T.equals("bag"));
     }
 
     /** is the type tx a subtype of type ty? */
@@ -340,12 +339,13 @@ public class TypeInference extends Translator {
         case `T(`t):
             match t2 {
             case `S(`s):
-                if (!is_collection(T) || !is_collection(S))
+                if (!T.equals(S))
                     fail;
-                String R = max_collection(T,S);
-                Tree r = unify(t,s);
-                if (r != null)
-                    return #<`R(`r)>;
+                if (!is_collection(T))
+                    fail;
+                Tree ts = unify(t,s);
+                if (ts != null)
+                    return #<`T(`ts)>;
             }
         case `f(...ts1):
             match t2 {

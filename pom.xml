@@ -20,7 +20,7 @@
 
   <groupId>org.apache.mrql</groupId>
   <artifactId>mrql-parent</artifactId>
-  <version>0.9.1-incubating-SNAPSHOT</version>
+  <version>0.9.0-incubating-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache MRQL parent POM</name>
   <description>Apache MRQL is a query processing and optimization system for large-scale, distributed data analysis, built on top of Apache Hadoop, Hama, and Spark</description>
@@ -40,12 +40,13 @@
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
     <version>13</version>
+    <relativePath/>
   </parent>
 
   <properties>
     <hadoop.version>1.0.3</hadoop.version>
     <hama.version>0.6.2</hama.version>
-    <spark.version>0.7.3</spark.version>
+    <spark.version>0.8.0-incubating</spark.version>
   </properties>
 
   <modules>

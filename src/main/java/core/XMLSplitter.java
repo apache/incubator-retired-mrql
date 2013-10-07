@@ -86,6 +86,8 @@ final public class XMLSplitter implements Iterator<DataOutputBuffer> {
     public void remove () { }
 
     boolean is_start_tag () {
+        if (tags == null)
+            return true;
         for (String tag: tags)
             if (tag.contentEquals(tagname))
                 return true;
@@ -131,7 +133,7 @@ final public class XMLSplitter implements Iterator<DataOutputBuffer> {
             int b = in_memory ? in.read() : fsin.read();
             if (b == -1)
                 return false;
-            if (b == '&') {  // don't validate external XML references
+            if (b == '&') {  // don't validate external XML entities
                 buffer.write('&');buffer.write('a');buffer.write('m');buffer.write('p');buffer.write(';');
             } else buffer.write(b);
             if (b == '<') {

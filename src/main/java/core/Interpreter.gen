@@ -457,12 +457,6 @@ public class Interpreter extends TypeInference {
             MRData z = evalE(x,env);
             System.err.println("*** "+x+": "+z);
             return z;
-        case BinarySource(...,`file,`tp):
-            if (Config.hadoop_mode)
-                if (collection_type(tp))
-                    return Plan.collect(Plan.binarySource(file.stringValue()));
-                else return Plan.collect(Plan.binarySource(file.stringValue())).get(0);
-            else return MapReduceAlgebra.read_binary(file.stringValue());
         case _:
             try {
                 if (Config.hadoop_mode)

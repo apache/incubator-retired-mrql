@@ -27,7 +27,7 @@ import java_cup.runtime.Symbol;
 %char
 %cup
 %eofval{
-  return symbol(sym.EOF);
+  return symbol(jsym.EOF);
 %eofval}
 %{
   public String text () { return yytext(); }

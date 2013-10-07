@@ -19,10 +19,6 @@ package org.apache.mrql;
 
 import java_cup.runtime.*;
 
-parser code {:
-       public static MRData top_level;
-:}
-
 terminal TRUE, FALSE, NULL, COLON, COMMA, O_BEGIN, O_END, A_BEGIN, A_END;
 
 terminal String STRING;
@@ -38,7 +34,7 @@ precedence left COLON;
 
 start with top;
 
-top ::= json:e                        {: JSONParser.top_level = e; :}
+top ::= json:e                        {: RESULT = e; :}
     ;
 json ::= O_BEGIN O_END                {: RESULT = new Union((byte)0,new Bag()); :}
      |   O_BEGIN members:m O_END      {: RESULT = new Union((byte)0,m); :}

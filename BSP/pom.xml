@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.mrql</groupId>
     <artifactId>mrql-parent</artifactId>
-    <version>0.9.1-incubating-SNAPSHOT</version>
+    <version>0.9.0-incubating-SNAPSHOT</version>
   </parent>
   
   <dependencies>
@@ -127,12 +127,12 @@
 	  </execution>
           <execution>
 	    <id>validate</id>
-            <phase>verify</phase>
+            <phase>test</phase>
 	    <goals>
 	      <goal>run</goal>
 	    </goals>
 	    <configuration>
-	      <target name="validate_hama" description="Validate all test queries on Apache Hama">
+	      <target name="validate_hama" if="tests" description="Validate all test queries on Apache Hama">
 		<property name="runtime_classpath" refid="maven.runtime.classpath" />
 		<echo message="Evaluating test queries in memory (BSP mode):" />
 		<java classname="org.apache.mrql.Test" classpath="${runtime_classpath}" dir=".." fork="yes">
