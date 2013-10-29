@@ -25,15 +25,15 @@
 #--------------------------------------------------------------------------------
 
 
-# Required: The java installation directory
+# Required: The Java installation directory
 JAVA_HOME=/root/jdk
 
 # Required: The CUP parser library
-# You may download it from http://www2.cs.tum.edu/projects/cup/
+# You can download it from http://www2.cs.tum.edu/projects/cup/
 CUP_JAR=${HOME}/.m2/repository/net/sf/squirrel-sql/thirdparty/non-maven/java-cup/11a/java-cup-11a.jar
 
 # Required: The JLine library
-# You may download from http://jline.sourceforge.net
+# You can download from http://jline.sourceforge.net
 JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 
 
@@ -61,7 +61,7 @@ SPARK_HOME=${HOME}/spark-0.8.0-incubating-bin-hadoop1
 # URI of the Spark master node
 SPARK_MASTER=spark://crete:7077
 # Spark memory per node
-export SPARK_MEM="1g"
+SPARK_MEM="1g"
 
 
 # Claspaths
@@ -71,3 +71,6 @@ HADOOP_JARS=${HADOOP_HOME}/hadoop-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/lib/
 HAMA_JAR=${HAMA_HOME}/hama-core-${HAMA_VERSION}.jar
 
 SPARK_JARS=${SPARK_HOME}/assembly/target/scala-2.9.3/*
+
+# for hadoop yarn (build using eg,  mvn -Pyarn -Dhadoop.version=2.2.0 install)
+#HADOOP_JARS=${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/hadoop-annotations-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/commons-cli-1.2.jar
