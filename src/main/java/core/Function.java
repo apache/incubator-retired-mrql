@@ -31,10 +31,4 @@ abstract public class Function implements Serializable {
      * @return the result of evaluating
      */
     abstract public MRData eval ( final MRData arg );
-
-    public void writeObject(ObjectOutputStream out) throws IOException {}
-
-    public void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {}
-
-    public void readObjectNoData() throws ObjectStreamException {}
 }

@@ -34,12 +34,8 @@ final public class MR_dataset extends MRData {
 
     public DataSet dataset () { return dataset; }
 
-    final public void write ( DataOutput out ) throws IOException {
-        try {
-            Plan.collect(dataset).write(out);
-        } catch (Exception ex) {
-            throw new Error(ex);
-        }
+    public void write ( DataOutput out ) throws IOException {
+        throw new Error("DataSets are not serializable");
     }
 
     public void readFields ( DataInput in ) throws IOException {

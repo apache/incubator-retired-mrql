@@ -24,15 +24,4 @@ import java.io.*;
 /** All MRQL data are encoded as MRData (similar to AVRO form) */
 public abstract class MRData implements WritableComparable<MRData>, Serializable {
     abstract public void materializeAll ();
-
-    /* doesn't work
-    private void writeObject ( ObjectOutputStream out ) throws IOException {
-        write(out);
-    }
-
-    private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
-        byte n = in.readByte();
-        readFields(in);
-    }
-    */
 }

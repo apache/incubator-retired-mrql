@@ -20,6 +20,7 @@ package org.apache.mrql;
 import java.io.*;
 import org.apache.mrql.gen.Tree;
 
+
 /** the run-time environment for in-memory evaluation (binds variables to MRData) */
 final public class Environment implements Serializable {
     public String name;

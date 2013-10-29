@@ -31,13 +31,14 @@ import org.apache.hadoop.fs.*;
  *   3) spilled to a local file: can be accessed multiple times
  */
 public class Bag extends MRData implements Iterable<MRData> {
+    private final static long serialVersionUID = 64629834894869L;
     enum Modes { STREAMED, MATERIALIZED, SPILLED };
-    private Modes mode;
-    private ArrayList<MRData> content;      // content of a materialized bag
-    private BagIterator iterator;           // iterator for a streamed bag
-    private boolean consumed;               // true, if the stream has already been used
-    private String path;                    // local path that contains the spilled bag
-    private SequenceFile.Writer writer;     // the file writer for spiled bags
+    private transient Modes mode;
+    private transient ArrayList<MRData> content;      // content of a materialized bag
+    private transient BagIterator iterator;           // iterator for a streamed bag
+    private transient boolean consumed;               // true, if the stream has already been used
+    private transient String path;                    // local path that contains the spilled bag
+    private transient SequenceFile.Writer writer;     // the file writer for spiled bags
 
     /**
      * create an empty bag as an ArrayList
@@ -63,6 +64,17 @@ public class Bag extends MRData implements Iterable<MRData> {
     public Bag ( final MRData ...as ) {
         mode = Modes.MATERIALIZED;
         content = new ArrayList<MRData>(as.length);
+        for ( MRData a: as )
+            content.add(a);
+    }
+
+    /**
+     * in-memory Bag construction (an ArrayList) initialized with data
+     * @param as a vector of MRData to insert in the Bag
+     */
+    public Bag ( final List<MRData> as ) {
+        mode = Modes.MATERIALIZED;
+        content = new ArrayList<MRData>(as.size());
         for ( MRData a: as )
             content.add(a);
     }
@@ -188,12 +200,16 @@ public class Bag extends MRData implements Iterable<MRData> {
     }
 
     /** make this Bag empty (cache it in memory if necessary) */
-    public void clear () throws IOException {
+    public void clear () {
         if (materialized())
             content.clear();
         else if (streamed()) {
             if (writer != null)
-                writer.close();
+                try {
+                    writer.close();
+                } catch (IOException ex) {
+                    throw new Error(ex);
+                };
             writer = null;
             path = null;
             mode = Modes.MATERIALIZED;
@@ -471,8 +487,17 @@ public class Bag extends MRData implements Iterable<MRData> {
     }
 
     private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
-        readFields(in);
+        int n = WritableUtils.readVInt(in);
+        mode = Modes.MATERIALIZED;
+        iterator = null;
+        path = null;
+        writer = null;
+        content = new ArrayList<MRData>(n);
+        for ( int i = 0; i < n; i++ )
+            add(MRContainer.read(in));
     }
+
+    private void readObjectNoData () throws ObjectStreamException { };
 
     /** compare this Bag with a given Bag by comparing their associated elements */
     public int compareTo ( MRData x ) {

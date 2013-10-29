@@ -23,7 +23,7 @@ import org.apache.hadoop.io.WritableComparable;
 
 /** A container for MRData that implements read (the deserializer) */
 final public class MRContainer implements WritableComparable<MRContainer>, Serializable {
-    MRData data;
+    transient MRData data;
 
     public final static byte BOOLEAN = 0, BYTE = 1, SHORT = 2, INT = 3, LONG = 4,
         FLOAT = 5, DOUBLE = 6, CHAR = 7, STRING = 8, PAIR = 9, TUPLE = 10, BAG = 11,

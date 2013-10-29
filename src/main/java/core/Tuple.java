@@ -24,6 +24,8 @@ import org.apache.hadoop.fs.*;
 
 /** a container for Tuples */
 final public class Tuple extends MRData {
+    private final static long serialVersionUID = 723385754575L;
+
     MRData[] tuple;
 
     public Tuple ( int size ) {
