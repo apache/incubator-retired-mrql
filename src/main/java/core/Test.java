@@ -29,6 +29,7 @@ final public class Test {
     static MRQLParser parser = new MRQLParser();
     static String result_directory;
     static PrintStream test_out;
+    static PrintStream error_stream;
 
     private static int compare ( String file1, String file2 ) throws Exception {
         FileInputStream s1 = new FileInputStream(file1);
@@ -65,14 +66,14 @@ final public class Test {
                 test_out.println("OK matched");
             else test_out.println("OK created");
         } catch (Error ex) {
-            System.err.println(qname+": "+ex);
-            ex.printStackTrace(System.err);
+            error_stream.println(qname+": "+ex);
+            ex.printStackTrace(error_stream);
             test_out.println("FAILED");
             if (!exists)
                 new File(result_file).delete();
         } catch (Exception ex) {
-            System.err.println(qname+": "+ex);
-            ex.printStackTrace(System.err);
+            error_stream.println(qname+": "+ex);
+            ex.printStackTrace(error_stream);
             test_out.println("FAILED");
             if (!exists)
                 new File(result_file).delete();
@@ -117,7 +118,8 @@ final public class Test {
         File query_dir = new File(Main.query_file);
         result_directory = Config.extra_args.get(0);
         (new File(result_directory)).mkdirs();
-        System.setErr(new PrintStream(Config.extra_args.get(1)));
+        error_stream = new PrintStream(Config.extra_args.get(1));
+        System.setErr(error_stream);
         test_out = System.out;
         for ( File f: query_dir.listFiles() )
             query(f);

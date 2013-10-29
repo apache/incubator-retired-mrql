@@ -18,6 +18,7 @@
 package org.apache.mrql;
 
 import org.apache.mrql.gen.*;
+import java.util.List;
 import java.io.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.Configuration;
@@ -99,11 +100,6 @@ final public class BSPEvaluator extends Evaluator {
         throw new Error("Cannot perform the BSP plan: "+plan);
     }
 
-    /** collect all data from a persistent dataset into a Bag */
-    public Bag collect ( final DataSet x ) throws Exception {
-        throw new Error("method collect should be called from BSP");
-    }
-
     /** return the FileInputFormat for parsed files (CSV, XML, JSON, etc) */
     final public Class<? extends MRQLFileInputFormat> parsedInputFormat () {
         return BSPParsedInputFormat.class;
@@ -170,7 +166,7 @@ final public class BSPEvaluator extends Evaluator {
         if (Config.trace_execution) 
             try {
                 System.out.println(tabs(tab_count)
-                                   +"-> "+Plan.collect(res,false));
+                                   +"-> "+res.take(Config.max_bag_size_print));
                 tab_count -= 3;
             } catch (Exception ex) {
                 throw new Error("Cannot collect the operator output: "+e);

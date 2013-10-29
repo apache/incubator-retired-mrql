@@ -17,6 +17,7 @@
  */
 package org.apache.mrql;
 
+import java.util.List;
 import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
 
@@ -76,6 +77,27 @@ public class DataSet {
         for ( int i = 1; i < ds.length; i++ )
             path += ","+((DataSource)ds[i]).path;
         return path;
+    }
+
+    /** return the first num values */
+    public List<MRData> take ( int num ) {
+        int count = num;
+        ArrayList<MRData> res = new ArrayList<MRData>();
+        for ( DataSource s: source ) {
+            res.addAll(s.take(count));
+            if (res.size() < count)
+                count = count-res.size();
+            else return res;
+        };
+        return res;
+    }
+
+    /** accumulate all dataset values */
+    public MRData reduce ( MRData zero, Function acc ) {
+        MRData res = zero;
+        for ( DataSource s: source )
+            res = s.reduce(res,acc);
+        return res;
     }
 
     public String toString () {

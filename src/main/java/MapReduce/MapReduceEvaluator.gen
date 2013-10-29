@@ -54,11 +54,6 @@ final public class MapReduceEvaluator extends Evaluator {
         return new Configuration();
     }
 
-    /** collect all data from a persistent dataset into a Bag */
-    final public Bag collect ( final DataSet x ) throws Exception {
-        return MapReducePlan.collect(x);
-    }
-
     /** return the FileInputFormat for parsed files (CSV, XML, JSON, etc) */
     final public Class<? extends MRQLFileInputFormat> parsedInputFormat () {
         return MapReduceParsedInputFormat.class;
@@ -114,8 +109,8 @@ final public class MapReduceEvaluator extends Evaluator {
      * @return a DataSet (stored in HDFS)
      */
     final public DataSet eval ( final Tree e,
-                         final Environment env,
-                         final String counter ) {
+                                final Environment env,
+                                final String counter ) {
         if (Config.trace_execution) {
             tab_count += 3;
             System.out.println(tabs(tab_count)+print_query(e));
@@ -124,7 +119,7 @@ final public class MapReduceEvaluator extends Evaluator {
         if (Config.trace_execution) 
             try {
                 System.out.println(tabs(tab_count)
-                                   +"-> "+MapReducePlan.collect(res));
+                                   +"-> "+res.take(Config.max_bag_size_print));
                 tab_count -= 3;
             } catch (Exception ex) {
                 throw new Error("Cannot collect the operator output: "+e);
@@ -203,9 +198,10 @@ final public class MapReduceEvaluator extends Evaluator {
             case GroupByJoin(`kx,`ky,`gx,`gy,`mp,`c,`r,`x,`y,`o):
                 DataSet X = eval(x,env,"-");
                 DataSet Y = eval(y,env,"-");
-                int n = (int)Math.ceil(X.size(MapReducePlan.conf)/10000.0/Math.sqrt((float)Config.mapjoin_size));
-                int m = (int)Math.ceil(Y.size(MapReducePlan.conf)/10000.0/Math.sqrt((float)Config.mapjoin_size));
-                System.err.println("*** Using a groupBy join on a "+n+"*"+m+" grid of partitions");
+                int n = (int)Math.floor(Math.sqrt(4.0*Config.nodes));
+                int m = n;
+                if (Config.trace)
+                    System.out.println("*** Using a groupBy join on a "+n+"*"+m+" grid of partitions");
                 return GroupByJoinPlan.groupByJoin(closure(kx,env),closure(ky,env),
                                                    closure(gx,env),closure(gy,env),
                                                    closure(mp,env),closure(c,env),closure(r,env),

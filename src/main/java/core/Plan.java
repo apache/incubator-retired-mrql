@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.SequenceFile.Sorter;
 
 
-/** A physical plan (a superclass for both MapReduce and BSP plans) */
+/** A physical plan (a superclass for both MapReduce, BSP, and Spark plans) */
 public class Plan {
     public static Configuration conf;
     static ArrayList<String> temporary_paths = new ArrayList<String>();
@@ -358,33 +358,5 @@ public class Plan {
         Path path = new Path(file);
         FileSystem fs = path.getFileSystem(conf);
         return new PrintStream(fs.create(path));
-    }
-
-    /** dump both the MRQL data and their MRQL type into files */
-    public final static void dump ( String file, Tree type, MRData data ) throws Exception {
-        Path path = new Path(file);
-        FileSystem fs = path.getFileSystem(conf);
-        PrintStream ftp = new PrintStream(fs.create(path.suffix(".type")));
-        ftp.print("2@"+type.toString()+"\n");
-        ftp.close();
-        SequenceFile.Writer writer
-            = new SequenceFile.Writer(fs,conf,path,
-                                      MRContainer.class,MRContainer.class);
-        if (data instanceof MR_dataset)
-            data = Plan.collect(((MR_dataset)data).dataset());
-        if (data instanceof Bag) {
-            Bag s = (Bag)data;
-            long i = 0;
-            for ( MRData e: s ) {
-                counter_key.set(i++);
-                value_container.set(e);
-                writer.append(counter_container,value_container);
-            }
-        } else {
-            counter_key.set(0);
-            value_container.set(data);
-            writer.append(counter_container,value_container);
-        };
-        writer.close();
     }
 }

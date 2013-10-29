@@ -18,6 +18,8 @@
 package org.apache.mrql;
 
 import org.apache.mrql.gen.*;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.io.PrintStream;
 
@@ -101,8 +103,8 @@ public class Interpreter extends TypeInference {
 
     /** evaluate an MRQL function in memory */
     private final static Function evalf ( final String v,
-                                  final Tree body,
-                                  final Environment env ) {
+                                          final Tree body,
+                                          final Environment env ) {
         return new Function() {
             final public MRData eval ( final MRData x ) {
                 return evalE(body,new Environment(v,x,env));
@@ -346,21 +348,28 @@ public class Interpreter extends TypeInference {
         case index(`x,`n):
             MRData xv = evalE(x,env);
             MRData nv = evalE(n,env);
-            if (xv instanceof MR_dataset)
-                xv = Plan.collect(((MR_dataset)xv).dataset());
+            final int k = (int)((MR_int)nv).get();
+            if (k < 0)
+                throw new Error("Negative list index: "+k);
+            if (xv instanceof MR_dataset) {
+                List<MRData> res = ((MR_dataset)xv).dataset().take(k+1);
+                if (k >= res.size())
+                    throw new Error("List index out of bounds: "+k);
+                return res.get(k);
+            };
             Bag b = (Bag)xv;
-            int k = (int)((MR_int)nv).get();
             return b.get(k);
         case range(`x,`i,`j):
             MRData xv = evalE(x,env);
             MRData ni = evalE(i,env);
             MRData nj = evalE(j,env);
-            if (xv instanceof MR_dataset)
-                xv = Plan.collect(((MR_dataset)xv).dataset());
-            Bag b = (Bag)xv;
             int ki = (int)((MR_int)ni).get();
             int kj = (int)((MR_int)nj).get();
-            Iterator<MRData> it = b.iterator();
+            if (ki < 0 || kj < ki)
+                throw new Error("Wrong list range: ["+ki+","+kj+"]");
+            Iterator<MRData> it = (xv instanceof MR_dataset)
+                                   ? ((MR_dataset)xv).dataset().take(kj+1).iterator()
+                                   : ((Bag)xv).iterator();
             Bag s = new Bag();
             for ( int n = 0; it.hasNext() && n < ki; n++ )
                 it.next();
@@ -369,9 +378,19 @@ public class Interpreter extends TypeInference {
             return s;
         case map_index(`x,`key):
             MRData xv = evalE(x,env);
-            MRData nk = evalE(key,env);
-            if (xv instanceof MR_dataset)
-                xv = Plan.collect(((MR_dataset)xv).dataset());
+            final MRData nk = evalE(key,env);
+            if (xv instanceof MR_dataset) {
+                xv = ((MR_dataset)xv).dataset().reduce(new Tuple(),new Function() {
+                        public MRData eval ( MRData value ) {
+                            Tuple p = (Tuple)value;
+                            Tuple y = (Tuple)p.second();
+                            return (y.first().equals(nk)) ? y.second() : p.first();
+                        }
+                    });
+                if (xv instanceof Tuple && ((Tuple)xv).size() == 0)
+                    throw new Error("Map key not found: "+nk);
+                return xv;
+            };
             return ((Bag)xv).map_find(nk);
         case aggregate(`acc,`zero,`s):
             return MapReduceAlgebra.aggregate(evalF(acc,env),evalE(zero,env),
@@ -380,6 +399,10 @@ public class Interpreter extends TypeInference {
             if (Config.hadoop_mode)
                 return Evaluator.evaluator.aggregate(closure(acc,env),zero,s,env);
             else return MapReduceAlgebra.aggregate(evalF(acc,env),evalE(zero,env),evalM(s,env));
+        case mergeGroupByJoin(`kx,`ky,`gx,`gy,`m,`c,`r,`x,`y,`o):
+            return MapReduceAlgebra.mergeGroupByJoin(evalF(kx,env),evalF(ky,env),evalF(gx,env),evalF(gy,env),
+                                                     evalF(m,env),evalF(c,env),evalF(r,env),
+                                                     (Bag)evalE(x,env),(Bag)evalE(y,env));
         case BSP(tuple(...ns),`superstep,`state,`o,...as):
             if (Config.hadoop_mode)
                 return Evaluator.evaluator.bsp(e,env);

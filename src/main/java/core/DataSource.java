@@ -19,8 +19,11 @@ package org.apache.mrql;
 
 import org.apache.mrql.gen.*;
 import java.io.IOException;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Iterator;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
 
@@ -154,5 +157,39 @@ public class DataSource {
         ds.path = local_path;
         dataSourceDirectory.put(local_path,ds);
         return ds;
+    }
+
+    /** return the first num values */
+    public List<MRData> take ( int num ) {
+        int count = num;
+        try {
+            ArrayList<MRData> res = new ArrayList<MRData>();
+            Iterator<MRData> it = inputFormat.newInstance().materialize(new Path(path)).iterator();
+            for ( int i = num; (num < 0 || i > 0) && it.hasNext(); i-- )
+                if (Config.hadoop_mode && Config.bsp_mode)
+                    res.add(((Tuple)it.next()).get(1));  // strip tag in BSP mode
+                else res.add(it.next());
+            return res;
+        } catch (Exception ex) {
+            throw new Error(ex);
+        }
+    }
+
+    static Tuple tuple_container = new Tuple(new Tuple(),new Tuple());
+
+    /** accumulate all datasource values */
+    public MRData reduce ( MRData zero, final Function acc ) {
+        try {
+            MRData res = zero;
+            for ( MRData x: inputFormat.newInstance().materialize(new Path(path)) ) {
+                if (Config.hadoop_mode && Config.bsp_mode)
+                    x = ((Tuple)x).get(1); // strip tag in BSP mode
+                tuple_container.set(0,res).set(1,x);
+                res = acc.eval(tuple_container);
+            };
+            return res;
+        } catch (Exception ex) {
+            throw new Error(ex);
+        }
     }
 }

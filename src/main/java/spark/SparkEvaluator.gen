@@ -17,10 +17,13 @@
  */
 package org.apache.mrql;
 
-import java_cup.runtime.*;
 import org.apache.mrql.gen.*;
 import java_cup.runtime.Scanner;
-import java.util.*;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.Iterator;
 import java.io.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,7 +48,7 @@ import org.apache.spark.api.java.function.VoidFunction;
 
 /** Evaluates physical plans in Apache Spark mode */
 final public class SparkEvaluator extends Evaluator implements Serializable {
-    static JavaSparkContext spark_context;
+    public static JavaSparkContext spark_context;
     final static String spark_jar = SparkEvaluator.class.getProtectionDomain().getCodeSource().getLocation().toString();
     final static String core_jar = Interpreter.class.getProtectionDomain().getCodeSource().getLocation().toString();
     final static String gen_jar = Tree.class.getProtectionDomain().getCodeSource().getLocation().toString();
@@ -85,11 +88,6 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
     }
 
     final public void initialize_query () {
-        spark_context.clearJars();
-        spark_context.addJar(spark_jar);
-        spark_context.addJar(core_jar);
-        spark_context.addJar(gen_jar);
-        spark_context.addJar(scanner_jar);
         Plan.distribute_compiled_arguments(Plan.conf);
         if (Config.compile_functional_arguments)
             spark_context.addJar(Plan.conf.get("mrql.jar.path"));
@@ -97,47 +95,6 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
 
     final public Configuration new_configuration () {
         return new Configuration();
-    }
-
-    final public MR_bool synchronize ( MR_string peerName, MR_bool mr_exit ) {
-        throw new Error("You can only synchronize BSP tasks");
-    }
-
-    final public Bag distribute ( MR_string peerName, Bag s ) {
-        throw new Error("You can only distribute bags among BSP tasks");
-    }
-
-    final public Bag collect ( final DataSet x ) throws Exception {
-        return Plan.collect(x);
-    }
-
-    final public MRData bsp ( Tree plan, Environment env ) throws Exception {
-        throw new Error("You can not run a BSP task in Spark mode");
-    }
-
-    /** materialize the entire dataset into a Bag
-     * @param x the DataSet in HDFS to collect values from
-     * @param strip is not used in MapReduce mode
-     * @return the Bag that contains the collected values
-     */
-    final public Bag collect ( final DataSet x, boolean strip ) throws Exception {
-        Bag res = new Bag();
-        final MRContainer zero = new MRContainer(new MR_byte((byte)0));
-        for ( DataSource s: x.source )
-            if (s instanceof RDDDataSource) {
-		JavaPairRDD<MRContainer,MRContainer> rd
-		    = ((RDDDataSource)s).rdd.map(new PairFunction<MRData,MRContainer,MRContainer>() {
-			    public Tuple2<MRContainer,MRContainer> call ( final MRData value ) {
-				return new Tuple2<MRContainer,MRContainer>(zero,new MRContainer(value));
-			    }
-			});
-		String path = Plan.new_path(Plan.conf);
-		rd.saveAsHadoopFile(path,MRContainer.class,MRContainer.class,SequenceFileOutputFormat.class);
-		res = res.union(collect(new DataSet(new BinaryDataSource(path,Plan.conf),0,0),strip));
-            } else if (s.to_be_merged)
-                res = res.union(Plan.merge(s));
-            else res = res.union(s.inputFormat.newInstance().materialize(new Path(s.path)));
-        return res;
     }
 
     /** return the FileInputFormat for parsed files (CSV, XML, JSON, etc) */
@@ -171,8 +128,11 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
     public static void load_source_dir () throws IOException {
         if (Config.local_mode)
             return;
-        if (Plan.conf == null)
-            Plan.conf = Evaluator.evaluator.new_configuration();
+        if (Plan.conf == null) {
+            if (evaluator == null)
+                evaluator = new SparkEvaluator();
+            Plan.conf = evaluator.new_configuration();
+        };
         // the name of the file that contains the source directory details is passed
         //   to workers through the HashMap environment in the JavaSparkContext
         Path path = new Path(System.getenv("mrql.data.source.directory"));
@@ -183,7 +143,55 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
         ftp.close();
     }
 
-    private static Function2<MRData,MRData,MRData> accumulator ( Tree acc_fnc, Environment env ) {
+    /** dump MRQL data into a sequence file */
+    @Override
+    final public void dump ( String file, Tree type, MRData data ) throws Exception {
+        if (data instanceof MR_dataset && ((MR_dataset)data).dataset().source.get(0) instanceof RDDDataSource) {
+	    Path path = new Path(file);
+	    FileSystem fs = path.getFileSystem(Plan.conf);
+	    PrintStream ftp = new PrintStream(fs.create(path.suffix(".type")));
+	    ftp.print("2@"+type.toString()+"\n");
+	    ftp.close();
+            // in Spark mode, a dataset has always one RDD datasource
+	    JavaRDD<MRData> rdd = ((RDDDataSource)((MR_dataset)data).dataset().source.get(0)).rdd.cache();
+            rdd.map(new PairFunction<MRData,MRContainer,MRContainer>() {
+			final MRContainer zero = new MRContainer(new MR_int(0));
+                        public Tuple2<MRContainer,MRContainer> call ( MRData value ) {
+			    return new Tuple2<MRContainer,MRContainer>(zero,new MRContainer(value));
+			}
+		    })
+		.saveAsHadoopFile(file,MRContainer.class,MRContainer.class,SequenceFileOutputFormat.class);
+	} else super.dump(file,type,data);
+    }
+
+    /** dump MRQL data into text a CVS file */
+    @Override
+    final public void dump_text ( String file, Tree type, MRData data ) throws Exception {
+        if (data instanceof MR_dataset && ((MR_dataset)data).dataset().source.get(0) instanceof RDDDataSource) {
+            // in Spark mode, a dataset has always one RDD datasource
+	    JavaRDD<MRData> rdd = ((RDDDataSource)((MR_dataset)data).dataset().source.get(0)).rdd.cache();
+	    int ps = Config.max_bag_size_print;
+	    Config.max_bag_size_print = -1;
+	    match type {
+	    case `T(tuple(...tps)):
+		final Trees ts = tps;
+		rdd.map(new Function<MRData,String>() {
+                        public String call ( MRData value ) {
+			    Tuple t = (Tuple)value;
+			    String s = Printer.print(t.get((short)0),ts.nth(0));
+			    for ( short i = 1; i < t.size(); i++ )
+				s += ","+Printer.print(t.get(i),ts.nth(i));
+			    return s;
+			}
+		    }).saveAsTextFile(file);
+	    case _:
+		rdd.saveAsTextFile(file);
+	    };
+	    Config.max_bag_size_print = ps;
+	} else super.dump_text(file,type,data);
+    }
+
+    private static Function2<MRData,MRData,MRData> accumulator ( final Tree acc_fnc, final Environment env ) {
         final org.apache.mrql.Function f = evalF(acc_fnc,env);
         return new Function2<MRData,MRData,MRData>() {
             public MRData call ( MRData x, MRData y ) {
@@ -339,7 +347,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
         final JavaRDD<MRData> res = evalD(e,env);
         if (Config.trace_execution) 
             try {
-                System.out.println(tabs(tab_count)+"-> "+res.collect());
+                System.out.println(tabs(tab_count)+"-> "+res.take(Config.max_bag_size_print));
                 tab_count -= 3;
             } catch (Exception ex) {
                 throw new Error("Cannot collect the operator output: "+e);
@@ -394,7 +402,6 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
     private static JavaRDD<MRData> containerData ( JavaPairRDD<MRContainer,MRContainer> rd ) {
         final Environment env = Interpreter.global_env;
         return rd.map(new Function<Tuple2<MRContainer,MRContainer>,MRData>() {
-                // need to pass the global bindings (the in-memory repeat vars) to workers
                 boolean first = true;
                 public MRData call ( Tuple2<MRContainer,MRContainer> value ) {
                     if (first) {
@@ -522,8 +529,10 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                             }
                         });
             case GroupByJoin(`kx,`ky,`gx,`gy,`mp,`c,`r,`x,`y,`o):
-                final int n = 10;
-                final int m = 10;
+                final int n = (int)Math.floor(Math.sqrt(4.0*Config.nodes));
+                final int m = n;
+                if (Config.trace)
+                    System.out.println("*** Using a groupBy join on a "+n+"*"+m+" grid of partitions");
                 final org.apache.mrql.Function fkx = evalF(kx,env);
                 final org.apache.mrql.Function fky = evalF(ky,env);
                 final org.apache.mrql.Function fgx = evalF(gx,env);
@@ -531,7 +540,9 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                 final org.apache.mrql.Function fm = evalF(mp,env);
                 final org.apache.mrql.Function fc = evalF(c,env);
                 final org.apache.mrql.Function fr = evalF(r,env);
-                JavaPairRDD<MRData,MRData> xs
+                final MRData one = new MR_byte(1);
+                final MRData two = new MR_byte(2);
+                final JavaPairRDD<MRData,MRData> xs
                     = eval(x,env).flatMap(new PairFlatMapFunction<MRData,MRData,MRData>() {
                             public Iterable<Tuple2<MRData,MRData>> call ( final MRData value ) {
                                 return new Iterable<Tuple2<MRData,MRData>>() {
@@ -541,7 +552,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                                             public Tuple2<MRData,MRData> next () {
                                                 MRData key = new MR_int((fgx.eval(value).hashCode() % m)+m*i);
                                                 i++;
-                                                return new Tuple2<MRData,MRData>(key,new Tuple(fkx.eval(value),value));
+                                                return new Tuple2<MRData,MRData>(key,new Tuple(one,value));
                                             }
                                             public boolean hasNext () {
                                                 return i < n;
@@ -552,20 +563,20 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                                 };
                             }
                         });
-                JavaPairRDD<MRData,MRData> ys
+                final JavaPairRDD<MRData,MRData> ys
                     = eval(y,env).flatMap(new PairFlatMapFunction<MRData,MRData,MRData>() {
                             public Iterable<Tuple2<MRData,MRData>> call ( final MRData value ) {
                                 return new Iterable<Tuple2<MRData,MRData>>() {
                                     public Iterator<Tuple2<MRData,MRData>> iterator() {
                                         return new Iterator<Tuple2<MRData,MRData>>() {
-                                            int i = 0;
+                                            int j = 0;
                                             public Tuple2<MRData,MRData> next () {
-                                                MRData key = new MR_int((fgy.eval(value).hashCode() % n)*m+i);
-                                                i++;
-                                                return new Tuple2<MRData,MRData>(key,new Tuple(fky.eval(value),value));
+                                                MRData key = new MR_int((fgy.eval(value).hashCode() % n)*m+j);
+                                                j++;
+                                                return new Tuple2<MRData,MRData>(key,new Tuple(two,value));
                                             }
                                             public boolean hasNext () {
-                                                return i < m;
+                                                return j < m;
                                             }
                                             public void remove () {}
                                         };
@@ -573,25 +584,28 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                                 };
                             }
                         });
-                return xs.cogroup(ys)
-                    .flatMap(new FlatMapFunction<Tuple2<MRData,Tuple2<List<MRData>,List<MRData>>>,MRData>() {
-                            public Iterable<MRData> call ( Tuple2<MRData,Tuple2<List<MRData>,List<MRData>>> value ) {
-                                final Iterator<MRData> i = (MapReduceAlgebra.mergeGroupByJoin(fkx,fky,fgx,fgy,fm,fc,fr,
-                                                                        bag(value._2._1),bag(value._2._2))).iterator();
-                                return new Iterable<MRData>() {
-                                    public Iterator<MRData> iterator() {
-                                        return new Iterator<MRData>() {
-                                            public MRData next () {
-                                                return i.next();
-                                            }
-                                            public boolean hasNext () {
-                                                return i.hasNext();
-                                            }
-                                            public void remove () {}
-                                        };
-                                    }
-                                };
-                            }
+                return xs.union(ys).groupByKey(Config.nodes)
+                    .mapPartitions(new FlatMapFunction<Iterator<Tuple2<MRData,List<MRData>>>,MRData>() {
+                        public Iterable<MRData> call ( final Iterator<Tuple2<MRData,List<MRData>>> value ) {
+                            Bag xb = new Bag();
+                            Bag yb = new Bag();
+                            while (value.hasNext()) {
+                                Tuple2<MRData,List<MRData>> t = value.next();
+                                for ( MRData e: t._2 ) {
+                                    Tuple p = (Tuple)e;
+                                    if (((MR_byte)p.first()).get() == 1)
+                                        xb.add(new Tuple(t._1,p.second()));
+                                    else yb.add(new Tuple(t._1,p.second()));
+                                }
+                            };
+                            final Bag b = MapReduceAlgebra.mergeGroupByJoin(fkx,fky,fgx,fgy,fm,fc,fr,xb,yb);
+                            xb = null; yb = null;
+                            return new Iterable<MRData>() {
+                                public Iterator<MRData> iterator() {
+                                    return b.iterator();
+                                }
+                            };
+                        }
                         });
             case MapJoin(`mx,`my,`r,`x,`y):
                 final org.apache.mrql.Function fx = evalF(mx,env);

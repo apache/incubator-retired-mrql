@@ -21,6 +21,8 @@ import java_cup.runtime.*;
 import org.apache.mrql.gen.*;
 import java.io.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.*;
 
 
 /** Evaluates physical plans using one of the evaluation engines */
@@ -56,9 +58,6 @@ abstract public class Evaluator extends Interpreter {
         throw new Error("You can only run a BSP task in BSP mode");
     }
 
-    /** collect all data from a persistent dataset into a Bag */
-    abstract public Bag collect ( final DataSet x ) throws Exception;
-
     /** return the FileInputFormat for parsed files (CSV, XML, JSON, etc) */
     abstract public Class<? extends MRQLFileInputFormat> parsedInputFormat ();
 
@@ -91,4 +90,63 @@ abstract public class Evaluator extends Interpreter {
     abstract public DataSet eval ( final Tree e,
                                    final Environment env,
                                    final String counter );
+
+    final static MR_long counter_key = new MR_long(0);
+    final static MRContainer counter_container = new MRContainer(counter_key);
+    final static MRContainer value_container = new MRContainer(new MR_int(0));
+
+    /** dump MRQL data into a sequence file */
+    public void dump ( String file, Tree type, MRData data ) throws Exception {
+        Path path = new Path(file);
+        FileSystem fs = path.getFileSystem(Plan.conf);
+        PrintStream ftp = new PrintStream(fs.create(path.suffix(".type")));
+        ftp.print("2@"+type.toString()+"\n");
+        ftp.close();
+        SequenceFile.Writer writer
+            = new SequenceFile.Writer(fs,Plan.conf,path,
+                                      MRContainer.class,MRContainer.class);
+        if (data instanceof MR_dataset)
+            data = Plan.collect(((MR_dataset)data).dataset());
+        if (data instanceof Bag) {
+            Bag s = (Bag)data;
+            long i = 0;
+            for ( MRData e: s ) {
+                counter_key.set(i++);
+                value_container.set(e);
+                writer.append(counter_container,value_container);
+            }
+        } else {
+            counter_key.set(0);
+            value_container.set(data);
+            writer.append(counter_container,value_container);
+        };
+        writer.close();
+    }
+
+    /** dump MRQL data into a text CVS file */
+    public void dump_text ( String file, Tree type, MRData data ) throws Exception {
+	int ps = Config.max_bag_size_print;
+	Config.max_bag_size_print = -1;
+	final PrintStream out = (Config.hadoop_mode)
+	                         ? Plan.print_stream(file)
+	                         : new PrintStream(file);
+	if (data instanceof MR_dataset)
+	    data = Plan.collect(((MR_dataset)data).dataset());
+	if (Translator.collection_type(type)) {
+	    Tree tp = ((Node)type).children().head();
+	    if (tp instanceof Node && ((Node)tp).name().equals("tuple")) {
+		Trees ts = ((Node)tp).children();
+		for ( MRData x: (Bag)data ) {
+		    Tuple t = (Tuple)x;
+		    out.print(print(t.get((short)0),ts.nth(0)));
+		    for ( short i = 1; i < t.size(); i++ )
+			out.print(","+print(t.get(i),ts.nth(i)));
+		    out.println();
+		}
+	    } else for ( MRData x: (Bag)data )
+		       out.println(print(x,tp));
+	} else out.println(print(data,query_type));
+	Config.max_bag_size_print = ps;
+	out.close();
+    }
 }

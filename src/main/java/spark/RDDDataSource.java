@@ -17,12 +17,15 @@
  */
 package org.apache.mrql;
 
+import java.util.List;
+import java.io.Serializable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.function.Function2;
 
 
-final public class RDDDataSource extends DataSource {
-    JavaRDD<MRData> rdd;
+final public class RDDDataSource extends DataSource implements Serializable {
+    public JavaRDD<MRData> rdd;
 
     RDDDataSource ( JavaRDD<MRData> rdd ) {
         super();
@@ -32,5 +35,28 @@ final public class RDDDataSource extends DataSource {
     @Override
     public long size ( Configuration conf ) {
         return rdd.count();
+    }
+
+    /** return the first num values */
+    @Override
+    public List<MRData> take ( int num ) {
+        return (num < 0) ? rdd.collect() : rdd.take(num);
+    }
+
+    /** accumulate all dataset values */
+    @Override
+    public MRData reduce ( final MRData zero, final Function acc ) {
+        return rdd.aggregate(zero,new Function2<MRData,MRData,MRData>() {
+                Tuple t = new Tuple(new Tuple(),new Tuple());
+                public MRData call ( MRData x, MRData y ) {
+                    t.set(0,x).set(1,y);
+                    return acc.eval(t);
+                }
+            },new Function2<MRData,MRData,MRData>() {
+                Tuple t = new Tuple(new Tuple(),new Tuple());
+                public MRData call ( MRData x, MRData y ) {
+                    return (y.equals(zero)) ? x : y;
+                }
+            });
     }
 }

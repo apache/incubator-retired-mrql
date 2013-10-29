@@ -19,6 +19,7 @@ package org.apache.mrql;
 
 import org.apache.mrql.gen.*;
 import java.util.Iterator;
+import java.util.List;
 
 
 /** printers for types, expressions, plans, etc */
@@ -202,12 +203,28 @@ public class Printer {
             case Bag(`tp):
                 if (x instanceof MR_dataset) {
                     DataSet ds = ((MR_dataset)x).dataset();
-                    return print(Plan.collect(ds),#<bag(`tp)>);
+                    List<MRData> vals = ds.take(Config.max_bag_size_print);
+                    if (vals.size() == 0)
+                        return "{}";
+                    String s = "{ "+print(vals.get(0),tp);
+                    for ( int i = 1; i < vals.size(); i++ )
+                        s += ", "+print(vals.get(i),tp);
+                    if (vals.size() == Config.max_bag_size_print)
+                        return s+", ... }";
+                    else return s+" }";
                 } else return print(x,#<bag(`tp)>);
             case List(`tp):
                 if (x instanceof MR_dataset) {
                     DataSet ds = ((MR_dataset)x).dataset();
-                    return print(Plan.collect(ds),#<list(`tp)>);
+                    List<MRData> vals = ds.take(Config.max_bag_size_print);
+                    if (vals.size() == 0)
+                        return "[]";
+                    String s = "[ "+print(vals.get(0),tp);
+                    for ( int i = 1; i < vals.size(); i++ )
+                        s += ", "+print(vals.get(i),tp);
+                    if (vals.size() == Config.max_bag_size_print)
+                        return s+", ... ]";
+                    else return s+" ]";
                 } else return print(x,#<list(`tp)>);
             case bag(`tp):
                 Bag b = (Bag)x;

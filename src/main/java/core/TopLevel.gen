@@ -18,7 +18,6 @@
 package org.apache.mrql;
 
 import org.apache.mrql.gen.*;
-import java.io.PrintStream;
 
 
 /** Provides the API for compilation/code-generation */
@@ -76,12 +75,16 @@ final public class TopLevel extends Interpreter {
                 System.err.println("*** MRQL System Error at line "+Main.parser.line_pos()+": "+x);
             if (Config.trace)
                 x.printStackTrace(System.err);
+            if (Config.testing)
+                throw new Error(x);
             return null;
         } catch (Error x) {
             if (x.getMessage() != null)
                 System.err.println("*** MRQL System Error at line "+Main.parser.line_pos()+": "+x);
             if (Config.trace)
                 x.printStackTrace(System.err);
+            if (Config.testing)
+                throw new Error(x);
             return null;
         }
     }
@@ -172,7 +175,7 @@ final public class TopLevel extends Interpreter {
             query_type = make_persistent_type(query_type);
             if (res != null)
                 if (Config.hadoop_mode) 
-                    Plan.dump(file,query_type,res);
+                    Evaluator.evaluator.dump(file,query_type,res);
                 else MapReduceAlgebra.dump(file,query_type,res);
         } catch (Exception x) {
             throw new Error(x);
@@ -184,29 +187,7 @@ final public class TopLevel extends Interpreter {
         MRData res = expression(e,false);
         if (res != null)
             try {
-                PrintStream out = (Config.hadoop_mode)
-                                   ? Plan.print_stream(file)
-                                   : new PrintStream(file);
-                if (res instanceof MR_dataset)
-                    res = Plan.collect(((MR_dataset)res).dataset());
-                int ps = Config.max_bag_size_print;
-                Config.max_bag_size_print = -1;
-                match query_type {
-                case `T(tuple(...ts)):
-                    for ( MRData x: (Bag)res ) {
-                        Tuple t = (Tuple)x;
-                        out.print(print(t.get((short)0),ts.nth(0)));
-                        for ( short i = 1; i < t.size(); i++ )
-                            out.print(","+print(t.get(i),ts.nth(i)));
-                        out.println();
-                    }
-                case `T(`tp):
-                    for ( MRData x: (Bag)res )
-                        out.println(print(x,tp));
-                case _: out.println(print(res,query_type));
-                };
-                Config.max_bag_size_print = ps;
-                out.close();
+		Evaluator.evaluator.dump_text(file,query_type,res);
             } catch (Exception x) {
                 throw new Error(x);
             }

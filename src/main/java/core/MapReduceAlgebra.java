@@ -207,14 +207,13 @@ final public class MapReduceAlgebra {
     /** A hash-based equi-join
      * @param kx left key function from a to k
      * @param ky right key function from b to k
-     * @param f reducer from ({a},{b}) to {c}
+     * @param f reducer from (a,b) to c
      * @param X left input of type {a}
      * @param Y right input of type {b}
      * @return a value of type {c}
      */
     public static Bag hash_join ( final Function kx, final Function ky, final Function f,
                                   final Bag X, final Bag Y ) {
-        final Bag empty_bag = new Bag();
         Hashtable<MRData,Bag> hashTable = new Hashtable<MRData,Bag>(1000);
         for ( MRData x: X ) {
             MRData key = kx.eval(x);
@@ -227,10 +226,9 @@ final public class MapReduceAlgebra {
         for ( MRData y: Y ) {
             MRData key = ky.eval(y);
             Bag match = hashTable.get(key);
-            if (match == null)
-                res.add(f.eval(new Tuple(empty_bag,y)));
-            else for ( MRData x: match )
-                     res.add(f.eval(new Tuple(x,y)));
+            if (match != null)
+                for ( MRData x: match )
+                    res.add(f.eval(new Tuple(x,y)));
         };
         return res;
     }
@@ -331,7 +329,7 @@ final public class MapReduceAlgebra {
     /** The fragment-replicate join (map-side join)
      * @param kx left key function from a to k
      * @param ky right key function from b to k
-     * @param r reducer from ({a},{b}) to {c}
+     * @param r reducer from (a,{b}) to {c}
      * @param X left input of type {a}
      * @param Y right input of type {b}
      * @return a value of type {c}
@@ -388,16 +386,13 @@ final public class MapReduceAlgebra {
         return res;
     }
 
-    private static void flush_table ( Hashtable<MRData,MRData> hashTable, Function r, Bag result ) throws IOException {
+    private static void flush_table ( final Map<MRData,MRData> hashTable, final Function r, final Bag result ) {
         Bag tbag = new Bag(2);
         Tuple pair = new Tuple(2);
-        Enumeration<MRData> en = hashTable.keys();
-        while (en.hasMoreElements()) {
-            MRData key = en.nextElement();
-            MRData value = hashTable.get(key);
-            pair.set(0,key);
+        for ( Map.Entry<MRData,MRData> entry: hashTable.entrySet() ) {
+            pair.set(0,entry.getKey());
             tbag.clear();
-            tbag.add_element(value);
+            tbag.add_element(entry.getValue());
             pair.set(1,tbag);
             for ( MRData e: (Bag)r.eval(pair) )
                 result.add(e);
@@ -417,69 +412,67 @@ final public class MapReduceAlgebra {
      * @param Y right input of type {b}
      * @return a value of type {e}
      */
-    public static Bag mergeGroupByJoin ( final Function kx, final Function ky,
-                                         final Function gx, final Function gy,
-                                         final Function m, final Function c, final Function r,
-                                         final Bag X, final Bag Y ) {
-        try {
-            Bag tbag = new Bag(2);
-            Tuple pair = new Tuple(2);
-            Hashtable<MRData,MRData> hashTable = new Hashtable<MRData,MRData>(1000);
-            Bag xs = groupBy(map(new Function() {
-                    public MRData eval ( final MRData e ) {
-                        Tuple t = (Tuple)e;
-                        return new Tuple(new Tuple(t.first(),kx.eval(t.second())),t.second());
-                    } }, X));
-            Bag ys = groupBy(map(new Function() {
-                    public MRData eval ( final MRData e ) {
-                        Tuple t = (Tuple)e;
-                        return new Tuple(new Tuple(t.first(),ky.eval(t.second())),t.second());
-                    } }, Y));
-            Bag res = new Bag();
-            Iterator<MRData> xi = xs.iterator();
-            Iterator<MRData> yi = ys.iterator();
-            if ( !xi.hasNext() || !yi.hasNext() )
-                return res;
-            Tuple x = (Tuple)xi.next();
-            Tuple y = (Tuple)yi.next();
-            MRData partition = null;
-            while ( xi.hasNext() && yi.hasNext() ) {
-                int cmp = x.first().compareTo(y.first());
-                if (cmp < 0) { x = (Tuple)xi.next(); continue; };
-                if (cmp > 0) { y = (Tuple)yi.next(); continue; };
-                if (partition == null)
-                    partition = ((Tuple)x.first()).first();
-                else if (!partition.equals(((Tuple)x.first()).first())) {
-                    partition = ((Tuple)x.first()).first();
-                    flush_table(hashTable,r,res);
-                };
-                for ( MRData xx: (Bag)x.second() )
-                    for ( MRData yy: (Bag)y.second() ) {
-                        Tuple key = new Tuple(gx.eval(xx),gy.eval(yy));
-                        Tuple value = new Tuple(xx,yy);
-                        MRData old = hashTable.get(key);
-                        pair.set(0,key);
-                        for ( MRData e: (Bag)m.eval(value) )
-                            if (old == null)
-                                hashTable.put(key,e);
-                            else {
-                                tbag.clear();
-                                tbag.add_element(e).add_element(old);
-                                pair.set(1,tbag);
-                                for ( MRData z: (Bag)c.eval(pair) )
-                                    hashTable.put(key,z);  // normally, done once
-                            }
-                    };
-                if (xi.hasNext())
-                    x = (Tuple)xi.next();
-                if (yi.hasNext())
-                    y = (Tuple)yi.next();
-            };
-            flush_table(hashTable,r,res);
+    final public static Bag mergeGroupByJoin ( final Function kx, final Function ky,
+                                               final Function gx, final Function gy,
+                                               final Function m, final Function c, final Function r,
+                                               Bag X, Bag Y ) {
+        Bag tbag = new Bag(2);
+        Tuple pair = new Tuple(2);
+        Tuple vpair = new Tuple(2);
+        final Map<MRData,MRData> hashTable = new HashMap<MRData,MRData>(1000);
+        Bag xs = groupBy(map(new Function() {
+                public MRData eval ( final MRData e ) {
+                    Tuple t = (Tuple)e;
+                    return new Tuple(new Tuple(t.first(),kx.eval(t.second())),t.second());
+                } }, X));
+        Bag ys = groupBy(map(new Function() {
+                public MRData eval ( final MRData e ) {
+                    Tuple t = (Tuple)e;
+                    return new Tuple(new Tuple(t.first(),ky.eval(t.second())),t.second());
+                } }, Y));
+        X = null; Y = null;
+        Bag res = new Bag();
+        final Iterator<MRData> xi = xs.iterator();
+        final Iterator<MRData> yi = ys.iterator();
+        if ( !xi.hasNext() || !yi.hasNext() )
             return res;
-        } catch (IOException ex) {
-            throw new Error(ex);
-        }
+        Tuple x = (Tuple)xi.next();
+        Tuple y = (Tuple)yi.next();
+        MRData partition = null;
+        while ( xi.hasNext() && yi.hasNext() ) {
+            int cmp = x.first().compareTo(y.first());
+            if (cmp < 0) { x = (Tuple)xi.next(); continue; };
+            if (cmp > 0) { y = (Tuple)yi.next(); continue; };
+            if (partition == null)
+                partition = ((Tuple)x.first()).first();
+            else if (!partition.equals(((Tuple)x.first()).first())) {
+                partition = ((Tuple)x.first()).first();
+                flush_table(hashTable,r,res);
+            };
+            for ( MRData xx: (Bag)x.second() )
+                for ( MRData yy: (Bag)y.second() ) {
+                    Tuple key = new Tuple(gx.eval(xx),gy.eval(yy));
+                    vpair.set(0,xx).set(1,yy);
+                    MRData old = hashTable.get(key);
+                    pair.set(0,key);
+                    for ( MRData e: (Bag)m.eval(vpair) )
+                        if (old == null)
+                            hashTable.put(key,e);
+                        else {
+                            tbag.clear();
+                            tbag.add_element(e).add_element(old);
+                            pair.set(1,tbag);
+                            for ( MRData z: (Bag)c.eval(pair) )
+                                hashTable.put(key,z);  // normally, done once
+                        }
+                };
+            if (xi.hasNext())
+                x = (Tuple)xi.next();
+            if (yi.hasNext())
+                y = (Tuple)yi.next();
+        };
+        flush_table(hashTable,r,res);
+        return res;
     }
 
     /** repeat the loop until all termination conditions are true or until we reach the max num of steps
