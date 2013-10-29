@@ -25,6 +25,7 @@ import java.lang.reflect.*;
 import java.util.*;
 import java.net.*;
 import java.util.jar.*;
+import org.apache.hadoop.io.WritableComparable;
 
 
 /** compilation of MRQL expressions to Java code and then to Java bytecode */
@@ -35,6 +36,7 @@ final public class Compiler extends Translator {
     public static String jar_path;
     static Trees in_memory_repeat_vars = #[];
     static int lambda_num = 0;
+    static int user_functions_num = 0;
 
     /** Compile the MRQL functional arguments into Java bytecode */
     final private static class JavaSourceFromString extends SimpleJavaFileObject {
@@ -135,6 +137,7 @@ final public class Compiler extends Translator {
      */
     final public static Tree compile ( Tree query ) {
         try {
+            user_functions_num = lambda_num++;
             // remove the old jar
             if (jar_path != null)
                 remove(new File(jar_path));
@@ -164,12 +167,12 @@ final public class Compiler extends Translator {
                         sb.append("; }\n");
                     }
                 };
-            out.append("final public class UserFunctions {\n");
+            out.append("final class UserFunctions_"+user_functions_num+" {\n");
             out.append(sb);
             out.append("}\n");
             String code = out.toString();
             //System.out.println(code);
-            JavaFileObject file = new JavaSourceFromString("UserFunctions",code);
+            JavaFileObject file = new JavaSourceFromString("UserFunctions_"+user_functions_num,code);
             Iterable<? extends JavaFileObject> compilationUnits = Arrays.asList(file);
             List<String> optionList = new ArrayList<String>();
             (new File(tmp_dir)).mkdir();
@@ -181,6 +184,8 @@ final public class Compiler extends Translator {
             String separator = System.getProperty("path.separator");
             for ( URL url: ((URLClassLoader) classLoader).getURLs() )
                 classpath += separator+url.getFile();
+            // use hadoop core jar
+            classpath += separator + WritableComparable.class.getProtectionDomain().getCodeSource().getLocation().toString();
             optionList.addAll(Arrays.asList("-classpath",classpath));
             optionList.addAll(Arrays.asList("-d",dir));
             CompilationTask task = compiler.getTask(null,null,diagnostics,optionList,null,compilationUnits);
@@ -448,7 +453,7 @@ final public class Compiler extends Translator {
                 fail;
             match global_functions.lookup(f.toString()) {
             case function(tuple(...params),`otp,`body):
-                String ret = "UserFunctions."+f+"(";
+                String ret = "UserFunctions_"+user_functions_num+"."+f+"(";
                 if (args.is_empty())
                     return ret+")";
                 for ( int i = 0; i < params.length(); i++ )
@@ -464,7 +469,7 @@ final public class Compiler extends Translator {
             match global_functions.lookup(f.toString()) {
             case function(tuple(...params),`otp,`body):
                 String ac = compileE(arg);
-                String ret = "UserFunctions."+f+"(";
+                String ret = "UserFunctions_"+user_functions_num+"."+f+"(";
                 for ( int i = 0; i < params.length(); i++ )
                     match params.nth(i) {
                     case bind(_,`tp):
