@@ -45,7 +45,7 @@
 
   <properties>
     <hadoop.version>1.0.3</hadoop.version>
-    <hama.version>0.6.2</hama.version>
+    <hama.version>0.6.3</hama.version>
     <spark.version>0.8.0-incubating</spark.version>
   </properties>
 
@@ -63,11 +63,6 @@
       <groupId>net.sf.squirrel-sql.thirdparty.non-maven</groupId>
       <artifactId>java-cup</artifactId>
       <version>11a</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-core</artifactId>
-      <version>${hadoop.version}</version>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
@@ -177,6 +172,50 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>hadoop1</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+        <property>
+          <name>hadoop1</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-core</artifactId>
+          <version>${hadoop.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>yarn</id>
+      <activation>
+        <property>
+          <name>yarn</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+          <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs</artifactId>
+          <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+          <version>${hadoop.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
 
   <scm>
     <connection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-mrql.git</connection>
