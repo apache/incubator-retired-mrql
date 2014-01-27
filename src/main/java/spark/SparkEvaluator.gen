@@ -273,7 +273,8 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
             });
     }
 
-    final static TaskContext context = new TaskContext(0,0,(long)0,Config.local_mode,null);
+    // changed since Spark 0.8.1
+    final static TaskContext context = new TaskContext(0,0,(long)0,Config.local_mode,false,null);
 
     /** Convert a Spark RDD into a lazy bag
      * @param rdd the Spark RDD

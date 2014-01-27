@@ -56,7 +56,7 @@ final public class Inv extends MRData {
     }
 
     public boolean equals ( Object x ) {
-        return value.equals(((Inv)x).value);
+        return x instanceof Inv && value.equals(((Inv)x).value);
     }
 
     public int hashCode () { return value.hashCode(); }

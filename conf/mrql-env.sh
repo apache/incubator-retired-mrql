@@ -57,7 +57,7 @@ HAMA_ZOOKEEPER_QUORUM=localhost
 
 
 # Optional: Spark configuration
-SPARK_HOME=${HOME}/spark-0.8.0-incubating-bin-hadoop1
+SPARK_HOME=${HOME}/spark-0.8.1-incubating-bin-hadoop1
 # URI of the Spark master node
 SPARK_MASTER=spark://crete:7077
 # Spark memory per node

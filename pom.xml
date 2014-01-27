@@ -46,7 +46,7 @@
   <properties>
     <hadoop.version>1.0.3</hadoop.version>
     <hama.version>0.6.3</hama.version>
-    <spark.version>0.8.0-incubating</spark.version>
+    <spark.version>0.8.1-incubating</spark.version>
   </properties>
 
   <modules>
