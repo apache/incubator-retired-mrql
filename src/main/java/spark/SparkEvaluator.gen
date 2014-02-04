@@ -150,6 +150,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
 	    Path path = new Path(file);
 	    FileSystem fs = path.getFileSystem(Plan.conf);
 	    PrintStream ftp = new PrintStream(fs.create(path.suffix(".type")));
+            fs.delete(path,true);
 	    ftp.print("2@"+type.toString()+"\n");
 	    ftp.close();
             // in Spark mode, a dataset has always one RDD datasource
