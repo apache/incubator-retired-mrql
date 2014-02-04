@@ -31,15 +31,26 @@ MRQL_HOME="$(cd `dirname $0`/..; pwd -P)"
 GEN_JAR=`ls "$MRQL_HOME"/lib/mrql-gen-*.jar`
 CORE_JAR=`ls "$MRQL_HOME"/lib/mrql-core-*.jar`
 MR_JAR=`ls "$MRQL_HOME"/lib/mrql-mr-*.jar`
+FULL_JAR="$MRQL_HOME/lib/mrql-mr-all.jar"
 
 export JAVA_HOME MAPRED_JOB_TRACKER FS_DEFAULT_NAME
 
+if (! [ -a $FULL_JAR ]); then
+   rm -rf "$MRQL_HOME/tmp/classes"
+   mkdir -p "$MRQL_HOME/tmp/classes"
+   pushd $MRQL_HOME/tmp/classes > /dev/null
+   $JAVA_HOME/bin/jar xf $CUP_JAR
+   $JAVA_HOME/bin/jar xf $JLINE_JAR
+   $JAVA_HOME/bin/jar xf $GEN_JAR
+   $JAVA_HOME/bin/jar xf $CORE_JAR
+   $JAVA_HOME/bin/jar xf $MR_JAR
+   cd ..
+   $JAVA_HOME/bin/jar cf $FULL_JAR -C classes/ .
+   popd > /dev/null
+fi
 
 if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
-   LIBJARS="$CUP_JAR,$JLINE_JAR,$GEN_JAR,$CORE_JAR,$MR_JAR"
-   export HADOOP_CLASSPATH="$CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$MR_JAR"
-   $HADOOP_HOME/bin/hadoop jar $MRQL_HOME/lib/mrql-mr-*.jar org.apache.mrql.Main -libjars $LIBJARS $*
+   $HADOOP_HOME/bin/hadoop jar $FULL_JAR org.apache.mrql.Main $*
 else
-   CLASSPATH="$CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$MR_JAR:$HADOOP_JARS"
-   $JAVA_HOME/bin/java -classpath $CLASSPATH org.apache.mrql.Main $*
+   $JAVA_HOME/bin/java -classpath "$FULL_JAR:$HADOOP_JARS" org.apache.mrql.Main $*
 fi

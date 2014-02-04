@@ -44,7 +44,8 @@
   </parent>
 
   <properties>
-    <hadoop.version>1.0.3</hadoop.version>
+    <hadoop.version>1.2.1</hadoop.version>
+    <yarn.version>2.2.0</yarn.version>
     <hama.version>0.6.3</hama.version>
     <spark.version>0.8.1-incubating</spark.version>
   </properties>
@@ -200,17 +201,12 @@
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-          <version>${hadoop.version}</version>
+          <artifactId>hadoop-client</artifactId>
+          <version>${yarn.version}</version>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+          <artifactId>hadoop-core</artifactId>
           <version>${hadoop.version}</version>
         </dependency>
       </dependencies>

@@ -20,9 +20,20 @@
 #
 #--------------------------------------------------------------------------------
 #
-# Set Apache MRQL-specific environment variables here.
+# To rebuild Apache MRQL from sources:
+#
+# build MRQL on Hadoop 1.x:
+# mvn -Dhadoop.version=1.0.3 install
+#
+# build MRQL on Hadoop 2.x (yarn):
+# mvn -Pyarn -Dyarn.version=2.2.0 -Dhadoop.version=1.2.1 install
+#
+# build MRQL on Hadoop 0.20.x:
+# mvn -PMultipleInputs -Dhadoop.version=0.20.2 install
 #
 #--------------------------------------------------------------------------------
+#
+# Set Apache MRQL-specific environment variables here:
 
 
 # Required: The Java installation directory
@@ -33,12 +44,12 @@ JAVA_HOME=/root/jdk
 CUP_JAR=${HOME}/.m2/repository/net/sf/squirrel-sql/thirdparty/non-maven/java-cup/11a/java-cup-11a.jar
 
 # Required: The JLine library
-# You can download from http://jline.sourceforge.net
+# You can download it from http://jline.sourceforge.net
 JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 
 
-# Required: Hadoop configuration
-HADOOP_VERSION=1.0.3
+# Required: Hadoop configuration. Supports versions 0.20.x, 1.x, 2.x
+HADOOP_VERSION=1.2.1
 # The Hadoop installation directory
 HADOOP_HOME=${HOME}/hadoop-${HADOOP_VERSION}
 # The Hadoop job trackeer (as defined in hdfs-site.xml)
@@ -56,7 +67,7 @@ BSP_MASTER_ADDRESS=localhost:40000
 HAMA_ZOOKEEPER_QUORUM=localhost
 
 
-# Optional: Spark configuration
+# Optional: Spark configuration. Supports 0.8.1 only
 SPARK_HOME=${HOME}/spark-0.8.1-incubating-bin-hadoop1
 # URI of the Spark master node
 SPARK_MASTER=spark://crete:7077
@@ -66,11 +77,12 @@ SPARK_MEM="1g"
 
 # Claspaths
 
-HADOOP_JARS=${HADOOP_HOME}/hadoop-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/lib/commons-logging-1.1.1.jar:${HADOOP_HOME}/lib/log4j-1.2.15.jar:${HADOOP_HOME}/lib/commons-cli-1.2.jar
-
 HAMA_JAR=${HAMA_HOME}/hama-core-${HAMA_VERSION}.jar
 
 SPARK_JARS=${SPARK_HOME}/assembly/target/scala-2.9.3/*
 
-# for hadoop yarn (build using eg,  mvn -Pyarn -Dhadoop.version=2.2.0 install)
-#HADOOP_JARS=${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/hadoop-annotations-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/commons-cli-1.2.jar
+if [[ ${HADOOP_VERSION} =~ "^2.*$" ]]; then
+   HADOOP_JARS=${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/hadoop-annotations-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/log4j-1.2.17.jar:${HADOOP_HOME}/share/hadoop/common/lib/commons-cli-1.2.jar
+else
+   HADOOP_JARS=${HADOOP_HOME}/hadoop-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/lib/commons-logging-1.1.1.jar:${HADOOP_HOME}/lib/log4j-1.2.15.jar:${HADOOP_HOME}/lib/commons-cli-1.2.jar
+fi
