@@ -30,8 +30,8 @@ MRQL_HOME="$(cd `dirname $0`/..; pwd -P)"
 
 GEN_JAR=`ls "$MRQL_HOME"/lib/mrql-gen-*.jar`
 CORE_JAR=`ls "$MRQL_HOME"/lib/mrql-core-*.jar`
-BSP_JAR=`ls "$MRQL_HOME"/lib/mrql-bsp-*.jar`
-FULL_JAR="$MRQL_HOME/lib/mrql-bsp-all.jar"
+MRQL_JAR=`ls "$MRQL_HOME"/lib/mrql-bsp-*.jar`
+FULL_JAR="$MRQL_HOME/lib/mrql-all-bsp.jar"
 
 export JAVA_HOME FS_DEFAULT_NAME BSP_MASTER_ADDRESS HAMA_ZOOKEEPER_QUORUM
 
@@ -43,7 +43,7 @@ if (! [ -a $FULL_JAR ]); then
    $JAVA_HOME/bin/jar xf $JLINE_JAR
    $JAVA_HOME/bin/jar xf $GEN_JAR
    $JAVA_HOME/bin/jar xf $CORE_JAR
-   $JAVA_HOME/bin/jar xf $BSP_JAR
+   $JAVA_HOME/bin/jar xf $MRQL_JAR
    cd ..
    $JAVA_HOME/bin/jar cf $FULL_JAR -C classes/ .
    popd > /dev/null

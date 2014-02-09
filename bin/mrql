@@ -30,8 +30,8 @@ MRQL_HOME="$(cd `dirname $0`/..; pwd -P)"
 
 GEN_JAR=`ls "$MRQL_HOME"/lib/mrql-gen-*.jar`
 CORE_JAR=`ls "$MRQL_HOME"/lib/mrql-core-*.jar`
-MR_JAR=`ls "$MRQL_HOME"/lib/mrql-mr-*.jar`
-FULL_JAR="$MRQL_HOME/lib/mrql-mr-all.jar"
+MRQL_JAR=`ls "$MRQL_HOME"/lib/mrql-mr-*.jar`
+FULL_JAR="$MRQL_HOME/lib/mrql-all-mr.jar"
 
 export JAVA_HOME MAPRED_JOB_TRACKER FS_DEFAULT_NAME
 
@@ -43,7 +43,7 @@ if (! [ -a $FULL_JAR ]); then
    $JAVA_HOME/bin/jar xf $JLINE_JAR
    $JAVA_HOME/bin/jar xf $GEN_JAR
    $JAVA_HOME/bin/jar xf $CORE_JAR
-   $JAVA_HOME/bin/jar xf $MR_JAR
+   $JAVA_HOME/bin/jar xf $MRQL_JAR
    cd ..
    $JAVA_HOME/bin/jar cf $FULL_JAR -C classes/ .
    popd > /dev/null

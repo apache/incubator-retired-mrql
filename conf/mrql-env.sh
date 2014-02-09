@@ -48,18 +48,18 @@ CUP_JAR=${HOME}/.m2/repository/net/sf/squirrel-sql/thirdparty/non-maven/java-cup
 JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 
 
-# Required: Hadoop configuration. Supports versions 0.20.x, 1.x, 2.x
+# Required: Hadoop configuration. Supports versions 0.20.x, 1.x, and 2.x (YARN)
 HADOOP_VERSION=1.2.1
 # The Hadoop installation directory
 HADOOP_HOME=${HOME}/hadoop-${HADOOP_VERSION}
-# The Hadoop job trackeer (as defined in hdfs-site.xml)
+# The Hadoop job tracker (as defined in hdfs-site.xml)
 MAPRED_JOB_TRACKER=localhost:9001
 # The HDFS namenode URI (as defined in hdfs-site.xml)
 FS_DEFAULT_NAME=hdfs://localhost:9000/
 
 
-# Optional: Hama configuration
-HAMA_VERSION=0.6.2
+# Optional: Hama configuration. Supports versions 0.5.0, 0.6.0, 0.6.2, and 0.6.3
+HAMA_VERSION=0.6.3
 # The Hadoop installation directory
 HAMA_HOME=${HOME}/hama-${HAMA_VERSION}
 # The Hama configuration as defined in hama-site.xml
@@ -67,9 +67,9 @@ BSP_MASTER_ADDRESS=localhost:40000
 HAMA_ZOOKEEPER_QUORUM=localhost
 
 
-# Optional: Spark configuration. Supports 0.8.1 only
-SPARK_HOME=${HOME}/spark-0.8.1-incubating-bin-hadoop1
-# URI of the Spark master node
+# Optional: Spark configuration. Supports versions 0.8.1 and 0.9.0
+SPARK_HOME=${HOME}/spark-0.9.0-incubating-bin-hadoop1
+# URI of the Spark master node (to run Spark on a YARN cluster, set it to "yarn-client")
 SPARK_MASTER=spark://crete:7077
 # Spark memory per node
 SPARK_MEM="1g"
@@ -79,10 +79,12 @@ SPARK_MEM="1g"
 
 HAMA_JAR=${HAMA_HOME}/hama-core-${HAMA_VERSION}.jar
 
-SPARK_JARS=${SPARK_HOME}/assembly/target/scala-2.9.3/*
+SPARK_JAR=`ls ${SPARK_HOME}/assembly/target/scala-*/*`
 
-if [[ ${HADOOP_VERSION} =~ "^2.*$" ]]; then
+if [[ -f ${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar ]]; then
+   # hadoop 2.x (YARN)
    HADOOP_JARS=${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/hadoop-annotations-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/log4j-1.2.17.jar:${HADOOP_HOME}/share/hadoop/common/lib/commons-cli-1.2.jar
 else
+   # hadoop 1.x or 0.20.x
    HADOOP_JARS=${HADOOP_HOME}/hadoop-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/lib/commons-logging-1.1.1.jar:${HADOOP_HOME}/lib/log4j-1.2.15.jar:${HADOOP_HOME}/lib/commons-cli-1.2.jar
 fi

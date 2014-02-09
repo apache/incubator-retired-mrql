@@ -25,6 +25,8 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.io.*;
+import java.util.Enumeration;
+import org.apache.log4j.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
@@ -74,6 +76,11 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                                                      env);
                 Plan.conf = spark_context.hadoopConfiguration();
                 FileSystem.setDefaultUri(Plan.conf,System.getenv("FS_DEFAULT_NAME"));
+            };
+            if (!Config.info) {
+                for ( Enumeration en = LogManager.getCurrentLoggers(); en.hasMoreElements(); )
+                    ((Logger)en.nextElement()).setLevel(Level.WARN);
+                LogManager.getRootLogger().setLevel(Level.WARN);
             }
         } catch (IOException ex) {
             throw new Error(ex);

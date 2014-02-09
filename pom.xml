@@ -48,6 +48,7 @@
     <yarn.version>2.2.0</yarn.version>
     <hama.version>0.6.3</hama.version>
     <spark.version>0.9.0-incubating</spark.version>
+    <scala.version>2.10</scala.version>
   </properties>
 
   <modules>
