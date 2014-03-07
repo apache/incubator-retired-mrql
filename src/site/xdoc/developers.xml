@@ -37,7 +37,7 @@ xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd
     <subsection name="Issues"></subsection>
     <p>
     All bugs, improvements, patches, etc. should be logged in 
-    <a href="./issue_tracking.html">JIRA</a>
+    <a href="./issue-tracking.html">JIRA</a>
     </p>
     </body>
 </document>
