@@ -42,22 +42,6 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.8</version>
-        <executions>
-          <execution>
-            <phase>generate-sources</phase>
-            <goals><goal>add-source</goal></goals>
-            <configuration>
-              <sources>
-                <source>../src/main/java/core</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
 	<groupId>org.apache.maven.plugins</groupId>
 	<artifactId>maven-shade-plugin</artifactId>
 	<version>2.1</version>
@@ -101,8 +85,8 @@
             </goals>
             <configuration>
               <lexDefinitions>
-                <lexDefinition>../src/main/java/core/mrql.lex</lexDefinition>
-                <lexDefinition>../src/main/java/core/JSON.lex</lexDefinition>
+                <lexDefinition>src/main/java/org/apache/mrql/mrql.lex</lexDefinition>
+                <lexDefinition>src/main/java/org/apache/mrql/JSON.lex</lexDefinition>
               </lexDefinitions>
 	      <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
 	      <verbose>false</verbose>
@@ -125,7 +109,7 @@
               <target>
                 <mkdir dir="${project.build.directory}/generated-sources/org/apache/mrql" />
 		<property name="compile_classpath" refid="maven.compile.classpath" />
-		<fileset id="gen.path" dir="../src/main/java/core" includes="*.gen" />
+		<fileset id="gen.path" dir="src/main/java/org/apache/mrql" includes="*.gen" />
 		<pathconvert pathsep=" " property="gen.files" refid="gen.path" />
 		<java classname="org.apache.mrql.gen.Main" classpath="../lib/mrql-gen-${project.version}.jar:${compile_classpath}">
 		  <arg line="${gen.files}" />
@@ -133,13 +117,13 @@
 		  <arg file="${project.build.directory}/generated-sources/org/apache/mrql" />
 		</java>
 		<java classname="org.apache.mrql.gen.Main" classpath="../lib/mrql-gen-${project.version}.jar:${compile_classpath}">
-		  <arg file="../src/main/java/core/mrql.cgen" />
+		  <arg file="src/main/java/org/apache/mrql/mrql.cgen" />
 		  <arg line="-o" />
 		  <arg file="${project.build.directory}/generated-sources/mrql.cup" />
 		</java>
                 <taskdef name="cup" classname="java_cup.anttask.CUPTask" classpathref="maven.compile.classpath" />
                 <cup srcfile="${project.build.directory}/generated-sources/mrql.cup" destdir="${project.build.directory}/generated-sources" nosummary="true" parser="MRQLParser" />
-                <cup srcfile="src/main/java/core/JSON.cup" destdir="${project.build.directory}/generated-sources" nosummary="true" parser="JSONParser" symbols="jsym" />
+                <cup srcfile="${project.basedir}/src/main/java/org/apache/mrql/JSON.cup" destdir="${project.build.directory}/generated-sources" nosummary="true" parser="JSONParser" symbols="jsym" />
 	      </target>
 	    </configuration>
 	  </execution>

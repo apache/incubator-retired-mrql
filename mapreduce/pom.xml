@@ -19,10 +19,10 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.mrql</groupId>
-  <artifactId>mrql-spark</artifactId>
+  <artifactId>mrql-mr</artifactId>
   <packaging>jar</packaging>
-  <name>Apache MRQL Spark mode</name>
-  <description>Apache MRQL evaluation in Spark mode on Apache Spark</description>
+  <name>Apache MRQL MapReduce mode</name>
+  <description>Apache MRQL evaluation in MapReduce mode on Apache Hadoop</description>
   <url>http://mrql.incubator.apache.org/</url>
   <inceptionYear>2013</inceptionYear>
 
@@ -43,12 +43,45 @@
       <artifactId>mrql-core</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <!-- needed for testing in local mode -->
     <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_${scala.version}</artifactId>
-      <version>${spark.version}</version>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.4</version>
     </dependency>
   </dependencies>
+
+  <profiles>
+    <profile>
+      <id>MultipleInputs</id>
+      <activation>
+        <property>
+          <name>MultipleInputs</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>1.8</version>
+            <executions>
+              <execution>
+                <phase>generate-sources</phase>
+                <goals><goal>add-source</goal></goals>
+                <configuration>
+                  <sources>
+                    <source>../src/main/java/multipleinputs</source>
+                    <source>${project.build.directory}/generated-sources</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
   <build>
     <plugins>
@@ -62,8 +95,7 @@
             <goals><goal>add-source</goal></goals>
             <configuration>
               <sources>
-                <source>../src/main/java/spark</source>
-                <source>${project.build.directory}/generated-sources/org/apache/mrql</source>
+                <source>${project.build.directory}/generated-sources</source>
               </sources>
             </configuration>
           </execution>
@@ -86,7 +118,7 @@
 	       </includes>
 	       <excludes>
 		 <exclude>org.apache.mrql:mrql-gen</exclude>
-                 <exclude>org.apache.mrql:mrql-core</exclude>
+		 <exclude>org.apache.mrql:mrql-core</exclude>
 	       </excludes>
               </artifactSet>
 	    </configuration>
@@ -98,8 +130,9 @@
         <artifactId>maven-jar-plugin</artifactId>
         <version>2.4</version>
 	<configuration>
-	  <finalName>mrql-spark-${project.version}</finalName>
+	  <finalName>mrql-mr-${project.version}</finalName>
 	  <outputDirectory>${project.parent.basedir}/lib</outputDirectory>
+	  <useDefaultManifestFile>true</useDefaultManifestFile>
 	</configuration>
       </plugin>
       <plugin>
@@ -107,6 +140,7 @@
 	<version>1.7</version>
 	<executions>
 	  <execution>
+	    <id>gen</id>
 	    <phase>generate-sources</phase>
 	    <goals>
 	      <goal>run</goal>
@@ -114,8 +148,8 @@
 	    <configuration>
               <target>
                 <mkdir dir="${project.build.directory}/generated-sources/org/apache/mrql" />
-		<property name="compile_classpath" refid="maven.compile.classpath" />
-		<fileset id="mr.gen.path" dir="../src/main/java/spark" includes="*.gen" />
+                <property name="compile_classpath" refid="maven.compile.classpath" />
+		<fileset id="mr.gen.path" dir="src/main/java/org/apache/mrql" includes="*.gen" />
 		<pathconvert pathsep=" " property="mr.gen.files" refid="mr.gen.path" />
 		<java classname="org.apache.mrql.gen.Main" classpath="../lib/mrql-gen-${project.version}.jar:${compile_classpath}">
 		  <arg line="${mr.gen.files}" />
@@ -123,7 +157,7 @@
 		  <arg file="${project.build.directory}/generated-sources/org/apache/mrql" />
 		</java>
 	      </target>
-  	    </configuration>
+	    </configuration>
 	  </execution>
           <execution>
 	    <id>validate</id>
@@ -132,14 +166,19 @@
 	      <goal>run</goal>
 	    </goals>
 	    <configuration>
-	      <target name="validate_spark" if="tests" description="Validate all test queries on Apache Spark">
+	      <target name="validate_hadoop" if="tests" description="Validate all test queries on Apache Hadoop">
 		<property name="runtime_classpath" refid="maven.runtime.classpath" />
-		<echo message="Evaluating test queries in Apache Spark local mode:" />
-		<java classname="org.apache.mrql.Test" classpath="../lib/mrql-spark-${project.version}.jar:${runtime_classpath}" dir=".." fork="yes" error="/dev/null">
-		  <arg line="-local" />
-		  <arg line="-spark" />
+		<echo message="Evaluating test queries in memory (Map-Reduce mode):" />
+		<java classname="org.apache.mrql.Test" classpath="${runtime_classpath}" dir=".." fork="yes">
 		  <arg file="../tests/queries" />
-		  <arg file="../tests/results/spark" />
+		  <arg file="../tests/results/mr-memory" />
+		  <arg file="../tests/error_log.txt" />
+		</java>
+		<echo message="Evaluating test queries in Apache Hadoop local mode:" />
+		<java classname="org.apache.mrql.Test" classpath="../lib/mrql-mr-${project.version}.jar:${runtime_classpath}" dir=".." fork="yes" error="/dev/null">
+		  <arg line="-local" />
+		  <arg file="../tests/queries" />
+		  <arg file="../tests/results/hadoop" />
 		  <arg file="../tests/error_log.txt" />
 		</java>
 	      </target>

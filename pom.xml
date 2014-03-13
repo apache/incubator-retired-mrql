@@ -52,11 +52,11 @@
   </properties>
 
   <modules>
-    <module>Gen</module>
+    <module>gen</module>
     <module>core</module>
-    <module>MapReduce</module>
-    <module>BSP</module>
-    <module>Spark</module>
+    <module>mapreduce</module>
+    <module>bsp</module>
+    <module>spark</module>
     <module>dist</module>
   </modules>
 

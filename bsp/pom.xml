@@ -62,8 +62,7 @@
             <goals><goal>add-source</goal></goals>
             <configuration>
               <sources>
-                <source>../src/main/java/BSP</source>
-                <source>${project.build.directory}/generated-sources/org/apache/mrql</source>
+                <source>${project.build.directory}/generated-sources</source>
               </sources>
             </configuration>
           </execution>
@@ -115,7 +114,7 @@
               <target>
                 <mkdir dir="${project.build.directory}/generated-sources/org/apache/mrql" />
 		<property name="compile_classpath" refid="maven.compile.classpath" />
-		<fileset id="mr.gen.path" dir="../src/main/java/BSP" includes="*.gen" />
+		<fileset id="mr.gen.path" dir="src/main/java/org/apache/mrql" includes="*.gen" />
 		<pathconvert pathsep=" " property="mr.gen.files" refid="mr.gen.path" />
 		<java classname="org.apache.mrql.gen.Main" classpath="../lib/mrql-gen-${project.version}.jar:${compile_classpath}">
 		  <arg line="${mr.gen.files}" />
