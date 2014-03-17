@@ -228,7 +228,7 @@ public class Plan {
             paths[i] = ds[i].getPath();
         if (dl > Config.max_merged_streams) {
             if (Config.trace)
-                System.err.println("*** Merging "+dl+" files");
+                System.out.println("Merging "+dl+" files");
             Path out_path = new Path(new_path(conf));
             SequenceFile.Sorter sorter
                 = new SequenceFile.Sorter(fs,new MRContainerKeyComparator(),

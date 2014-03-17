@@ -141,8 +141,24 @@ final public class BSPEvaluator extends Evaluator {
         throw new Error("Cannot perform the aggregation: "+plan);
     }
 
-    final public Tuple loop ( Tree e, Environment env ) {
-        throw new Error("The BSP Loop was supposed to be translated to a BSP task");
+    /** Evaluate a loop a fixed # of times */
+    final public Tuple loop ( Tree e, Environment env ) throws Exception {
+        match e {
+        case Loop(lambda(tuple(...vs),tuple(...bs)),tuple(...ss),`num):
+            int limit = ((MR_int)evalE(num,env)).get();
+            MR_dataset[] s = new MR_dataset[vs.length()];
+            for ( int i = 0; i < vs.length(); i++ )
+                s[i] = new MR_dataset(eval(ss.nth(i),env,"-"));
+            for ( int n = 0; n < limit; n++ ) {
+                Environment nenv = env;
+                for ( int i = 0; i < vs.length(); i ++ )
+                    nenv = new Environment(vs.nth(i).toString(),s[i],nenv);
+                for ( int i = 0; i < vs.length(); i ++ )
+                    s[i] = new MR_dataset(eval(bs.nth(i),nenv,"-"));
+            };
+            return new Tuple(s);
+        };
+        throw new Error("Wrong Loop format");
     }
 
     final public DataSet eval ( final Tree e,
@@ -195,6 +211,13 @@ final public class BSPEvaluator extends Evaluator {
                                       ((MR_long)evalE(min,env)).get(),
                                       ((MR_long)evalE(max,env)).get(),
                                       ((MR_long)evalE(size,env)).get());
+            case BSPSource(`n,`v):
+                if (!v.is_variable())
+                    fail;
+                DataSet ds = evalD(v,env);
+                for ( DataSource s: ds.source )
+                    s.source_num = (int)((LongLeaf)n).value();
+                return ds;
             case Merge(`x,`y):
                 return Plan.merge(eval(x,env),eval(y,env));
             case Dump(`s):

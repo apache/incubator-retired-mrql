@@ -115,6 +115,19 @@ final public class TopLevel extends Interpreter {
     }
 
     /** handle the assignment v:=e */
+    public final static Tree distributed_assign ( String v, Tree e ) {
+        reset();
+        if (global_vars.lookup(v) != null)
+            global_vars.remove(v);
+        MRData res = expression(e,false);
+        global_type_env.insert(v,query_type);
+        if (res instanceof Bag)
+            ((Bag)res).materialize();
+        new_distributed_binding(v,res);
+        return query_plan;
+    }
+
+    /** bind v to the result of e */
     public final static Tree store ( String v, Tree e ) {
         reset();
         if (global_vars.lookup(v) != null)
@@ -251,7 +264,7 @@ final public class TopLevel extends Interpreter {
         case assign(`v,`e): assign(v.toString(),e);
         case store(`v,`e):
             long t = System.currentTimeMillis();
-            if (store(v.toString(),e) != null && !Config.quiet_execution)
+            if (distributed_assign(v.toString(),e) != null && !Config.quiet_execution)
                 System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
         case dump(`s,`e):
             long t = System.currentTimeMillis();

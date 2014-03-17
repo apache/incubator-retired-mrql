@@ -35,6 +35,6 @@ function randomEdge ( imin: int, imax: int, jmin: int, jmax: int ): (int,int) {
                      else randomEdge((imin+imax)/2,imax,(jmin+jmax)/2,jmax)
 };
 
-store "graph.bin"
+store "tmp/graph.bin"
  from select distinct randomEdge(0,toInt(args[0]),0,toInt(args[0]))
         from i in 1...(toLong(args[1]));

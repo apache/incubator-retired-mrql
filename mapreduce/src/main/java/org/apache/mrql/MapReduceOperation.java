@@ -184,10 +184,9 @@ final public class MapReduceOperation extends MapReducePlan {
         protected void setup ( Context context ) throws IOException,InterruptedException {
             super.setup(context);
             try {
-                Configuration conf = context.getConfiguration();
-                Config.read(conf);
-                if (Plan.conf == null)
-                    Plan.conf = conf;
+                conf = context.getConfiguration();
+                Plan.conf = conf;
+                Config.read(Plan.conf);
                 Tree code = Tree.parse(conf.get("mrql.reducer"));
                 reduce_fnc = functional_argument(conf,code);
                 streamed = PlanGeneration.streamed_MapReduce_reducer(code);
@@ -234,6 +233,7 @@ final public class MapReduceOperation extends MapReducePlan {
                                             String stop_counter,  // optional counter used in repeat operation
                                             boolean orderp )      // does the result need to be ordered?
                                 throws Exception {
+        conf = MapReduceEvaluator.clear_configuration(conf);
         String newpath = new_path(conf);
         conf.set("mrql.mapper",map_fnc.toString());
         if (combine_fnc != null)
@@ -260,7 +260,7 @@ final public class MapReduceOperation extends MapReducePlan {
         FileOutputFormat.setOutputPath(job,new Path(newpath));
         job.setReducerClass(MRReducer.class);
         if (Config.trace && PlanGeneration.streamed_MapReduce_reducer(reduce_fnc))
-            System.err.println("*** Streamed MapReduce reducer");
+            System.out.println("Streamed MapReduce reducer");
         if (num_reduces > 0)
             job.setNumReduceTasks(num_reduces);
         job.waitForCompletion(true);

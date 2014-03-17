@@ -25,6 +25,28 @@ import java.io.*;
 /** Generate a physical plan from an algebraic expression */
 final public class PlanGeneration extends AlgebraicOptimization {
 
+    /** return the monoid associated with the aggregation e */
+    private static Tree get_monoid ( Tree e ) {
+        match e {
+        case call(`f,`u):
+            Tree etp = #<none>;
+            match TypeInference.type_inference2(u) {
+            case `S(`tp): etp = tp;
+            case _: return #<none>;
+            };
+            for ( Tree monoid: monoids )  // system & user-defined aggregations
+                match monoid {
+                case `aggr(`mtp,`plus,`zero,`unit):
+                    if (!aggr.equals(f.toString()))
+                        continue;
+                    if (TypeInference.unify(etp,mtp) == null)
+                        continue;
+                    return monoid;
+                }
+        };
+        return #<none>;
+    }
+
     /** extract the combiner from the reducer in a MapReduce plan */
     static class Aggregates {
         public static Trees maps = #[];
@@ -67,49 +89,40 @@ final public class PlanGeneration extends AlgebraicOptimization {
             Tree gvar = #<nth(`rvar,1)>;
             match e {
             case call(`f,`u):
-                for ( Tree monoid: monoids )  // system & user-defined aggregations
-                    match monoid {
-                    case `nm(`mtp,`plus,`zero,`unit):
-                        if (nm.equals(f.toString())) {
-                            match TypeInference.type_inference2(u) {
-                            case `S(`tp):
-                                if (TypeInference.unify(tp,mtp) == null)
-                                    continue;
-                            case _: throw new Error("Unexpected aggregation: "+e);
-                            };
-                            match u {
-                            case cmap(`m,`v):
-                                if (!v.equals(gvar) || occurences(rvar,m) > 0)
-                                    fail;
-                                Tree ev = new_var();
-                                Tree nv = new_var();
-                                Tree mv = new_var();
-                                int i = union_aggegates(e,
+                match get_monoid(e) {
+                case `nm(`mtp,`plus,`zero,`unit):
+                    match u {
+                    case cmap(`m,`v):
+                        if (!v.equals(gvar) || occurences(rvar,m) > 0)
+                            fail;
+                        Tree ev = new_var();
+                        Tree nv = new_var();
+                        Tree mv = new_var();
+                        int i = union_aggegates(e,
                                            #<aggregate(lambda(`ev,apply(`plus,tuple(nth(`ev,0),apply(`unit,nth(`ev,1))))),
                                                        `zero,cmap(`m,cmap(lambda(x,bag(nth(x,1))),apply(`map,`mvar))))>,
                                            #<aggregate(lambda(`nv,apply(`plus,tuple(nth(`nv,0),
                                                                                     nth(nth(`nv,1),-1)))),
                                                        `zero,`gvar)>);
-                                return simplify_all(#<aggregate(lambda(`mv,apply(`plus,tuple(nth(`mv,0),
-                                                                                             nth(nth(`mv,1),`i)))),
-                                                                `zero,`gvar)>);
-                            case `v:
-                                if (!v.equals(gvar))
-                                    fail;
-                                Tree ev = new_var();
-                                Tree nv = new_var();
-                                Tree mv = new_var();
-                                int i = union_aggegates(e,
+                        return simplify_all(#<aggregate(lambda(`mv,apply(`plus,tuple(nth(`mv,0),
+                                                                                     nth(nth(`mv,1),`i)))),
+                                                        `zero,`gvar)>);
+                    case `v:
+                        if (!v.equals(gvar))
+                            fail;
+                        Tree ev = new_var();
+                        Tree nv = new_var();
+                        Tree mv = new_var();
+                        int i = union_aggegates(e,
                                            #<aggregate(lambda(`ev,apply(`plus,tuple(nth(`ev,0),apply(`unit,nth(`ev,1))))),
                                                        `zero,cmap(lambda(x,bag(nth(x,1))),apply(`map,`mvar)))>,
                                            #<aggregate(lambda(`nv,apply(`plus,tuple(nth(`nv,0),nth(nth(`nv,1),-1)))),
                                                        `zero,`gvar)>);
-                                return simplify_all(#<aggregate(lambda(`mv,apply(`plus,tuple(nth(`mv,0),
-                                                                                             nth(nth(`mv,1),`i)))),
-                                                                `zero,`gvar)>);
-                            }
-                        }
-                    };
+                        return simplify_all(#<aggregate(lambda(`mv,apply(`plus,tuple(nth(`mv,0),
+                                                                                     nth(nth(`mv,1),`i)))),
+                                                        `zero,`gvar)>);
+                    }
+                };
                 fail
             case nth(`v,0):
                 if (v.is_variable())
@@ -179,21 +192,50 @@ final public class PlanGeneration extends AlgebraicOptimization {
         return false;
     }
 
+    private static boolean contains_without ( Tree e, Tree with, Tree without ) {
+        if (e.equals(with))
+            return false;
+        if (e.equals(without))
+            return true;
+        match e {
+        case `f(...r):
+            for ( Tree a: r )
+                if (contains_without(a,with,without))
+                    return true;
+        };
+        return false;
+    }
+
+    private static Trees extract_combiners ( Tree e, Tree with, Tree var ) {
+        Trees res = #[ ];
+        match e {
+        case call(`c,`u):
+            if (contains_without(e,with,var) || occurences(with,e) == 0)
+                fail;
+            if (get_monoid(e).equals(#<none>))
+                fail;
+            return #[`e];
+        case `f(...r):
+            for ( Tree a: r )
+                res = res.append(extract_combiners(a,with,var));
+        };
+        return res;
+    }
+
     /** compile an algebraic form to a algebraic plan
      * @param e the algebraic form
      * @return the algebraic plan
      */
     public static Tree makePlan ( Tree e ) {
        match e {
-       // combine groupBy with Join (experimental)
-       case mapReduce(lambda(`vm,`bm),lambda(`vr,`br),`s,`o):
-           if (!Config.use_combiner || !is_dataset_expr(s))
+       // combine groupBy with Join into a groupByJoin (generalized matrix multiplication)
+       case mapReduce(lambda(`vm,bag(`bm)),lambda(`vr,bag(`br)),`s,`o):
+           if (!bm.equals(vm))
                fail;
-           Tree splan = makePlan(s);
-           match splan {
-           case MapReduce2(lambda(`mvx,bag(tuple(`kx,`mx))),
-                           lambda(`mvy,bag(tuple(`ky,`my))),
-                           lambda(`v,cmap(lambda(`x,cmap(lambda(`y,bag(tuple(tuple(`gx,`gy),`b))),
+           match s {
+           case mapReduce2(lambda(`mvx,bag(tuple(`jx,`mx))),
+                           lambda(`mvy,bag(tuple(`jy,`my))),
+                           lambda(`v,cmap(lambda(`x,cmap(lambda(`y,bag(tuple(tuple(`gx,`gy),`mxy))),
                                                          nth(`vx,1))),
                                           nth(`vy,0))),
                            `X,`Y,`o2):
@@ -201,58 +243,56 @@ final public class PlanGeneration extends AlgebraicOptimization {
                    fail;
                Tree gxx = gx;
                Tree gyy = gy;
-               if (free_variables(gx,#[]).equals(#[`y]) && free_variables(gy,#[]).equals(#[`x])) {
+               if (free_variables(gx,#[`y]).is_empty() && free_variables(gy,#[`x]).is_empty()) {
                    gxx = gy;
                    gyy = gx;
-               } else if (!free_variables(gx,#[]).equals(#[`x]) || !free_variables(gy,#[]).equals(#[`y]))
+               } else if (!free_variables(gx,#[`x]).is_empty() || !free_variables(gy,#[`y]).is_empty())
                    fail;
-               Aggregates.clear();
-               Tree nv = new_var();
-               match TypeInference.type_inference(bm) {
-               case `S(`tp):
-                   if (!is_collection(S))
-                       fail;
-                   type_env.insert(nv.toString(),tp);
-               };
-               Tree rd = Aggregates.derive_combiner(br,#<lambda(`vm,`bm)>,vm,vr);
-               if (Aggregates.reduces.is_empty())
+               Trees combiners = extract_combiners(br,#<nth(`vr,1)>,vr);
+               if (combiners.is_empty())
                    fail;
-               Tree vr2 = new_var();
-               Tree m = simplify_all(#<lambda(`vm,cmap(lambda(`nv,bag(tuple(nth(`nv,0),
-                                                    tuple(...(Aggregates.maps))))),`bm))>);
-               Tree c = subst(vr,vr2,#<bag(tuple(...(Aggregates.combines)))>);
-               c = simplify_all(#<lambda(`vr2,`c)>);
-               Tree r = simplify_all(#<lambda(`vr,`rd)>);
-               Tree mtp = TypeInference.type_inference(#<bag(tuple(...(Aggregates.maps)))>);
-               Tree rtp = #<tuple(`(TypeInference.type_inference(#<nth(`vr,0)>)),`mtp)>;
-               type_env.insert(vr.toString(),rtp);
-               type_env.insert(vr2.toString(),rtp);
-               TypeInference.type_inference(m);
-               TypeInference.type_inference(c);
-               TypeInference.type_inference(r);
-               Tree combiner = makePlan(c);
-               Tree reducer = makePlan(r);
-               Tree nm = simplify_all(subst(x,#<nth(`vx,0)>,
-                                            subst(y,#<nth(`vy,1)>,
-                                                  #<cmap(lambda(x,bag(nth(x,1))),
-                                                         cmap(`m,bag(tuple(tuple(`gx,`gy),`b))))>)));
-               type_env.insert(v.toString(),TypeInference.type_inference(#<tuple(`mvx,`mvy)>));
-               nm = makePlan(nm);
-               return #<GroupByJoin(lambda(`mvx,`kx),
-                                    lambda(`mvy,`ky),
-                                    lambda(`x,`gxx),
-                                    lambda(`y,`gyy),
-                                    lambda(`v,`nm),
-                                    `combiner,
-                                    `reducer,
-                                    `X,`Y,`o)>;
+               Tree nvc = new_var();
+               Tree nvr = new_var();
+               Tree nm = subst(x,#<nth(nth(`nvc,1),0)>,subst(y,#<nth(nth(`nvc,1),1)>,mxy));
+               int i = 0;
+               Trees accs = #[ ];
+               Trees zeros = #[ ];
+               for ( Tree combiner: combiners )
+                   match combiner {
+                   case call(_,cmap(lambda(`vc,bag(`u)),_)):
+                       match get_monoid(combiner) {
+                       case `aggr(`mtp,`plus,`zero,`unit):
+                           br = subst(combiner,#<nth(nth(`nvr,1),`i)>,br);
+                           zeros = zeros.append(zero);
+                           accs = accs.append(#<apply(`plus,tuple(nth(nth(`nvc,0),`i),
+                                                                  apply(`unit,apply(lambda(`vc,`u),`nm))))>);
+                           i++;
+                       }
+                   case _: throw new Error("Unrecognized aggregation: "+combiner);
+                   };
+               type_env.insert(nvc.toString(),TypeInference.type_inference(#<tuple(tuple(...zeros),tuple(`x,`y))>));
+               type_env.insert(nvr.toString(),
+                               TypeInference.type_inference(#<tuple(nth(`vr,0),tuple(...zeros))>));
+               Tree reducer = makePlan(subst(#<nth(`vr,0)>,#<nth(`nvr,0)>,br));
+               if (!free_variables(reducer,#[`nvr]).is_empty())
+                   fail;
+               Tree accumulator = makePlan(simplify_all(#<tuple(...accs)>));
+               Tree zero = makePlan(#<tuple(...zeros)>);
+               return #<GroupByJoin(lambda(`mvx,`(makePlan(jx))),
+                                    lambda(`mvy,`(makePlan(jy))),
+                                    lambda(`x,`(makePlan(gxx))),
+                                    lambda(`y,`(makePlan(gyy))),
+                                    lambda(`nvc,`accumulator),
+                                    `zero,
+                                    lambda(`nvr,`reducer),
+                                    `(makePlan(X)),
+                                    `(makePlan(Y)),`o)>;
            };
            fail
        // extract the mapReduce combiner
        case mapReduce(lambda(`vm,`bm),lambda(`vr,`br),`s,`o):
            if (!Config.use_combiner || !is_dataset_expr(s))
                fail;
-           Tree splan = makePlan(s);
            Aggregates.clear();
            Tree nv = new_var();
            match TypeInference.type_inference(bm) {
@@ -279,7 +319,7 @@ final public class PlanGeneration extends AlgebraicOptimization {
            TypeInference.type_inference(r);
            Tree combiner = makePlan(c);
            Tree reducer = makePlan(r);
-           match splan {
+           match makePlan(s) {
            // if the MapCombineReduce input is a join, push the combiner to the join
            case MapReduce2(`mx,`my,lambda(`rv,`rb),`x,`y,`o2):
                Tree nr = makePlan(simplify_all(#<lambda(`rv,cmap(`m,`rb))>));
@@ -369,9 +409,11 @@ final public class PlanGeneration extends AlgebraicOptimization {
                fail;
            repeat_variables = repeat_variables.cons(v);
            return #<Closure(lambda(`v,`(makePlan(b))),`(makePlan(s)),`(Integer.MAX_VALUE))>;
-       case loop(lambda(tuple(...vs),`b),`s,`n):
+       case loop(lambda(tuple(...vs),`b),tuple(...s),`n):
+           if (!is_dataset_expr(s.nth(0)))
+               fail;
            repeat_variables = repeat_variables.append(vs);
-           return #<Loop(lambda(tuple(...vs),`(makePlan(b))),`(makePlan(s)),`(makePlan(n)))>;
+           return #<Loop(lambda(tuple(...vs),`(makePlan(b))),`(makePlan(#<tuple(...s)>)),`(makePlan(n)))>;
        case record(...bl):
            Trees el = #[];
            for ( Tree b: bl )

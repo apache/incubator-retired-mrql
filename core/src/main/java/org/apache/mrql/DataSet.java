@@ -20,10 +20,11 @@ package org.apache.mrql;
 import java.util.List;
 import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
+import java.io.Serializable;
 
 
 /** The domain of the MRQL physical algebra is a set of DataSources */
-public class DataSet {
+public class DataSet implements Serializable {
     public ArrayList<DataSource> source;  // multiple sources
     public long counter;  // a Hadoop user-defined counter used by the `repeat' operator
     public long records;  // total number of dataset records

@@ -16,18 +16,22 @@
  * limitations under the License.
  */
 
-function fact ( n: int ): long {
-   if n <= 0
-   then 1 as long
-   else n*fact(n-1)
-};
+// generate random matrices; needs dimensions N and M from args
 
-fact(10);
+N = toLong(args[0]);
+M = toLong(args[1]);
 
-store x := [xml| <a A="2"><b>1</b><b>2</b></a> |];
+store "tmp/Xmatrix.bin"
+ from select (random(100000)/10000.0 as double,i,j)
+        from i in 0...(N-1),
+             j in 0...(M-1);
 
-function children ( tag: string, s: list(XML) ) : list(XML) {
-  select c from Node(t,*,cs) in s, c in cs where t=tag order by c
-};
+store "tmp/Ymatrix.bin"
+ from select (random(100000)/10000.0 as double,i,j)
+        from i in 0...(N-1),
+             j in 0...(M-1);
 
-children("b",x.b);
+store "tmp/Zmatrix.bin"
+ from select (random(100000)/10000.0 as double,i,j)
+        from i in 0...(N-1),
+             j in 0...(M-1);

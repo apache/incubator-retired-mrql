@@ -28,7 +28,7 @@ import jline.*;
 
 
 final public class Main {
-    public final static String version = "0.9.0";
+    public final static String version = "0.9.2";
 
     public static PrintStream print_stream;
     public static Configuration conf;
@@ -56,26 +56,40 @@ final public class Main {
         }
     }
 
+    private static void initialize_evaluator () throws Exception {
+        if (Config.bsp_mode)
+            Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.BSPEvaluator").newInstance();
+        else if (Config.spark_mode)
+            Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.SparkEvaluator").newInstance();
+        else // when Config.map_reduce_mode but also the default
+            Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.MapReduceEvaluator").newInstance();
+    }
+
+    public static void initialize () throws Exception {
+        if (Evaluator.evaluator == null) {
+            if (Plan.conf == null)
+                Plan.conf = new Configuration();
+            conf = Plan.conf;
+            Config.read(Plan.conf);
+            initialize_evaluator();
+        }
+    }
+
     public static void main ( String[] args ) throws Exception {
-        boolean hadoop = false;
+        Config.hadoop_mode = false;
         for ( String arg: args ) {
-            hadoop |= arg.equals("-local") || arg.equals("-dist");
+            Config.hadoop_mode |= arg.equals("-local") || arg.equals("-dist");
             Config.bsp_mode |= arg.equals("-bsp");
             Config.spark_mode |= arg.equals("-spark");
         };
         Config.map_reduce_mode = !Config.bsp_mode && !Config.spark_mode;
-        if (Config.map_reduce_mode)
-            Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.MapReduceEvaluator").newInstance();
-        if (Config.bsp_mode)
-            Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.BSPEvaluator").newInstance();
-        if (Config.spark_mode)
-            Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.SparkEvaluator").newInstance();
-        if (hadoop) {
-            conf = Evaluator.evaluator.new_configuration();
-            GenericOptionsParser gop = new GenericOptionsParser(conf,args);
-            conf = gop.getConfiguration();
-            args = gop.getRemainingArgs();
-        };
+        initialize_evaluator();
+	if (Config.hadoop_mode) {
+	    conf = Evaluator.evaluator.new_configuration();
+	    GenericOptionsParser gop = new GenericOptionsParser(conf,args);
+	    conf = gop.getConfiguration();
+	    args = gop.getRemainingArgs();
+	};
         Config.parse_args(args,conf);
         Config.hadoop_mode = Config.local_mode || Config.distributed_mode;
         if (!Config.info) {
@@ -89,7 +103,7 @@ final public class Main {
         if (Config.compile_functional_arguments)
             System.out.print("compiled ");
         else System.out.print("interpreted ");
-        if (hadoop) {
+        if (Config.hadoop_mode) {
             if (Config.local_mode)
                 System.out.print("local ");
             else if (Config.distributed_mode)
@@ -118,7 +132,7 @@ final public class Main {
                 String line = "";
                 String s = "";
                 try {
-                    if (hadoop && Config.bsp_mode)
+                    if (Config.hadoop_mode && Config.bsp_mode)
                         Config.write(Plan.conf);
                     do {
                         s = reader.readLine("> ");
@@ -142,7 +156,7 @@ final public class Main {
                 }
                 }
             } finally {
-                if (hadoop) {
+                if (Config.hadoop_mode) {
                     Plan.clean();
                     Evaluator.evaluator.shutdown(Plan.conf);
                 };
@@ -150,7 +164,7 @@ final public class Main {
                     Compiler.clean();
             }
         } else try {
-                if (hadoop && Config.bsp_mode)
+                if (Config.hadoop_mode && Config.bsp_mode)
                     Config.write(Plan.conf);
                 try {
                     parser = new MRQLParser(new MRQLLex(new FileInputStream(query_file)));
@@ -162,7 +176,7 @@ final public class Main {
                 };
                 parser.parse();
             } finally {
-                if (hadoop) {
+                if (Config.hadoop_mode) {
                     Plan.clean();
                     Evaluator.evaluator.shutdown(Plan.conf);
                 };

@@ -18,7 +18,7 @@
 
 // preprocessing: for each node, group its outgoing links into a bag
 graph = select (key,n#1)
-          from n in source(binary,"graph.bin")
+          from n in source(binary,"tmp/graph.bin")
          group by key: n#0;
 
 store graph_size := count(graph);

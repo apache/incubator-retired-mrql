@@ -141,23 +141,6 @@ final public class BSPPlan extends Plan {
             }
         }
 
-        private void writeLocalResult ( Bag result,
-                                        BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer )
-                throws IOException {
-            MRContainer key = new MRContainer();
-            MRContainer value = new MRContainer();
-            for ( MRData v: result )
-                if (orderp) {       // prepare for sorting
-                    Tuple t = (Tuple)v;
-                    key.set(t.get(1));
-                    value.set(t.get(0));
-                    peer.write(key,value);
-                } else {
-                    value.set(v);
-                    peer.write(null_key,value);
-                }
-        }
-
         /** receive messages from other peers */
         private void receive_messages ( final BSPPeer<MRContainer,MRContainer,MRContainer,MRContainer,MRContainer> peer )
                 throws IOException, SyncException, InterruptedException {
@@ -246,9 +229,9 @@ final public class BSPPlan extends Plan {
                     step++;
                 if (!skip && Config.trace_execution) {
                     tabs = Interpreter.tabs(Interpreter.tab_count);
-                    System.err.println(tabs+"  Superstep "+step+" ["+peer.getPeerName()+"]:");
-                    System.err.println(tabs+"      messages ["+peer.getPeerName()+"]: "+msg_cache);
-                    System.err.println(tabs+"      state ["+peer.getPeerName()+"]: "+state);
+                    System.out.println(tabs+"  Superstep "+step+" ["+peer.getPeerName()+"]:");
+                    System.out.println(tabs+"      messages ["+peer.getPeerName()+"]: "+msg_cache);
+                    System.out.println(tabs+"      state ["+peer.getPeerName()+"]: "+state);
                     for ( int i = 0; i < local_cache.size(); i++)
                         if (local_cache.get(i) instanceof Bag && ((Bag)local_cache.get(i)).size() > 0)
                             System.out.println(tabs+"      cache ["+peer.getPeerName()+"] "+i+": "+local_cache.get(i));
@@ -265,12 +248,12 @@ final public class BSPPlan extends Plan {
                 if (result.get(2) == SystemFunctions.bsp_true_value) {  // must be ==, not equals
                     peer.sync();
                     if (Config.trace_execution)
-                        System.err.println(tabs+"      result ["+peer.getPeerName()+"]: "+result);
+                        System.out.println(tabs+"      result ["+peer.getPeerName()+"]: "+result);
                     break;
                 };
                 if (result.get(2) == SystemFunctions.bsp_false_value) {
                     if (Config.trace_execution)
-                        System.err.println(tabs+"      result ["+peer.getPeerName()+"]: "+result);
+                        System.out.println(tabs+"      result ["+peer.getPeerName()+"]: "+result);
                     send_messages(msgs,peer);
                     skip = false;
                     continue;
@@ -280,38 +263,75 @@ final public class BSPPlan extends Plan {
                 if (skip)
                     continue;
                 if (Config.trace_execution)
-                    System.err.println(tabs+"      result ["+peer.getPeerName()+"]: "+result);
+                    System.out.println(tabs+"      result ["+peer.getPeerName()+"]: "+result);
                 exit = synchronize(peer,(MR_bool)result.get(2)).get();
                 send_messages(msgs,peer);
             } while (!exit);
             if (acc_result == null) {
                 // the BSP result is a bag that needs to be dumped to the HDFS
-                writeLocalResult((Bag)(local_cache.get(source_num)),peer);
-                // if there more results, dump them to HDFS
+                Configuration conf = peer.getConfiguration();
+                String[] out_paths = conf.get("mrql.output.paths").split(",");
+                // counters contains the output size(s)
+                Tuple counters = new Tuple(out_paths.length-1);
                 final MR_long key = new MR_long(0);
                 final MRContainer key_container = new MRContainer(key);
                 final MRContainer data_container = new MRContainer(new MR_int(0));
+                long count = 0;
+                for ( MRData v: (Bag)(local_cache.get(source_num)) ) {
+                    count++;
+                    if (orderp) {       // prepare for sorting
+                        Tuple t = (Tuple)v;
+                        key_container.set(t.get(1));
+                        data_container.set(t.get(0));
+                        peer.write(key_container,data_container);
+                    } else {
+                        data_container.set(v);
+                        peer.write(null_key,data_container);
+                    }
+                };
+                counters.set(0,new MR_long(count));
+                // if there more results, dump them to HDFS
                 int loc = 0;
                 while ( loc < all_peer_names.length && peer.getPeerName().equals(all_peer_names[loc]) )
                     loc++;
-                Configuration conf = peer.getConfiguration();
-                String[] out_paths = conf.get("mrql.output.paths").split(",");
-                for ( int i = 1; i < out_paths.length; i++ ) {
+                for ( int i = 1; i < out_paths.length-1; i++ ) {
                     String[] s = out_paths[i].split(":");
                     int out_num = Integer.parseInt(s[0]);
                     Path path = new Path(s[1]+"/peer"+loc);
                     FileSystem fs = path.getFileSystem(conf);
                     SequenceFile.Writer writer
-                        = new SequenceFile.Writer(fs,conf,path,
-                                                  MRContainer.class,MRContainer.class);
-                    long count = 0;
+                        = new SequenceFile.Writer(fs,conf,path,MRContainer.class,MRContainer.class);
+                    count = 0;
                     for ( MRData e: (Bag)(local_cache.get(out_num)) ) {
                         key.set(count++);
                         data_container.set(e);
                         writer.append(key_container,data_container);
                     };
                     writer.close();
+                    counters.set(i,new MR_long(count));
                 };
+                // send all output sizes to master peer
+                peer.send(masterTask,new MRContainer(counters));
+                peer.sync();
+                // the master peer sums up all counters and dumps the result to a sequence file
+                if (peer.getPeerName().equals(masterTask)) {
+                    MRContainer msg;
+                    counters = new Tuple(out_paths.length-1);
+                    for ( int i = 0; i < counters.size(); i++ )
+                        counters.set(i,new MR_long(0));
+                    while ((msg = peer.getCurrentMessage()) != null) {
+                        Tuple t = (Tuple)msg.data();
+                        for ( int i = 0; i < counters.size(); i++ )
+                            counters.set(i,new MR_long(((MR_long)counters.get(i)).get()+((MR_long)t.get(i)).get()));
+                    };
+                    String[] s = out_paths[out_paths.length-1].split(":");
+                    Path path = new Path(s[1]);
+                    FileSystem fs = path.getFileSystem(conf);
+                    SequenceFile.Writer writer
+                        = new SequenceFile.Writer(fs,conf,path,MRContainer.class,MRContainer.class);
+                    writer.append(null_key,new MRContainer(counters));
+                    writer.close();
+                }
             } else {
                 // the BSP result is an aggregation:
                 //     send the partial results to the master peer
@@ -392,7 +412,7 @@ final public class BSPPlan extends Plan {
                 split_size = (long)Math.ceil((double)split_size*1.01);
         } while (tasks > Config.nodes);
         job.setNumBspTask(tasks);
-        System.err.println("*** Using "+tasks+" BSP tasks (out of a max "+Config.nodes+")."
+        System.out.println("Using "+tasks+" BSP tasks (out of a max "+Config.nodes+")."
                            +" Each task will handle about "+Math.min(total_size/Config.nodes,split_size)
                            +" bytes of input data.");
         job.set("bsp.min.split.size",Long.toString(split_size));
@@ -412,7 +432,7 @@ final public class BSPPlan extends Plan {
                                      boolean orderp,    // do we need to order the result?
                                      DataSet source     // input dataset
                                      ) throws Exception {
-        String[] newpaths = new String[source_nums.length];
+        String[] newpaths = new String[source_nums.length+1];
         newpaths[0] = new_path(conf);
         conf.set("mrql.output.paths",source_nums[0]+":"+newpaths[0]);
         for ( int i = 1; i < source_nums.length; i++ ) {
@@ -422,6 +442,9 @@ final public class BSPPlan extends Plan {
             fs.mkdirs(path);
             conf.set("mrql.output.paths",conf.get("mrql.output.paths")+","+source_nums[i]+":"+newpaths[i]);
         };
+        newpaths[source_nums.length] = new_path(conf);
+        Path cpath = new Path(newpaths[source_nums.length]);
+        conf.set("mrql.output.paths",conf.get("mrql.output.paths")+",0:"+newpaths[source_nums.length]);
         conf.set("mrql.superstep",superstep.toString());
         conf.set("mrql.initial.state",init_state.toString());
         conf.set("mrql.zero","");
@@ -440,16 +463,24 @@ final public class BSPPlan extends Plan {
         job.setInputFormat(MultipleBSPInput.class);
         FileInputFormat.setInputPaths(job,source.merge());
         job.waitForCompletion(true);
+        // read the output sizes from a sequence file (dumped by master peer)
+        FileSystem fs = cpath.getFileSystem(conf);
+        SequenceFile.Reader sreader = new SequenceFile.Reader(fs,cpath,conf);
+        MRContainer key = new MRContainer();
+        MRContainer value = new MRContainer();
+        sreader.next(key,value);
+        sreader.close();
+        Tuple t = (Tuple)value.data();
         if (source_nums.length == 1) {
             BinaryDataSource ds = new BinaryDataSource(source_nums[0],newpaths[0],conf);
             ds.to_be_merged = orderp;
-            return new MR_dataset(new DataSet(ds,0,3));
+            return new MR_dataset(new DataSet(ds,0,((MR_long)t.get(0)).get()));
         } else {
             MRData[] s = new MRData[source_nums.length];
             for ( int i = 0; i < source_nums.length; i++ ) {
                 BinaryDataSource ds = new BinaryDataSource(source_nums[i],newpaths[i],conf);
                 ds.to_be_merged = orderp;
-                s[i] = new MR_dataset(new DataSet(ds,0,3));
+                s[i] = new MR_dataset(new DataSet(ds,0,((MR_long)t.get(i)).get()));
             };
             return new Tuple(s);
         }

@@ -16,9 +16,12 @@
  * limitations under the License.
  */
 
-Mmatrix = source(line,"tests/data/Xmatrix.txt",",",type( (double,long,long) ));
-Hmatrix = source(line,"tests/data/Ymatrix.txt",",",type( (double,long,long) ));
-Wmatrix = source(line,"tests/data/Zmatrix.txt",",",type( (double,long,long) ));
+// Matrix factorization using macros.
+// Build the matrices first using the build_matrix.mrql query
+
+Mmatrix = source(binary,"tmp/Xmatrix.bin");
+Hmatrix = source(binary,"tmp/Ymatrix.bin");
+Wmatrix = source(binary,"tmp/Zmatrix.bin");
 
 
 macro transpose ( X ) {
@@ -50,7 +53,7 @@ macro factorize ( V, Hinit, Winit ) {
   repeat (H,W) = (Hinit,Winit)
     step ( Cmult(H,Cdiv(multiply(transpose(W),V),multiply(transpose(W),multiply(W,H)))),
            Cmult(W,Cdiv(multiply(V,transpose(H)),multiply(W,multiply(H,transpose(H))))) )
-   limit 2
+   limit 4
 };
 
 factorize(Mmatrix,Hmatrix,Wmatrix);

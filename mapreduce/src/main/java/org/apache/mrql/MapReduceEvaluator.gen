@@ -34,10 +34,13 @@ final public class MapReduceEvaluator extends Evaluator {
         if (Config.hadoop_mode)
             if (Config.local_mode) {
                 conf.set("mapred.job.tracker","local");
+                conf.set("mapreduce.framework.name","local");
                 conf.set("fs.default.name","file:///");
+                //conf.set("fs.defaultFS","file:///"); // doesn't work for hadoop 1.*
             } else {
                 conf.set("mapred.job.tracker",System.getenv("MAPRED_JOB_TRACKER"));
                 conf.set("fs.default.name",System.getenv("FS_DEFAULT_NAME"));
+                //conf.set("fs.defaultFS",System.getenv("FS_DEFAULT_NAME")); // doesn't work for hadoop 1.*
             }
     }
 
@@ -52,6 +55,17 @@ final public class MapReduceEvaluator extends Evaluator {
     /** create a new evaluation configuration */
     final public Configuration new_configuration () {
         return new Configuration();
+    }
+
+    final public static Configuration clear_configuration ( Configuration old_conf ) {
+        Configuration conf = new Configuration();
+        evaluator.init(conf);
+        // keep the current mrql configurations
+        for ( Map.Entry<String,String> entry: old_conf )
+            if (entry.getKey().startsWith("mrql.") && entry.getValue() != null)
+                conf.set(entry.getKey(),entry.getValue());
+        conf.unset("mapred.input.dir.formats");  // need to reset MultipleInputs for local mode
+        return conf;
     }
 
     /** return the FileInputFormat for parsed files (CSV, XML, JSON, etc) */
@@ -200,8 +214,7 @@ final public class MapReduceEvaluator extends Evaluator {
                 DataSet Y = eval(y,env,"-");
                 int n = (int)Math.floor(Math.sqrt(4.0*Config.nodes));
                 int m = n;
-                if (Config.trace)
-                    System.out.println("*** Using a groupBy join on a "+n+"*"+m+" grid of partitions");
+                System.out.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
                 return GroupByJoinPlan.groupByJoin(closure(kx,env),closure(ky,env),
                                                    closure(gx,env),closure(gy,env),
                                                    closure(mp,env),closure(c,env),closure(r,env),

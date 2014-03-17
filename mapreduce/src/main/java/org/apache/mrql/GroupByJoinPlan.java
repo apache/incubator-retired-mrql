@@ -33,25 +33,34 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
  *   A map-reduce job that captures a join with group-by. Similar to matrix multiplication.<br/>
  *   It captures queries of the form:
  * <pre>
- *      select r(kx,ky,c(z))
- *        from x in X, y in Y, z = mp(x,y)
+ *      select r((kx,ky),sum(z))
+ *        from x in X, y in Y, z = (x,y)
  *       where jx(x) = jy(y)
  *       group by (kx,ky): (gx(x),gy(y));
  * </pre>
- *   where: mp: map function, r: reduce function, c: combine function,
- *          jx: left join key function, jy: right join key function,
- *          gx: left group-by function, gy: right group-by function.
+ *   where:<br/>
+ *      jx: left join key function from a to k<br/>
+ *      jy: right join key function from b to k<br/>
+ *      gx: group-by key function from a to k1<br/>
+ *      gy: group-by key function from b to k2<br/>
+ *      sum: a summation from {(a,b)} to c based on the accumulator
+ *           acc from (c,(a,b)) to c with a left zero of type c<br/>
+ *      r: reducer from ((k1,k2),c) to d<br/>
+ *      X: left input of type {a}<br/>
+ *      Y: right input of type {b}<br/>
+ *      It returns a value of type {d}<br/>
  * <br/>
  *   Example: matrix multiplication:
  * <pre>
- *      select ( sum(z), i, j )
- *        from (x,i,k) in X, (y,k,j) in Y, z = x*y
+ *      select ( s(z), i, j )
+ *        from (x,i,k) in X, (y,k,j) in Y, z = (x,y)
  *       group by (i,j);
  * </pre>
+ *   where the summation s is based on the accumulator acc(c,(x,y))=c+x*y and zero=0<br/>
  *   It uses m*n partitions, so that n/m=|X|/|Y| and a hash table of size |X|/n*|Y|/m can fit in memory M.
  *   That is, n = |X|/sqrt(M), m = |Y|/sqrt(M).
  *   Each partition generates |X|/n*|Y|/m data. It replicates X n times and Y m times.
- *   Uses a hash-table H of size |X|/n*|Y|/m
+ *   Uses a hash-table H of size |X|/n*|Y|/m.<br/>
  *   MapReduce pseudo-code:
  * <pre>
  *   mapX ( x )
@@ -74,7 +83,7 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
  *     read x from s first and store it to xs
  *     for each y from the rest of s
  *        for each x in xs
- *            H[(gx(x),gy(y))] = c( H[(gx(x),gy(y))], mp((x,y)) )
+ *            H[(gx(x),gy(y))] = acc( H[(gx(x),gy(y))], (x,y) )
  * </pre>
  *   where flush() is: for each ((kx,ky),v) in H: emit r((kx,ky),v)
  */
@@ -263,13 +272,13 @@ final public class GroupByJoinPlan extends Plan {
         private static int n, m;                  // n*m partitioners
         private static Function left_groupby_fnc; // left group-by function
         private static Function right_groupby_fnc;// right group-by function
-        private static Function map_fnc;          // the map function
-        private static Function combine_fnc;      // the combine function
+        private static Function accumulator_fnc;  // the accumulator function
+        private static MRData zero_value;         // the left zero of the accumulator
         private static Function reduce_fnc;       // the reduce function
         private static Bag left = new Bag();      // a cached bag of input fragments from left input
         private static int current_partition = -1;
         private static Hashtable<MRData,MRData> hashTable;  // in-reducer combiner
-        private static Tuple pair = new Tuple(2);
+        private static Tuple pair = (new Tuple(2)).set(1,new Tuple(2));
         private static MRContainer ckey = new MRContainer(new MR_int(0));
         private static MRContainer cvalue = new MRContainer(new MR_int(0));
         private static MRContainer container = new MRContainer(new MR_int(0));
@@ -292,32 +301,23 @@ final public class GroupByJoinPlan extends Plan {
 
         private void store ( MRData key, MRData value ) throws IOException {
             MRData old = hashTable.get(key);
-            Tuple k = (Tuple)key;
-            pair.set(0,key);
-            for ( MRData e: (Bag)map_fnc.eval(value) )
-                if (old == null)
-                    hashTable.put(key,e);
-                else {
-                    tbag.clear();
-                    tbag.add_element(e).add_element(old);
-                    pair.set(1,tbag);
-                    for ( MRData z: (Bag)combine_fnc.eval(pair) )
-                        hashTable.put(key,z);  // normally, done once
-                }
+            if (old == null)
+                old = zero_value;
+            pair.set(0,old);
+            pair.set(1,value);
+            hashTable.put(key,accumulator_fnc.eval(pair));
         }
 
         protected static void flush_table ( Context context ) throws IOException, InterruptedException {
+            Tuple pair = new Tuple(2);
             Enumeration<MRData> en = hashTable.keys();
             while (en.hasMoreElements()) {
                 MRData key = en.nextElement();
                 MRData value = hashTable.get(key);
                 ckey.set(key);
                 pair.set(0,key);
-                tbag.clear();
-                tbag.add_element(value);
-                pair.set(1,tbag);
-                for ( MRData e: (Bag)reduce_fnc.eval(pair) )
-                    write(ckey,e,context);
+                pair.set(1,value);
+                write(ckey,reduce_fnc.eval(pair),context);
             };
             hashTable.clear();
         }
@@ -363,20 +363,19 @@ final public class GroupByJoinPlan extends Plan {
         protected void setup ( Context context ) throws IOException,InterruptedException {
             super.setup(context);
             try {
-                Configuration conf = context.getConfiguration();
-                Config.read(conf);
-                if (Plan.conf == null)
-                    Plan.conf = conf;
+                conf = context.getConfiguration();
+                Plan.conf = conf;
+                Config.read(Plan.conf);
                 Tree code = Tree.parse(conf.get("mrql.groupby.left"));
                 left_groupby_fnc = functional_argument(conf,code);
                 code = Tree.parse(conf.get("mrql.groupby.right"));
                 right_groupby_fnc = functional_argument(conf,code);
                 m = conf.getInt("mrql.m",1);
                 n = conf.getInt("mrql.n",1);
-                code = Tree.parse(conf.get("mrql.mapper"));
-                map_fnc = functional_argument(conf,code);
-                code = Tree.parse(conf.get("mrql.combiner"));
-                combine_fnc = functional_argument(conf,code);
+                code = Tree.parse(conf.get("mrql.accumulator"));
+                accumulator_fnc = functional_argument(conf,code);
+                code = Tree.parse(conf.get("mrql.zero"));
+                zero_value = Interpreter.evalE(code);
                 code = Tree.parse(conf.get("mrql.reducer"));
                 reduce_fnc = functional_argument(conf,code);
                 counter = conf.get("mrql.counter");
@@ -395,29 +394,30 @@ final public class GroupByJoinPlan extends Plan {
         }
     }
 
-    /** the GroupByJoin operation
-     * @param left_join_key_fnc   left join key function
-     * @param right_join_key_fnc  right join key function
-     * @param left_groupby_fnc    left group-by function
-     * @param right_groupby_fnc   right group-by function
-     * @param map_fnc             map function
-     * @param combine_fnc         combine function
-     * @param reduce_fnc          reduce function
-     * @param X                   left data set
-     * @param Y                   right data set
+    /** the GroupByJoin operation:
+     *      an equi-join combined with a group-by implemented using hashing
+     * @param left_join_key_fnc   left join key function from a to k
+     * @param right_join_key_fnc  right join key function from b to k
+     * @param left_groupby_fnc    left group-by function from a to k1
+     * @param right_groupby_fnc   right group-by function from b to k2
+     * @param accumulator_fnc     accumulator function from (c,(a,b)) to c
+     * @param zero                the left zero of accumulator of type c
+     * @param reduce_fnc          reduce function from ((k1,k2),c) to d
+     * @param X                   left data set of type {a}
+     * @param Y                   right data set of type {b}
      * @param num_reducers        number of reducers
      * @param n                   left dimension of the reducer grid
      * @param m                   right dimension of the reducer grid
      * @param stop_counter        optional counter used in repeat operation
-     * @return a DataSet that contains the result
+     * @return a DataSet that contains the result of type {d}
      */
     public final static DataSet groupByJoin
                  ( Tree left_join_key_fnc,       // left join key function
                    Tree right_join_key_fnc,      // right join key function
                    Tree left_groupby_fnc,        // left group-by function
                    Tree right_groupby_fnc,       // right group-by function
-                   Tree map_fnc,                 // map function
-                   Tree combine_fnc,             // combine function
+                   Tree accumulator_fnc,         // accumulator function
+                   Tree zero,                    // the left zero of accumulator
                    Tree reduce_fnc,              // reduce function
                    DataSet X,                    // left data set
                    DataSet Y,                    // right data set
@@ -425,6 +425,7 @@ final public class GroupByJoinPlan extends Plan {
                    int n, int m,                 // dimensions of the reducer grid
                    String stop_counter )         // optional counter used in repeat operation
               throws Exception {
+        conf = MapReduceEvaluator.clear_configuration(conf);
         String newpath = new_path(conf);
         conf.set("mrql.join.key.left",left_join_key_fnc.toString());
         conf.set("mrql.join.key.right",right_join_key_fnc.toString());
@@ -432,8 +433,8 @@ final public class GroupByJoinPlan extends Plan {
         conf.set("mrql.groupby.right",right_groupby_fnc.toString());
         conf.setInt("mrql.m",m);
         conf.setInt("mrql.n",n);
-        conf.set("mrql.mapper",map_fnc.toString());
-        conf.set("mrql.combiner",combine_fnc.toString());
+        conf.set("mrql.accumulator",accumulator_fnc.toString());
+        conf.set("mrql.zero",zero.toString());
         conf.set("mrql.reducer",reduce_fnc.toString());
         conf.set("mrql.counter",stop_counter);
         Job job = new Job(conf,newpath);

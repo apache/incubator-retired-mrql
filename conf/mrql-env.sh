@@ -52,9 +52,9 @@ JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 HADOOP_VERSION=1.2.1
 # The Hadoop installation directory
 HADOOP_HOME=${HOME}/hadoop-${HADOOP_VERSION}
-# The Hadoop job tracker (as defined in hdfs-site.xml)
+# The Hadoop job tracker (as defined in mapred-site.xml)
 MAPRED_JOB_TRACKER=localhost:9001
-# The HDFS namenode URI (as defined in hdfs-site.xml)
+# The HDFS namenode URI (as defined in core-site.xml)
 FS_DEFAULT_NAME=hdfs://localhost:9000/
 
 
@@ -62,24 +62,35 @@ FS_DEFAULT_NAME=hdfs://localhost:9000/
 HAMA_VERSION=0.6.3
 # The Hadoop installation directory
 HAMA_HOME=${HOME}/hama-${HAMA_VERSION}
-# The Hama configuration as defined in hama-site.xml
+# The Hama configuration (as defined in hama-site.xml)
 BSP_MASTER_ADDRESS=localhost:40000
 HAMA_ZOOKEEPER_QUORUM=localhost
 
 
 # Optional: Spark configuration. Supports versions 0.8.1 and 0.9.0
+# Use either the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
+# Tested in local, standalone deploy, and Yarn modes
 SPARK_HOME=${HOME}/spark-0.9.0-incubating-bin-hadoop1
 # URI of the Spark master node (to run Spark on a YARN cluster, set it to "yarn-client")
 SPARK_MASTER=spark://crete:7077
-# Spark memory per node
-SPARK_MEM="1g"
-
+# For a Yarn cluster set it to the number of workers to start on,
+#  for local/standalone set it to 1
+SPARK_WORKER_INSTANCES=1
+# Number of cores for the workers
+SPARK_WORKER_CORES=2
+# Memory per Worker (e.g. 1000M, 2G)
+SPARK_WORKER_MEMORY=2G
+# Memory for Master (e.g. 1000M, 2G)
+SPARK_MASTER_MEMORY=512M
 
 # Claspaths
 
 HAMA_JAR=${HAMA_HOME}/hama-core-${HAMA_VERSION}.jar
 
-SPARK_JAR=`ls ${SPARK_HOME}/assembly/target/scala-*/*`
+# YARN-enabled assembly jar
+if [[ -d ${SPARK_HOME}/assembly/target ]]; then
+   SPARK_JAR=`ls ${SPARK_HOME}/assembly/target/scala-*/*`
+fi
 
 if [[ -f ${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar ]]; then
    # hadoop 2.x (YARN)

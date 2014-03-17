@@ -61,13 +61,42 @@ public class Interpreter extends TypeInference {
     /** retrieve a global variable binding */
     public static MRData lookup_global_binding ( String v ) {
         for ( Environment env = global_env; env != null; env = env.next )
-            if (v.equals(env.name))
+            if (v.equals(env.name) && env.value != null)
                 return env.value;
-        return null;
+        return lookup_distributed_binding(v);
     }
 
     public static void set_global_bindings ( Environment env ) {
         global_env = env;
+    }
+
+    /** insert a new global variable binding visible to all nodes */
+    public final static void new_distributed_binding ( final String var, final MRData value ) {
+        new_global_binding(var,value);
+        if (Config.hadoop_mode) {   // insert the binding in the hadoop configuration
+            String gvs = Plan.conf.get("mrql.global.vars");
+            if (gvs == null)
+                gvs = "";
+            gvs = var+":"+reify(value)+"@"+gvs;
+            Plan.conf.set("mrql.global.vars",gvs);
+        }
+    }
+
+    /** retrieve a global variable binding available to all nodes */
+    public static MRData lookup_distributed_binding ( String v ) {
+        try {
+            if (Config.hadoop_mode) {   // find the binding in the hadoop configuration
+                String gvs = Plan.conf.get("mrql.global.vars");
+                if (gvs == null)
+                    return null;
+                for ( String s: gvs.split("@") ) {
+                    String[] b = s.split(":");
+                    if (b.length == 2 && b[0].equals(v))
+                        return evalE(Tree.parse(b[1]));
+                }
+            }
+        } catch (Exception ex) {};
+        return null;
     }
 
     final static int coerce_method = ClassImporter.find_method_number("coerce",#[any,int]);
@@ -86,6 +115,9 @@ public class Interpreter extends TypeInference {
             for ( short i = 0; i < t.size(); i++ )
                 as = as.append(reify(t.get(i)));
             return #<tuple(...as)>;
+        } else if (x instanceof Union) {
+            Union u = (Union)x;
+            return #<tagged_union(`(u.tag()),`(reify(u.value())))>;
         } else if (x instanceof MR_string)
             return new StringLeaf(((MR_string)x).get());
         else if (x instanceof MR_short)
@@ -239,24 +271,35 @@ public class Interpreter extends TypeInference {
         case repeat(lambda(`v,`b),`s,`n):
             final String nm = v.toString();
             final Tree body = b;
-            if (Config.hadoop_mode) {
-                Function loop_fnc = new Function () {
-                        public MRData eval ( MRData s ) {
-                            new_global_binding(nm,s);
-                            MRData val = new MR_dataset(Evaluator.evaluator.eval(body,new Environment(nm,s,env),nm));
-                            return val;
-                        }; };
-                return MapReduceAlgebra.repeat(loop_fnc,(Bag)evalE(s,env),((MR_int)evalE(n,env)).get());
-            } else {
-                Function loop_fnc = new Function () {
-                        public MRData eval ( MRData s ) {
-                            new_global_binding(nm,s);
-                            return evalM(body,new Environment(nm,s,env));
-                        }; };
-                return MapReduceAlgebra.repeat(loop_fnc,(Bag)evalE(s,env),((MR_int)evalE(n,env)).get());
-            }
-        case repeat(`lm,`s,`n):
-            return MapReduceAlgebra.repeat(evalF(lm,env),(Bag)evalE(s,env),((MR_int)evalE(n,env)).get());
+            Function loop_fnc = new Function () {
+                    public MRData eval ( MRData s ) {
+                        new_distributed_binding(nm,s);
+                        return evalE(body,new Environment(nm,s,env));
+                    }; };
+            return MapReduceAlgebra.repeat(loop_fnc,(Bag)evalE(s,env),((MR_int)evalE(n,env)).get());
+        case closure(lambda(`v,`b),`s,`n):
+            final String nm = v.toString();
+            final Tree body = b;
+            Function loop_fnc = new Function () {
+                    public MRData eval ( MRData s ) {
+                        new_distributed_binding(nm,s);
+                        return evalE(body,new Environment(nm,s,env));
+                    }; };
+            return MapReduceAlgebra.closure(loop_fnc,(Bag)evalE(s,env),((MR_int)evalE(n,env)).get());
+        case loop(lambda(tuple(...vs),`b),`s,`n):
+            final Trees nvs = vs;
+            final Tree body = b;
+            Function loop_fnc = new Function () {
+                    public MRData eval ( MRData s ) {
+                        Tuple t = (Tuple)s;
+                        Environment nenv = env;
+                        for ( int i = 0; i < nvs.length(); i++ ) {
+                            new_distributed_binding(nvs.nth(i).toString(),t.get(i));
+                            nenv = new Environment(nvs.nth(i).toString(),t.get(i),nenv);
+                        };
+                        return evalE(body,nenv);
+                    }; };
+            return MapReduceAlgebra.loop(loop_fnc,(Tuple)evalE(s,env),((MR_int)evalE(n,env)).get());
         case range(`min,`max):
             return MapReduceAlgebra.generator(((MR_long)evalE(min,env)).get(),
                                               ((MR_long)evalE(max,env)).get());
@@ -399,9 +442,9 @@ public class Interpreter extends TypeInference {
             if (Config.hadoop_mode)
                 return Evaluator.evaluator.aggregate(closure(acc,env),zero,s,env);
             else return MapReduceAlgebra.aggregate(evalF(acc,env),evalE(zero,env),evalM(s,env));
-        case mergeGroupByJoin(`kx,`ky,`gx,`gy,`m,`c,`r,`x,`y,`o):
+        case mergeGroupByJoin(`kx,`ky,`gx,`gy,`acc,`zero,`r,`x,`y,`o):
             return MapReduceAlgebra.mergeGroupByJoin(evalF(kx,env),evalF(ky,env),evalF(gx,env),evalF(gy,env),
-                                                     evalF(m,env),evalF(c,env),evalF(r,env),
+                                                     evalF(acc,env),evalE(zero,env),evalF(r,env),
                                                      (Bag)evalE(x,env),(Bag)evalE(y,env));
         case BSP(tuple(...ns),`superstep,`state,`o,...as):
             if (Config.hadoop_mode)
@@ -576,14 +619,14 @@ public class Interpreter extends TypeInference {
             case MapAggregateJoin(`kx,`ky,`r,`acc,`zero,`x,`y):
                 return new Bag(MapReduceAlgebra.aggregate(evalF(acc,env),evalE(zero,env),
                                                           evalM(#<MapJoin(`kx,`ky,`r,`x,`y)>,env)));
-            case GroupByJoin(`kx,`ky,`gx,`gy,`m,`c,`r,`x,`y,`o):
+            case GroupByJoin(`kx,`ky,`gx,`gy,`acc,`zero,`r,`x,`y,`o):
                 return MapReduceAlgebra.groupByJoin(
                                 evalF(kx,env),
                                 evalF(ky,env),
                                 evalF(gx,env),
                                 evalF(gy,env),
-                                evalF(m,env),
-                                evalF(c,env),
+                                evalF(acc,env),
+                                evalE(zero,env),
                                 evalF(r,env),
                                 evalM(x,env),
                                 evalM(y,env));
@@ -707,40 +750,10 @@ public class Interpreter extends TypeInference {
         }
     }
 
-    /** replace all non-free variables with their reified values */
     private final static Tree closure ( Tree e, Environment env, Trees local_vars ) {
-        match e {
-        case lambda(`x,`b):
-            return #<lambda(`x,`(closure(b,env,local_vars.cons(x))))>;
-        case apply(`f,...as):
-            Trees bs = #[];
-            for (Tree a: as)
-                bs = bs.append(closure(a,env,local_vars));
-            return #<apply(`f,...bs)>;
-        case `f(...as):
-            Trees bs = #[];
-            for (Tree a: as)
-                bs = bs.append(closure(a,env,local_vars));
-            return #<`f(...bs)>;
-        case null: return null;
-        case `v:
-            if (!v.is_variable())
-                fail;
-            if (local_vars.member(v))
-                fail;
-            MRData x = variable_lookup(v.toString(),env);
-            if (x != null)
-                if (!(x instanceof MR_dataset))
-                    return reify(x);
-            x = lookup_global_binding(v.toString());
-            if (x != null)
-                if (!(x instanceof MR_dataset))
-                    return reify(x);
-        };
         return e;
     }
 
-    /** replace all non-free variables with their reified values */
     final static Tree closure ( Tree e, Environment env ) {
         return closure(e,env,#[]);
     }

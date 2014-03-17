@@ -34,9 +34,9 @@ final public class Compiler extends Translator {
     static DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
     final static String tmp_dir = "/tmp/mrql_jar_"+System.getProperty("user.name");
     public static String jar_path;
-    static Trees in_memory_repeat_vars = #[];
     static int lambda_num = 0;
     static int user_functions_num = 0;
+    static Trees compiled_lambdas = #[ ];
 
     /** Compile the MRQL functional arguments into Java bytecode */
     final private static class JavaSourceFromString extends SimpleJavaFileObject {
@@ -93,23 +93,31 @@ final public class Compiler extends Translator {
     }
 
     public static void clean () throws IOException {
-        in_memory_repeat_vars = #[];
         remove(new File(tmp_dir));
     }
 
     final private static Tree compile ( Tree e, StringBuffer out ) throws Exception {
         match e {
-        case repeat(lambda(`v,`body),`s,`n):
-            in_memory_repeat_vars = in_memory_repeat_vars.cons(v);
-            return #<repeat(lambda(`v,`(compile(body,out))),`(compile(s,out)),`n)>;
         case `f(...al):
             if (!plans_with_distributed_lambdas.member(#<`f>))
                 fail;
             Trees nl = #[];
             for ( Tree a: al)
                 match Interpreter.closure(a,Interpreter.global_env) {
+                case compiled(`fname,lambda(`v,`body)):
+                    if (compiled_lambdas.member(fname))
+                        fail;
+                    compiled_lambdas = compiled_lambdas.append(fname);
+                    StringBuffer sb = new StringBuffer(1000);
+                    sb.append("final class "+fname+" extends Function {\n");
+                    sb.append(fname+" () {}\n");
+                    sb.append("final public MRData eval ( final MRData "+v
+                              +" ) { return "+compileE(body)+"; }\n}\n");
+                    out.append(sb);
+                    nl = nl.append(#<compiled(`fname,lambda(`v,`body))>);
                 case lambda(`v,`body):
                     String fname = new_lambda_name();
+                    compiled_lambdas = compiled_lambdas.append(#<`fname>);
                     StringBuffer sb = new StringBuffer(1000);
                     sb.append("final class "+fname+" extends Function {\n");
                     sb.append(fname+" () {}\n");
@@ -129,6 +137,22 @@ final public class Compiler extends Translator {
         return e;
     }
 
+    private static boolean is_persistent_type ( Tree tp ) {
+        match tp {
+        case `T(`t):
+            return is_persistent_collection(T.toString());
+        case `f(...ts):
+            for ( Tree t: ts )
+                if (is_persistent_type(t))
+                    return true;
+        case `v:
+            Tree vt = TypeInference.expand(v);
+            if (!v.equals(vt))
+                return is_persistent_type(vt);
+        };
+        return false;
+    }
+
     private static StringBuffer out;
 
     /** compile the functional arguments of the MRQL operators using the Java compiler
@@ -137,6 +161,7 @@ final public class Compiler extends Translator {
      */
     final public static Tree compile ( Tree query ) {
         try {
+            compiled_lambdas = #[ ];
             user_functions_num = lambda_num++;
             // remove the old jar
             if (jar_path != null)
@@ -149,6 +174,10 @@ final public class Compiler extends Translator {
             for ( String f: global_functions )
                 match global_functions.lookup(f) {
                 case function(tuple(...params),`otp,`body):
+                    if (is_persistent_type(otp)) {
+                        compile(body,out);  // incorporate compiled arguments but ignore body
+                        fail
+                    };
                     sb.append("final public static "+get_MR_type(otp)+" "+f);
                     if (params.is_empty())
                         sb.append(" ()");
@@ -254,7 +283,7 @@ final public class Compiler extends Translator {
     /** lambda lifting: generate Java code from an anonymous function */
     private static String compilef ( String v, Tree body ) throws Exception {
         String fname = new_lambda_name();
-        Trees free_vars = remove_duplicates(free_variables(body,#[`v]));
+        Trees free_vars = remove_duplicates(free_variables(body,#[`v,...repeat_variables]));
         StringBuffer sb = new StringBuffer(1000);
         sb.append("final class "+fname+" extends Function {\n");
         for ( Tree var: free_vars )
@@ -293,6 +322,10 @@ final public class Compiler extends Translator {
             ((Node)fnc).children().head = new VariableLeaf(s.substring(4,s.indexOf("(")));  //destructive
             return s;
         case function(tuple(...params),`tp,`body):
+            if (is_persistent_type(tp)) {
+                compileE(body);
+                return "";
+            };
             String ret = "new Lambda(new Function () { "
                          +"final public MRData eval ( final MRData _x ) { ";
             for ( int i = 0; i < params.length(); i++ )
@@ -324,7 +357,7 @@ final public class Compiler extends Translator {
         else if (e.equals(#<null>))
             return "(new MR_byte(0))";
         else if (e.is_variable())
-            if (in_memory_repeat_vars.member(e))
+            if (global_type_env.lookup(e.toString()) != null || repeat_variables.member(e))
                 return "Interpreter.lookup_global_binding(\""+e.toString()+"\")";
             else return e.toString();
         else if (e.is_long())
@@ -440,10 +473,16 @@ final public class Compiler extends Translator {
             return "MapReduceAlgebra.aggregate("+compileF(acc)+","+compileE(zero)+",(Bag)("+compileE(s)+"))";
         case Aggregate(`acc,`zero,`s):
             return "MapReducePlan.aggregate("+compileF(acc)+","+compileE(zero)+","+compileM(s)+")";
-        case mergeGroupByJoin(`kx,`ky,`gx,`gy,`m,`c,`r,`x,`y,`o):
+        case mergeGroupByJoin(`kx,`ky,`gx,`gy,`acc,`zero,`r,`x,`y,`o):
             return "MapReduceAlgebra.mergeGroupByJoin("+compileF(kx)+","+compileF(ky)
-                   +","+compileF(gx)+","+compileF(gy)+","+compileF(m)+","+compileF(c)
+                   +","+compileF(gx)+","+compileF(gy)+","+compileF(acc)+","+compileE(zero)
                    +","+compileF(r)+",(Bag)"+compileE(x)+",(Bag)"+compileE(y)+")";
+        case loop(lambda(tuple(...vs),`b),`s,`n):
+            String fs = "new Function () { final public MRData eval ( final MRData _x ) { ";
+            for ( int i = 0; i < vs.length(); i++ )
+                fs += "final MRData "+vs.nth(i)+" = ((Tuple)_x).get("+i+"); ";
+            return "MapReduceAlgebra.loop("+fs+"return "+compileE(b)+";}},(Tuple)("+compileE(s)
+                   +"),"+((LongLeaf)n).value()+")";
         case function(tuple(...params),`tp,`body):
             return compileF(e);
         case typed(`x,_):
@@ -453,6 +492,8 @@ final public class Compiler extends Translator {
                 fail;
             match global_functions.lookup(f.toString()) {
             case function(tuple(...params),`otp,`body):
+                if (is_persistent_type(otp))
+                    fail;
                 String ret = "UserFunctions_"+user_functions_num+"."+f+"(";
                 if (args.is_empty())
                     return ret+")";
@@ -468,6 +509,8 @@ final public class Compiler extends Translator {
                 fail;
             match global_functions.lookup(f.toString()) {
             case function(tuple(...params),`otp,`body):
+                if (is_persistent_type(otp))
+                    fail;
                 String ac = compileE(arg);
                 String ret = "UserFunctions_"+user_functions_num+"."+f+"(";
                 for ( int i = 0; i < params.length(); i++ )
@@ -522,9 +565,9 @@ final public class Compiler extends Translator {
         case MapAggregateJoin(`kx,`ky,`r,`acc,`zero,`x,`y):
             return "new Bag(MapReduceAlgebra.aggregate("+compileF(acc)
                    +","+compileE(zero)+","+compileM(#<MapJoin(`kx,`ky,`r,`x,`y)>)+"))";
-        case GroupByJoin(`kx,`ky,`gx,`gy,`m,`c,`r,`x,`y,`o):
+        case GroupByJoin(`kx,`ky,`gx,`gy,`acc,`zero,`r,`x,`y,`o):
             return "MapReduceAlgebra.groupByJoin("+compileF(kx)+","+compileF(ky)
-                   +","+compileF(gx)+","+compileF(gy)+","+compileF(m)+","+compileF(c)
+                   +","+compileF(gx)+","+compileF(gy)+","+compileF(acc)+","+compileE(zero)
                    +","+compileF(r)+",(Bag)"+compileM(x)+",(Bag)"+compileM(y)+")";
         case CrossProduct(`mx,`my,`r,`x,`y):
             return "MapReduceAlgebra.crossProduct("+compileF(mx)+","+compileF(my)

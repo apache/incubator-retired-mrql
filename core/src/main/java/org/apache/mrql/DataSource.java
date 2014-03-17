@@ -90,7 +90,6 @@ public class DataSource {
             Path p = new Path(path);
             FileSystem fs = p.getFileSystem(conf);
             String complete_path = fs.getFileStatus(p).getPath().toString();
-            //String complete_path = "file:"+path;
             this.path = complete_path;
             dataSourceDirectory.put(this.path,this);
         } catch (IOException e) {
@@ -134,6 +133,7 @@ public class DataSource {
         try {
             String[] s = buffer.split(separator);
             int n = Integer.parseInt(s[1]);
+            Main.initialize();            // the worker node may not have initialized MRQL
             if (s[0].equals("Binary"))
                 return new BinaryDataSource(n,s[2],conf);
             else if (s[0].equals("Generator"))

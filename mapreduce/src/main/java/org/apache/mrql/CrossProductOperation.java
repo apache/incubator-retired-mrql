@@ -133,10 +133,9 @@ final public class CrossProductOperation extends MapReducePlan {
         protected void setup ( Context context ) throws IOException,InterruptedException {
             super.setup(context);
             try {
-                Configuration conf = context.getConfiguration();
-                Config.read(conf);
-                if (Plan.conf == null)
-                    Plan.conf = conf;
+                conf = context.getConfiguration();
+                Plan.conf = conf;
+                Config.read(Plan.conf);
                 Tree code = Tree.parse(conf.get("mrql.reducer"));
                 reduce_fnc = functional_argument(conf,code);
                 code = Tree.parse(conf.get("mrql.mapper"));
@@ -200,6 +199,7 @@ final public class CrossProductOperation extends MapReducePlan {
                                                String stop_counter ) // optional counter used in repeat operation
                                  throws Exception {
         DataSet ds = MapOperation.cMap(my,null,null,Y,"-");
+        conf = MapReduceEvaluator.clear_configuration(conf);
         String newpath = new_path(conf);
         conf.set("mrql.reducer",reduce_fnc.toString());
         conf.set("mrql.mapper",mx.toString());

@@ -35,7 +35,7 @@ public class BSPTranslator extends TypeInference {
     final static int coerceM = ClassImporter.find_method_number("coerce",#[any,int]);
 
     final static Trees planNames = plans_with_distributed_lambdas
-                     .append(#[ParsedSource,Generator,BinarySource,GroupByJoin,Repeat,Closure,repeat]);
+        .append(#[ParsedSource,Generator,BinarySource,GroupByJoin,Repeat,Closure,repeat]);
 
     private static int source_num = 0;
 
@@ -103,8 +103,8 @@ public class BSPTranslator extends TypeInference {
             return #<CrossAggregateProduct(`mx,`my,`r,`acc,`zero,
                                            `(new_source(x)),
                                            `(new_source(y)))>;
-        case GroupByJoin(`kx,`ky,`gx,`gy,`mr,`c,`r,`x,`y,`o):
-            return #<GroupByJoin(`kx,`ky,`gx,`gy,`mr,`c,`r,
+        case GroupByJoin(`kx,`ky,`gx,`gy,`acc,`z,`r,`x,`y,`o):
+            return #<GroupByJoin(`kx,`ky,`gx,`gy,`acc,`z,`r,
                                  `(new_source(x)),
                                  `(new_source(y)),`o)>;
         case Repeat(`f,`ds,`max):
@@ -129,6 +129,8 @@ public class BSPTranslator extends TypeInference {
     /** returns the source num of a BSP operation */
     private static int source_num ( Tree e ) {
         match e {
+        case BSP(tuple(`i,...),...):
+            return (int)((LongLeaf)i).value();
         case BSP(`i,...):
             return (int)((LongLeaf)i).value();
         case BSPSource(`i,_):
@@ -170,7 +172,7 @@ public class BSPTranslator extends TypeInference {
     private static Tree set_cache_num ( Tree e, int n ) {
         match e {
         case BSP(`m,...r):
-            return subst_setCache_num((int)((LongLeaf)m).value(),n,#<BSP(`n,...r)>);
+            return subst_setCache_num(source_num(e),n,#<BSP(`n,...r)>);
         case BSPSource(_,`x):
             return #<BSPSource(`n,`x)>;
         };
@@ -435,10 +437,10 @@ public class BSPTranslator extends TypeInference {
             return mr2bsp(#<MapAggregateReduce2(`mx,`my,
                                                 lambda(tuple(xs,ys),cmap(lambda(x,apply(`r,tuple(x,ys))),xs)),
                                                 `acc,`zero,`x,`y)>);
-        case GroupByJoin(`kx,`ky,lambda(`vx,`gx),lambda(`vy,`gy),`mr,`c,`r,`x,`y,`o):
-            int n = 8;
-            int m = 8;
-            System.err.println("*** Using a groupBy join on a "+n+"*"+m+" grid of partitions");
+        case GroupByJoin(`kx,`ky,lambda(`vx,`gx),lambda(`vy,`gy),`acc,`zero,`r,`x,`y,`o):
+            int n = (int)Math.floor(Math.sqrt(4.0*Config.nodes));
+            int m = n;
+            System.out.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
             Tree xkey = #<cmap(lambda(i,bag(tuple(call(plus,call(mod,call(hash_code,`gx),`m),call(times,`m,i)),
                                                   tuple(1,call(plus,call(mod,call(hash_code,`gx),`m),call(times,`m,i)),`vx)))),
                                range(0,`(n-1)))>;
@@ -457,7 +459,7 @@ public class BSPTranslator extends TypeInference {
                                             false,
                                             FALSE()),
                                       setCache(cache,o_,
-                                               mergeGroupByJoin(`kx,`ky,lambda(`vx,`gx),lambda(`vy,`gy),`mr,`c,`r,
+                                               mergeGroupByJoin(`kx,`ky,lambda(`vx,`gx),lambda(`vy,`gy),`acc,`zero,`r,
                                                       cmap(lambda(tuple(kx,p,x),
                                                                   if(callM(eq,`eqM,kx,1),bag(tuple(p,x)),bag())),ms),
                                                       cmap(lambda(tuple(ky,p,y),
@@ -539,6 +541,8 @@ public class BSPTranslator extends TypeInference {
             }
         // when the repeat variable is in memory
         case repeat(lambda(`v,`b),`ds,`max):
+            if (!Config.hadoop_mode)
+                fail;
             Tree step = bspSimplify(mr2bsp(b));
             int step_cache_num = source_num(step);
             step = subst(v,#<map(lambda(tuple(x,b),x),getCache(cache,`step_cache_num))>,step);
@@ -556,7 +560,7 @@ public class BSPTranslator extends TypeInference {
                                               if(step_end,   // end of repeat step
                                                  setCache(cache,o_,map(lambda(tuple(x,b),x),getCache(cache,`step_cache_num)),
                                                     setCache(cache,`step_cache_num,
-                                                        distribute(peer,getCache(cache,`step_cache_num)),
+                                                             distribute(peer,getCache(cache,`step_cache_num)),
                                                              tuple(bag(),
                                                                    tuple(`k0,callM(plus,`plusM,steps,1),false,bag()),
                                                                    if(callM(gt,`gtM,steps,`max),
@@ -571,7 +575,7 @@ public class BSPTranslator extends TypeInference {
                                   #<false>,
                                   sources);
                 return #<Collect(`res)>;   // must return a memory bag
-            case `x: throw new Error("Cannot compile the repeat function: "+x);
+            case `x: fail
             }
         case Closure(lambda(`v,`b),`ds,`max):
             Tree step = bspSimplify(mr2bsp(b));
@@ -618,16 +622,18 @@ public class BSPTranslator extends TypeInference {
             Tree[] k = new Tree[vs.length()];
             Trees sources = #[];
             Trees all_cache = #[];
+            boolean dont_fuse = false;
             for ( int i = 0; i < vs.length(); i++ ) {
                 inits[i] = mr2bsp(ss.nth(i));
                 sources = sources.append(inits[i]);
                 cache_num[i] = source_num(inits[i]);
                 all_cache = all_cache.append(#<getCache(cache,`(cache_num[i]))>);
             };
-            for ( int i = 0; i < vs.length(); i++ )
-                match bspSimplify(mr2bsp(bs.nth(i))) {
+            for ( int i = 0; i < vs.length(); i++ ) {
+                Tree ee = bspSimplify(mr2bsp(bs.nth(i)));
+                match ee {
                 case BSP(`n,`s,`k0,_,...as):
-                    steps[i] = subst_setCache_num((int)((LongLeaf)n).value(),cache_num[i],s);
+                    steps[i] = subst_setCache_num(source_num(ee),cache_num[i],s);
                     k[i] = k0;
                     loop: for ( Tree x: as )
                         match x {
@@ -636,21 +642,24 @@ public class BSPTranslator extends TypeInference {
                                 fail;
                             for ( int j = 0; j < vs.length(); j++ )
                                 if (w.equals(vs.nth(j)))
-                                    steps[i] = subst_getCache_num((int)((LongLeaf)m).value(),cache_num[j],steps[i]);
+                                    steps[i] = subst_getCache_num(source_num(x),cache_num[j],steps[i]);
                         case BSPSource(`n1,`d1):
                             for ( Tree y: sources )
                                 match y {
                                 case BSPSource(`n2,`d2):
                                     if (d1.equals(d2)) {
-                                        steps[i] = subst_getCache_num((int)((LongLeaf)n1).value(),
-                                                                      (int)((LongLeaf)n2).value(),steps[i]);
+                                        steps[i] = subst_getCache_num(source_num(x),source_num(y),steps[i]);
                                         continue loop;
                                     }
                                 };
                             sources = sources.append(x);
                         case _: sources = sources.append(x);
                         };
-                };
+                case _: dont_fuse = true;
+                }
+            };
+            if (dont_fuse)
+                fail;
             Tree code = #<tuple(BAG(),tuple(`(k[0]),0,1),TRUE())>;
             for ( int i = 0; i < vs.length(); i++ )
                 code = #<if(callM(eq,`eqM,i,`i),
@@ -693,15 +702,24 @@ public class BSPTranslator extends TypeInference {
                         match y {
                         case BSPSource(`n2,`d2):
                             if (d1.equals(d2)) {
-                                s1 = subst_getCache_num((int)((LongLeaf)n1).value(),
-                                                        (int)((LongLeaf)n2).value(),s1);
+                                s1 = subst_getCache_num(source_num(x),source_num(y),s1);
                                 continue loop;
                             }
                         };
                     ns = ns.append(x);
                 case _: ns = ns.append(x);
                 };
-            return bspSimplify(mkBSPL((int)((LongLeaf)n).value(),
+            int[] nvs = null;
+            match n {
+            case `f(...as):
+                nvs = new int[as.length()];
+                for ( int i = 0; i < as.length(); i++ )
+                    nvs[i] = (int)((LongLeaf)as.nth(i)).value();
+            case _:
+                nvs = new int[1];
+                nvs[0] = (int)((LongLeaf)n).value();
+            };
+            return bspSimplify(mkBSPL(nvs,
                                       #<lambda(tuple(cache,ms,tuple(first,k),peer),
                                                if(first,
                                                   let(tuple(ts,kk,b),apply(`s1,tuple(cache,ms,k,peer)),

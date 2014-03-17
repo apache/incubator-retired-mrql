@@ -27,8 +27,6 @@ import org.apache.hadoop.fs.Path;
 
 /** MRQL configuration parameters */
 final public class Config {
-    public static boolean loaded = false;
-
     // true for using Hadoop HDFS file-system
     public static boolean hadoop_mode = false;
     // true for local execution (one node)
@@ -117,9 +115,6 @@ final public class Config {
 
     /** load the configuration parameters */
     public static void read ( Configuration conf ) {
-        if (loaded)
-            return;
-        loaded = true;
         hadoop_mode = conf.getBoolean("mrql.hadoop.mode",hadoop_mode);
         local_mode = conf.getBoolean("mrql.local.mode",local_mode);
         distributed_mode = conf.getBoolean("mrql.distributed.mode",distributed_mode);
@@ -271,7 +266,7 @@ final public class Config {
         Bag b = new Bag();
         for ( String s: extra_args )
             b.add(new MR_string(s));
-        Interpreter.new_global_binding(new VariableLeaf("args").value(),b);
+        Interpreter.new_distributed_binding(new VariableLeaf("args").value(),b);
         return b;
     }
 }

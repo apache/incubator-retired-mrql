@@ -57,6 +57,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
     final static String scanner_jar = Scanner.class.getProtectionDomain().getCodeSource().getLocation().toString();
     static String data_source_directory;
     final static Bag empty_bag = new Bag();
+    static Broadcast<String> data_source_directory_b;
 
     /** initialize the Spark evaluator */
     final public void init ( Configuration conf ) {
@@ -129,25 +130,39 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
         PrintStream ps = new PrintStream(fs.create(path,true));
         ps.println(Plan.conf.get("mrql.data.source.directory"));
         ps.close();
+        data_source_directory_b = spark_context.broadcast(data_source_directory);
     }
+
+    // a tmp file used to hold the data source directory information
+    final static String data_source_dir_name = "/tmp/"+System.getenv("USER")+"_data_source_dir.txt";
 
     /** executed by a worker when reading parsed input (see SparkParsedInputFormat) */
     public static void load_source_dir () throws IOException {
-        if (Config.local_mode)
-            return;
         if (Plan.conf == null) {
             if (evaluator == null)
                 evaluator = new SparkEvaluator();
             Plan.conf = evaluator.new_configuration();
+            Config.read(Plan.conf);
         };
-        // the name of the file that contains the source directory details is passed
-        //   to workers through the HashMap environment in the JavaSparkContext
-        Path path = new Path(System.getenv("mrql.data.source.directory"));
+        if (Config.local_mode)
+            return;
+        // the name of the file that contains the source directory details is broadcast to workers
+        if (data_source_directory_b != null)
+            data_source_directory = data_source_directory_b.value();
+        else data_source_directory = data_source_dir_name;
+        Path path = new Path(data_source_directory);
         FileSystem fs = path.getFileSystem(Plan.conf);
         BufferedReader ftp = new BufferedReader(new InputStreamReader(fs.open(path)));
         Plan.conf.set("mrql.data.source.directory",ftp.readLine());
         DataSource.dataSourceDirectory.read(Plan.conf);
         ftp.close();
+        if (data_source_directory_b != null) {
+            path = new Path(data_source_dir_name);
+            fs = path.getFileSystem(Plan.conf);
+            PrintStream ps = new PrintStream(fs.create(path,true));
+            ps.println(Plan.conf.get("mrql.data.source.directory"));
+            ps.close();
+        }
     }
 
     /** dump MRQL data into a sequence file */
@@ -264,7 +279,10 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                 for ( int i = 0; i < vs.length(); i ++ )
                     s[i] = new MR_rdd(eval(bs.nth(i),nenv));
             };
-            return new Tuple(s);
+            Tuple t = new Tuple(vs.length());
+            for ( int i = 0; i < vs.length(); i++ )
+                t.set(i,bag(s[i].rdd()));
+            return t;
         };
         throw new Error("Wrong Loop format");
     }
@@ -327,7 +345,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                                 final Environment env,
                                 final String counter ) {
         JavaRDD<MRData> rd = eval(e,env);
-        int count = 0;
+        long count = 0;
         if (!counter.equals("-")) {
             final Accumulator<Integer> c = spark_context.intAccumulator(0);
             rd = rd.cache();
@@ -340,7 +358,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
             count = c.value();
             rd = rd.map(get_first);
         };
-        return new DataSet(new RDDDataSource(rd),count,0);
+        return new DataSet(new RDDDataSource(rd),count,rd.count());
     }
 
     /** Evaluate an MRQL physical plan using Spark and print tracing info
@@ -537,17 +555,16 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                                 return (Bag)fr.eval(new Tuple(bag(value._2._1),bag(value._2._2)));
                             }
                         });
-            case GroupByJoin(`kx,`ky,`gx,`gy,`mp,`c,`r,`x,`y,`o):
+            case GroupByJoin(`kx,`ky,`gx,`gy,`acc,`zero,`r,`x,`y,`o):
                 final int n = (int)Math.floor(Math.sqrt(4.0*Config.nodes));
                 final int m = n;
-                if (Config.trace)
-                    System.out.println("*** Using a groupBy join on a "+n+"*"+m+" grid of partitions");
+                System.out.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
                 final org.apache.mrql.Function fkx = evalF(kx,env);
                 final org.apache.mrql.Function fky = evalF(ky,env);
                 final org.apache.mrql.Function fgx = evalF(gx,env);
                 final org.apache.mrql.Function fgy = evalF(gy,env);
-                final org.apache.mrql.Function fm = evalF(mp,env);
-                final org.apache.mrql.Function fc = evalF(c,env);
+                final org.apache.mrql.Function fc = evalF(acc,env);
+                final MRData z = evalE(zero,env);
                 final org.apache.mrql.Function fr = evalF(r,env);
                 final MRData one = new MR_byte(1);
                 final MRData two = new MR_byte(2);
@@ -607,7 +624,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                                     else yb.add(new Tuple(t._1,p.second()));
                                 }
                             };
-                            final Bag b = MapReduceAlgebra.mergeGroupByJoin(fkx,fky,fgx,fgy,fm,fc,fr,xb,yb);
+                            final Bag b = MapReduceAlgebra.mergeGroupByJoin(fkx,fky,fgx,fgy,fc,z,fr,xb,yb);
                             xb = null; yb = null;
                             return new Iterable<MRData>() {
                                 public Iterator<MRData> iterator() {
@@ -696,7 +713,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                                        });
                     i++;
                     cont = true_results > 0 && i <= max_num;
-                    System.err.println("*** Repeat #"+i+": "+true_results+" true results");
+                    System.out.println("Repeat #"+i+": "+true_results+" true results");
                 } while (cont);
                 return res;
             case Closure(lambda(`v,`b),`s,`m):
@@ -711,7 +728,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                     old = n;
                     n = res.count();
                     i++;
-                    System.err.println("*** Repeat #"+i+": "+(old-n)+" new records");
+                    System.out.println("Repeat #"+i+": "+(old-n)+" new records");
                 } while (old < n && i <= max_num);
                 return res;
             case Generator(`min,`max,`size):
@@ -734,16 +751,25 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                 if (((MR_bool)evalE(c,env)).get())
                     return eval(x,env);
                 else return eval(y,env);
+            case apply(`f,`arg):
+                MRData x = evalE(e,env);
+                if (x instanceof MR_dataset)
+                    return ((RDDDataSource)((MR_dataset)x).dataset().source.get(0)).rdd;
+                throw new Error("Expected an RDD dataset: "+x);
             case `v:
                 if (!v.is_variable())
                     fail;
                 MRData x = variable_lookup(v.toString(),env);
                 if (x != null)
-                    if (x instanceof MR_rdd)
+                    if (x instanceof MR_dataset)
+                        return ((RDDDataSource)((MR_dataset)x).dataset().source.get(0)).rdd;
+                    else if (x instanceof MR_rdd)
                         return ((MR_rdd)x).rdd();
                 x = variable_lookup(v.toString(),global_env);
                 if (x != null)
-                    if (x instanceof MR_rdd)
+                    if (x instanceof MR_dataset)
+                        return ((RDDDataSource)((MR_dataset)x).dataset().source.get(0)).rdd;
+                    else if (x instanceof MR_rdd)
                         return ((MR_rdd)x).rdd();
                 throw new Error("Variable "+v+" is not bound");
             };

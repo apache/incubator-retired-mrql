@@ -313,7 +313,7 @@ public class TypeInference extends Translator {
         }
     }   
 
-    /** pure-mans type-unification (the any type unifies with everything) */
+    /** poor-man's type-unification (the any type unifies with everything) */
     private static Trees unify ( Trees ts1, Trees ts2 ) {
         Trees s = #[];
         if (ts1.length() != ts2.length())
@@ -327,7 +327,7 @@ public class TypeInference extends Translator {
         return s;
     }
 
-    /** pure-mans type-unification (the any type unifies with everything) */
+    /** poor-man's type-unification (the any type unifies with everything) */
     public static Tree unify ( Tree t1, Tree t2 ) {
         t1 = expand(t1);
         t2 = expand(t2);
@@ -358,6 +358,49 @@ public class TypeInference extends Translator {
         return null;
     }
 
+    /** similar to unify, but it returns the second type instantiated */
+    private static Trees subtype_unify ( Trees ts1, Trees ts2 ) {
+        Trees s = #[];
+        if (ts1.length() != ts2.length())
+            return null;
+        for ( Trees s1 = ts1, s2 = ts2; !s1.is_empty(); s1=s1.tail(), s2=s2.tail() ) {
+            Tree t = subtype_unify(s1.head(),s2.head());
+            if (t == null)
+                return null;
+            else s = s.append(t);
+        };
+        return s;
+    }
+
+    /** similar to unify, but it returns the second type instantiated */
+    public static Tree subtype_unify ( Tree t1, Tree t2 ) {
+        t1 = expand(t1);
+        t2 = expand(t2);
+        if (t1.equals(#<any>))
+            return t2;
+        if (t2.equals(#<any>) || equal_types(t1,t2))
+            return t1;
+        match t1 {
+        case `T(`t):
+            match t2 {
+            case `S(`s):
+                if (!is_collection(T))
+                    fail;
+                Tree ts = subtype_unify(t,s);
+                if (ts != null)
+                    return #<`T(`ts)>;
+            }
+        case `f(...ts1):
+            match t2 {
+            case `g(...ts2):
+                Trees s = subtype_unify(ts1,ts2);
+                if (f.equals(g) && s != null)
+                    return #<`f(...s)>;
+            }
+        };
+        return null;
+    }
+
     /** if the types tx and ty do not unify, try to coerce them */
     static Tree unify ( Tree tx, Tree ty, Trees destx, Trees desty ) {
         Tree tp = unify(tx,ty);
@@ -365,10 +408,10 @@ public class TypeInference extends Translator {
             return tp;
         else if (subtype(tx,ty)) {
             coerce(tx,ty,destx);
-            return ty;
+            return subtype_unify(tx,ty);
         } else if (subtype(ty,tx)) {
             coerce(ty,tx,desty);
-            return tx;
+            return subtype_unify(ty,tx);
         } else return null;
     }
 

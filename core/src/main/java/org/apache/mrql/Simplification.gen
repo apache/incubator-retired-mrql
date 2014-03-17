@@ -53,52 +53,46 @@ public class Simplification extends Normalization {
         return e.equals(v);
     }
 
-    private static Trees factor_out_aggr ( Tree e, Tree v ) {
+    private static Trees simple_accessors ( Tree v, Tree e ) {
+        if (simple_accessor(v,e))
+            return #[`e];
         match e {
-        case call(`g,cmap(`f,`d)):
-            if (!simple_accessor(v,d) || !free_variables(f,#[]).is_empty())
-                fail;
-            for ( Tree monoid: monoids )
-                match monoid {
-                case `aggr(...):
-                    if (aggr.equals(g.toString()))
-                        return #[bind(`e,`d)];
-                };
-            fail
-       case `f(...al):
-           Trees bl = #[];
-           for ( Tree a: al )
-               bl = bl.append(factor_out_aggr(a,v));
-           return bl;
+        case `f(...al):
+            Trees res = #[ ];
+            for ( Tree a: al )
+                res = res.append(simple_accessors(v,a));
+            return res;
         };
-        return #[];
+        return #[ ];
     }
 
-    private static Trees factor_out_aggregations ( Tree e, Tree v ) {
-        Trees al = factor_out_aggr(e,v);
-        Tree t = e;
-        for ( Tree a: al )
-            match a {
-            case bind(`u,`d):  t = subst(u,#<0>,t);
-            };
-        Trees bl = #[];
-        for ( Tree a: al )
-            match a {
-            case bind(`u,`d):
-                if (occurences(d,t) == 0) {
-                    boolean exists = false;
-                    for ( Tree b: bl )
-                        match b {
-                        case bind(`uu,`dd):
-                            if (d.equals(dd) && !u.equals(uu))
-                                if (alpha_equivalent(u,uu))
-                                    exists = true;
-                        };
-                    if (true || !exists)
-                        bl = bl.append(a);
-                }
-            };
-        return bl;
+    private static Tree factor_out_call ( Tree e, Tree v ) {
+        match e {
+        case call(`f,...):
+            if (!free_variables(e,#[`v]).is_empty())
+                fail;
+            return e;
+       case `f(...al):
+           for ( Tree a: al ) {
+               Tree b = factor_out_call(a,v);
+               if (b != null)
+                   return b;
+           };
+           return null;
+        };
+        return null;
+    }
+
+    private static boolean contains_join ( Tree x ) {
+        match x {
+        case join(...): return true;
+        case lambda(...): return false;
+        case `f(...al):
+            for ( Tree a: al )
+                if (contains_join(a))
+                    return true;
+        };
+        return false;
     }
 
     /** Algebraic normalization (algebra to algebra)
@@ -150,55 +144,82 @@ public class Simplification extends Normalization {
             else fail
         case cmap(`f,if(`p,`x,`y)):
             return simplify(#<if(`p,cmap(`f,`x),cmap(`f,`y))>);
-        // if the join reducer contains an independent aggregation push it to the input
-        // NOTE: This disables the self-join to MR transformation used in pagerank
-        case xxxjoin(`kx,`ky,
-                  lambda(`v,cmap(lambda(`v1,cmap(lambda(`v2,bag(tuple(`k,`b))),
+        // if the group-by key is the same as the join key, fuse the group-by into the join
+        case join(lambda(`v,nth(`v1,0)), `ky, `r,
+                  groupBy(`X), `Y):
+            if (!v1.equals(v) || !Config.groupJoinOpt)
+                fail;
+            Tree nv = new_var();
+            type_env.insert(nv.toString(),TypeInference.type_inference(#<tuple(`X,`Y)>));
+            return simplify(#<join(lambda(`v,nth(`v1,0)), `ky,
+                                   lambda(`nv,apply(`r,tuple(groupBy(nth(`nv,0)),nth(`nv,1)))),
+                                   `X, `Y)>);
+        // ... same for the right join input
+        case join(`kx, lambda(`v,nth(`v1,0)), `r,
+                  `X, groupBy(`Y)):
+            if (!v1.equals(v) || !Config.groupJoinOpt)
+                fail;
+            Tree nv = new_var();
+            type_env.insert(nv.toString(),TypeInference.type_inference(#<tuple(`X,`Y)>));
+            return simplify(#<join(`kx, lambda(`v,nth(`v1,0)),
+                                   lambda(`nv,apply(`r,tuple(nth(`nv,0),groupBy(nth(`nv,1))))),
+                                   `X, `Y)>);
+        // push projection before join: if the join reducer contains a function call
+        // that depends on the left input, push it to the left input
+        case join(lambda(`w,`kx),`ky,
+                  lambda(`v,cmap(lambda(`v1,cmap(lambda(`v2,bag(`b)),
                                                  nth(`vy,1))),
                                  nth(`vx,0))),
                   `X,`Y):
             if (!vx.equals(v) || !vy.equals(v))
                 fail;
-            Trees l1 = factor_out_aggregations(b,v1);
-            Trees l2 = factor_out_aggregations(b,v2);
-            if (l1.is_empty() && l2.is_empty())
+            Tree factor = factor_out_call(b,v1);
+            if (factor == null)
                 fail;
-            Tree px = v1;
-            Trees dl = #[];
-            for ( Tree a: l1 )
-                match a {
-                case bind(`u,`d):
-                    Tree nv = new_var();
-                    b = subst(u,nv,b);
-                    if (true || !dl.member(d)) {
-                        Tree vv = new_var();
-                        X = #<cmap(lambda(`px,bag(tuple(`px,`u))),`X)>;
-                        px = #<tuple(`px,`nv)>;
-                    }
-                    dl = dl.append(d);
-                };
-            Tree py = v2;
-            dl = #[];
-            for ( Tree a: l2 )
-                match a {
-                case bind(`u,`d):
-                    Tree nv = new_var();
-                    b = subst(u,nv,b);
-                    if (true || !dl.member(d)) {
-                        Tree vv = new_var();
-                        Y = #<cmap(lambda(`py,bag(tuple(`py,`u))),`Y)>;
-                        py = #<tuple(`py,`nv)>;
-                    };
-                    dl = dl.append(d);
-                };
-            Tree res = #<join(lambda(`px,apply(`kx,`v1)),
-                              lambda(`py,apply(`ky,`v2)),
-                              lambda(`v,cmap(lambda(`px,cmap(lambda(`py,bag(tuple(`k,`b))),
-                                                             nth(`vy,1))),
-                                             nth(`vx,0))),
-                              `X,`Y)>;
-            res = rename(res);
-            return simplify(res);
+            Tree nv = new_var();
+            b = subst(factor,#<nth(`nv,1)>,b);
+            Trees rest = simple_accessors(v1,subst(factor,#<tuple()>,b));
+            type_env.insert(nv.toString(),TypeInference.type_inference(#<tuple(`kx,`factor,...rest)>));
+            type_env.insert(v.toString(),TypeInference.type_inference(#<tuple(bag(`nv),nth(`v,1))>));
+            int i = 2;
+            Tree reducer = b;
+            for ( Tree a: rest )
+                reducer = subst(a,#<nth(`nv,`(i++))>,reducer);
+            Tree key = subst(w,v1,kx);
+            return simplify(#<join(lambda(`nv,nth(`nv,0)),`ky,
+                                   lambda(`v,cmap(lambda(`nv,cmap(lambda(`v2,bag(`reducer)),
+                                                                  nth(`vy,1))),
+                                                  nth(`vx,0))),
+                                   cmap(lambda(`v1,bag(tuple(`key,`factor,...rest))),`X),
+                                   `Y)>);
+        // push projection before join: if the join reducer contains a function call
+        // that depends on the right input, push it to the right input
+        case join(`kx,lambda(`w,`ky),
+                  lambda(`v,cmap(lambda(`v1,cmap(lambda(`v2,bag(`b)),
+                                                 nth(`vy,1))),
+                                 nth(`vx,0))),
+                  `X,`Y):
+            if (!vx.equals(v) || !vy.equals(v))
+                fail;
+            Tree factor = factor_out_call(b,v2);
+            if (factor == null)
+                fail;
+            Tree nv = new_var();
+            b = subst(factor,#<nth(`nv,1)>,b);
+            Trees rest = simple_accessors(v2,subst(factor,#<tuple()>,b));
+            type_env.insert(nv.toString(),TypeInference.type_inference(#<tuple(`ky,`factor,...rest)>));
+            type_env.insert(v.toString(),TypeInference.type_inference(#<tuple(nth(`v,0),bag(`nv))>));
+            int i = 2;
+            Tree reducer = b;
+            Tree key = subst(w,v2,ky);
+            for ( Tree a: rest )
+                reducer = subst(a,#<nth(`nv,`(i++))>,reducer);
+            return simplify(#<join(`kx,lambda(`nv,nth(`nv,0)),
+                                   lambda(`v,cmap(lambda(`v1,cmap(lambda(`nv,bag(`reducer)),
+                                                                  nth(`vy,1))),
+                                                  nth(`vx,0))),
+                                   `X,
+                                   cmap(lambda(`v2,bag(tuple(`key,`factor,...rest))),`Y))>);
         // if the reducer of a join generates pairs (k,v), where k is functional dependent
         // on a join key, then the outer groupBy just groups the v values
         case groupBy(join(lambda(`vx,`bx),`ky,

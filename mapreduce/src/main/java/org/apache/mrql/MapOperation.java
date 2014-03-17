@@ -67,10 +67,9 @@ final public class MapOperation extends MapReducePlan {
         protected void setup ( Context context ) throws IOException,InterruptedException {
             super.setup(context);
             try {
-                Configuration conf = context.getConfiguration();
-                Config.read(conf);
-                if (Plan.conf == null)
-                    Plan.conf = conf;
+                conf = context.getConfiguration();
+                Plan.conf = conf;
+                Config.read(Plan.conf);
                 Tree code = Tree.parse(conf.get("mrql.mapper"));
                 map_fnc = functional_argument(conf,code);
                 if (conf.get("mrql.zero") != null) {
@@ -107,6 +106,7 @@ final public class MapOperation extends MapReducePlan {
                                        DataSet source,       // input data source
                                        String stop_counter ) // optional counter used in repeat operation
                                 throws Exception {
+        conf = MapReduceEvaluator.clear_configuration(conf);
         String newpath = new_path(conf);
         conf.set("mrql.mapper",map_fnc.toString());
         conf.set("mrql.counter",stop_counter);

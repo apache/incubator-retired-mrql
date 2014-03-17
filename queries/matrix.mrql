@@ -16,18 +16,22 @@
  * limitations under the License.
  */
 
-function fact ( n: int ): long {
-   if n <= 0
-   then 1 as long
-   else n*fact(n-1)
+Xmatrix = source(binary,"tmp/Xmatrix.bin");
+Ymatrix = source(binary,"tmp/Ymatrix.bin");
+
+// matrix transpose:
+
+macro transpose ( X ) {
+  select (x,j,i)
+    from (x,i,j) in X
 };
 
-fact(10);
+// matrix multiplication:
 
-store x := [xml| <a A="2"><b>1</b><b>2</b></a> |];
-
-function children ( tag: string, s: list(XML) ) : list(XML) {
-  select c from Node(t,*,cs) in s, c in cs where t=tag order by c
+macro multiply ( X, Y ) {
+  select (sum(z),i,j)
+    from (x,i,k) in X, (y,k,j) in Y, z = x*y
+   group by (i,j)
 };
 
-children("b",x.b);
+multiply(Xmatrix,Ymatrix);

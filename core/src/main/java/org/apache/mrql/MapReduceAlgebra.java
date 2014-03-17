@@ -359,16 +359,17 @@ final public class MapReduceAlgebra {
      * @param ky right key function from b to k
      * @param gx group-by key function from a to k1
      * @param gy group-by key function from b to k2
-     * @param m mapper from (a,b) to {c}
-     * @param c combiner from ((k1,k2),{c}) to d
-     * @param r reducer from ((k1,k2),d) to {e}
+     * @param acc accumulator from (c,(a,b)) to c
+     * @param zero of type c
+     * @param r reducer from ((k1,k2),c) to d
      * @param X left input of type {a}
      * @param Y right input of type {b}
-     * @return a value of type {e}
+     * @return a value of type {d}
      */
     public static Bag groupByJoin ( final Function kx, final Function ky,
                                     final Function gx, final Function gy,
-                                    final Function m, final Function c, final Function r,
+                                    final Function acc, MRData zero,
+                                    final Function r,
                                     final Bag X, final Bag Y ) {
         Bag s = groupBy(hash_join(kx,ky,
                                   new Function() {
@@ -380,22 +381,20 @@ final public class MapReduceAlgebra {
         Bag res = new Bag();
         for ( MRData z: s ) {
             Tuple t = (Tuple)z;
-            for ( MRData n: (Bag)r.eval(new Tuple(t.first(),c.eval(new Tuple(t.first(),cmap(m,(Bag)t.second()))))) )
-                res.add(n);
+            MRData v = zero;
+            for ( MRData x: (Bag)t.second() )
+                v = acc.eval(new Tuple(v,x));
+            res.add(r.eval(new Tuple(t.first(),v)));
         };
         return res;
     }
 
     private static void flush_table ( final Map<MRData,MRData> hashTable, final Function r, final Bag result ) {
-        Bag tbag = new Bag(2);
         Tuple pair = new Tuple(2);
         for ( Map.Entry<MRData,MRData> entry: hashTable.entrySet() ) {
             pair.set(0,entry.getKey());
-            tbag.clear();
-            tbag.add_element(entry.getValue());
-            pair.set(1,tbag);
-            for ( MRData e: (Bag)r.eval(pair) )
-                result.add(e);
+            pair.set(1,entry.getValue());
+            result.add(r.eval(pair));
         };
         hashTable.clear();
     }
@@ -405,20 +404,21 @@ final public class MapReduceAlgebra {
      * @param ky right key function from b to k
      * @param gx group-by key function from a to k1
      * @param gy group-by key function from b to k2
-     * @param m mapper from (a,b) to {c}
-     * @param c combiner from ((k1,k2),{c}) to d
-     * @param r reducer from ((k1,k2),d) to {e}
+     * @param acc accumulator from (c,(a,b)) to c
+     * @param zero of type c
+     * @param r reducer from ((k1,k2),c) to d
      * @param X left input of type {a}
      * @param Y right input of type {b}
-     * @return a value of type {e}
+     * @return a value of type {d}
      */
     final public static Bag mergeGroupByJoin ( final Function kx, final Function ky,
                                                final Function gx, final Function gy,
-                                               final Function m, final Function c, final Function r,
+                                               final Function acc, MRData zero,
+                                               final Function r,
                                                Bag X, Bag Y ) {
         Bag tbag = new Bag(2);
         Tuple pair = new Tuple(2);
-        Tuple vpair = new Tuple(2);
+        pair.set(1,new Tuple(2));
         final Map<MRData,MRData> hashTable = new HashMap<MRData,MRData>(1000);
         Bag xs = groupBy(map(new Function() {
                 public MRData eval ( final MRData e ) {
@@ -452,19 +452,12 @@ final public class MapReduceAlgebra {
             for ( MRData xx: (Bag)x.second() )
                 for ( MRData yy: (Bag)y.second() ) {
                     Tuple key = new Tuple(gx.eval(xx),gy.eval(yy));
-                    vpair.set(0,xx).set(1,yy);
                     MRData old = hashTable.get(key);
-                    pair.set(0,key);
-                    for ( MRData e: (Bag)m.eval(vpair) )
-                        if (old == null)
-                            hashTable.put(key,e);
-                        else {
-                            tbag.clear();
-                            tbag.add_element(e).add_element(old);
-                            pair.set(1,tbag);
-                            for ( MRData z: (Bag)c.eval(pair) )
-                                hashTable.put(key,z);  // normally, done once
-                        }
+                    if (old == null)
+                        old = zero;
+                    pair.set(0,old);
+                    ((Tuple)pair.get(1)).set(0,xx).set(1,yy);
+                    hashTable.put(key,acc.eval(pair));
                 };
             if (xi.hasNext())
                 x = (Tuple)xi.next();
@@ -503,12 +496,19 @@ final public class MapReduceAlgebra {
                 }
             } else if (d instanceof MR_dataset) {
                 DataSet ds = ((MR_dataset)d).dataset();
-                if (ds.counter != 0)
-                    cont = true;
-                System.err.println("*** Repeat #"+i+": "+ds.counter+" true results");
-                s = Plan.collect(ds);
+                s.clear();
+                int c = 0;
+                for ( MRData x: Plan.collect(ds) ) {
+                    Tuple t = (Tuple)x;
+                    if (((MR_bool)t.second()).get()) {
+                        c++;
+                        cont = true;
+                    };
+                    s.add(t.first());
+                };
+                System.err.println("*** Repeat #"+i+": "+c+" true results");
             } else throw new Error("Wrong repeat");
-        } while (cont && i <= max_num);
+        } while (cont && i < max_num);
         return s;
     }
 
@@ -542,8 +542,37 @@ final public class MapReduceAlgebra {
                 n = ds.records;
                 s = Plan.collect(ds);
             } else throw new Error("Wrong repeat");
-        } while (old < n && i <= max_num);
+        } while (old < n && i < max_num);
         return s;
+    }
+
+    /** repetition: repeat the loop until we reach the num of steps
+     * @param loop a function from ({a1},...,{ak}) to ({a1},...,{ak})
+     * @param init the initial value of type ({a1},...,{ak})
+     * @param num the number of steps
+     * @return a value of type ({a1},...,{ak})
+     */
+    public static Tuple loop ( final Function loop,
+                               final Tuple init,
+                               final int num ) {
+        try {
+            Tuple s = init;
+            s.materializeAll();
+            for ( int i = 0; i < num; i++ ) {
+                Tuple d = (Tuple)loop.eval(s);
+                for ( int j = 0; j < d.size(); j++ )
+                    if (d.get(j) instanceof Bag) {
+                        s.set(j,d.get(i));
+                        ((Bag)d.get(j)).materialize();
+                    } else if (d.get(j) instanceof MR_dataset) {
+                        DataSet ds = ((MR_dataset)d.get(j)).dataset();
+                        s.set(j,Plan.collect(ds));
+                    } else throw new Error("Wrong loop");
+            };
+            return s;
+        } catch (Exception ex) {
+            throw new Error(ex);
+        }
     }
 
     /** parse a text document using a given parser

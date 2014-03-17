@@ -86,10 +86,9 @@ final public class MapJoinOperation extends MapReducePlan {
         protected void setup ( Context context ) throws IOException,InterruptedException {
             super.setup(context);
             try {
-                Configuration conf = context.getConfiguration();
-                Config.read(conf);
-                if (Plan.conf == null)
-                    Plan.conf = conf;
+                conf = context.getConfiguration();
+                Plan.conf = conf;
+                Config.read(Plan.conf);
                 if (conf.get("mrql.mapJoinReduce") != null)
                     mapJoinReduce = true;
                 Tree code = Tree.parse(conf.get("mrql.inMap.reducer"));
@@ -178,6 +177,7 @@ final public class MapJoinOperation extends MapReducePlan {
                                           String stop_counter )  // optional counter used in repeat operation
                                 throws Exception {
         DataSet ds = MapOperation.cMap(built_map_fnc,null,null,built_dataset,"-");
+        conf = MapReduceEvaluator.clear_configuration(conf);
         String newpath = new_path(conf);
         conf.set("mrql.inMap.reducer",reduce_fnc.toString());
         conf.set("mrql.probe_mapper",probe_map_fnc.toString());

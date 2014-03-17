@@ -178,10 +178,10 @@ public class Translator extends Printer {
     static Trees plans_with_distributed_lambdas
         = #[MapReduce,MapAggregateReduce,MapCombineReduce,FroupByJoin,Aggregate,
             MapReduce2,MapCombineReduce2,MapAggregateReduce2,MapJoin,MapAggregateJoin,
-            CrossProduct,CrossAggregateProduct,cMap,AggregateMap,BSP,GroupByJoin,repeat,closure];
+            CrossProduct,CrossAggregateProduct,cMap,AggregateMap,BSP,GroupByJoin];
 
     static Trees algebraic_operators
-        = #[mapReduce,mapReduce2,cmap,join,groupBy,orderBy,aggregate,map,filter];
+        = #[mapReduce,mapReduce2,cmap,join,groupBy,orderBy,aggregate,map,filter,repeat,closure];
 
     static Trees plan_names = plans_with_distributed_lambdas.append(algebraic_operators)
                                    .append(#[Repeat,Closure,Generator,Let,If]);
