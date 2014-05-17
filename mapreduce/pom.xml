@@ -43,6 +43,18 @@
       <artifactId>mrql-core</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.mrql</groupId>
+      <artifactId>mrql-core</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
     <!-- needed for testing in local mode -->
     <dependency>
       <groupId>commons-io</groupId>
@@ -158,31 +170,6 @@
 		</java>
 	      </target>
 	    </configuration>
-	  </execution>
-          <execution>
-	    <id>validate</id>
-            <phase>test</phase>
-	    <goals>
-	      <goal>run</goal>
-	    </goals>
-	    <configuration>
-	      <target name="validate_hadoop" if="tests" description="Validate all test queries on Apache Hadoop">
-		<property name="runtime_classpath" refid="maven.runtime.classpath" />
-		<echo message="Evaluating test queries in memory (Map-Reduce mode):" />
-		<java classname="org.apache.mrql.Test" classpath="${runtime_classpath}" dir=".." fork="yes">
-		  <arg file="../tests/queries" />
-		  <arg file="../tests/results/mr-memory" />
-		  <arg file="../tests/error_log.txt" />
-		</java>
-		<echo message="Evaluating test queries in Apache Hadoop local mode:" />
-		<java classname="org.apache.mrql.Test" classpath="../lib/mrql-mr-${project.version}.jar:${runtime_classpath}" dir=".." fork="yes" error="/dev/null">
-		  <arg line="-local" />
-		  <arg file="../tests/queries" />
-		  <arg file="../tests/results/hadoop" />
-		  <arg file="../tests/error_log.txt" />
-		</java>
-	      </target>
-  	    </configuration>
 	  </execution>
 	</executions>
       </plugin>

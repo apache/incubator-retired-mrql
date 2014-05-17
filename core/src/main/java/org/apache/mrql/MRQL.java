@@ -37,8 +37,9 @@ final public class MRQL extends Interpreter {
      */
     public static void evaluate ( String command ) {
         try {
-            MRQLParser parser = new MRQLParser();
-            parser.setScanner(new MRQLLex(new StringReader(command)));
+            MRQLLex scanner = new MRQLLex(new StringReader(command));
+            MRQLParser parser = new MRQLParser(scanner);
+            parser.setScanner(scanner);
             MRQLLex.reset();
             parser.parse();
         } catch (Exception x) {

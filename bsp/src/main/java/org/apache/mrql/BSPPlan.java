@@ -412,7 +412,7 @@ final public class BSPPlan extends Plan {
                 split_size = (long)Math.ceil((double)split_size*1.01);
         } while (tasks > Config.nodes);
         job.setNumBspTask(tasks);
-        System.out.println("Using "+tasks+" BSP tasks (out of a max "+Config.nodes+")."
+        System.err.println("Using "+tasks+" BSP tasks (out of a max "+Config.nodes+")."
                            +" Each task will handle about "+Math.min(total_size/Config.nodes,split_size)
                            +" bytes of input data.");
         job.set("bsp.min.split.size",Long.toString(split_size));

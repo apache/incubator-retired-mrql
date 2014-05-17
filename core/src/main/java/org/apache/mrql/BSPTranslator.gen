@@ -440,7 +440,7 @@ public class BSPTranslator extends TypeInference {
         case GroupByJoin(`kx,`ky,lambda(`vx,`gx),lambda(`vy,`gy),`acc,`zero,`r,`x,`y,`o):
             int n = (int)Math.floor(Math.sqrt(4.0*Config.nodes));
             int m = n;
-            System.out.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
+            System.err.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
             Tree xkey = #<cmap(lambda(i,bag(tuple(call(plus,call(mod,call(hash_code,`gx),`m),call(times,`m,i)),
                                                   tuple(1,call(plus,call(mod,call(hash_code,`gx),`m),call(times,`m,i)),`vx)))),
                                range(0,`(n-1)))>;

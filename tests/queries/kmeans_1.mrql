@@ -40,6 +40,6 @@ repeat centroids = { < X: 0.0 as double, Y: 0.0 as double >,
                      < X: 0.0, Y: 10.0 >,
                      < X: 10.0, Y: 10.0 > }
   step select ( centroid(new_centroid(select (p,1 as long) from p in s),k), true )
-         from s in source(line,"tests/data/points.txt",",",type( < X: double, Y: double > ))
+         from s in source(line,"../tests/data/points.txt",",",type( < X: double, Y: double > ))
         group by k: (select c from c in centroids order by distance(c,s))[0]
   limit 2;

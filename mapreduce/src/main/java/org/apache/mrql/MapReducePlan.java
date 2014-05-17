@@ -96,7 +96,7 @@ public class MapReducePlan extends Plan {
         do {
             s.dataset = ((MR_dataset)loop.eval(s)).dataset;
             i++;
-            System.out.println("Repeat #"+i+": "+s.dataset.counter+" true results");
+            System.err.println("Repeat #"+i+": "+s.dataset.counter+" true results");
         } while (s.dataset.counter != 0 && i < max_num);
         return s.dataset;
     }
@@ -116,7 +116,7 @@ public class MapReducePlan extends Plan {
         do {
             s.dataset = ((MR_dataset)loop.eval(s)).dataset;
             i++;
-            System.out.println("Repeat #"+i+": "+(s.dataset.records-n)+" new records");
+            System.err.println("Repeat #"+i+": "+(s.dataset.records-n)+" new records");
             old = n;
             n = s.dataset.records;
         } while (old < n && i < max_num);

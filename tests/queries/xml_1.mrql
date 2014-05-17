@@ -17,5 +17,5 @@
  */
 
 select s.name
-from s in source(xml,"tests/data/cs.xml",{"gradstudent"})
+from s in source(xml,"../tests/data/cs.xml",{"gradstudent"})
 where text(s.name.firstname)="Leonidas";

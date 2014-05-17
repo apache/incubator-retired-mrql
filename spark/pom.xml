@@ -48,6 +48,18 @@
       <artifactId>spark-core_${scala.version}</artifactId>
       <version>${spark.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.mrql</groupId>
+      <artifactId>mrql-core</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -120,26 +132,6 @@
 		  <arg line="${mr.gen.files}" />
 		  <arg line="-o" />
 		  <arg file="${project.build.directory}/generated-sources/org/apache/mrql" />
-		</java>
-	      </target>
-  	    </configuration>
-	  </execution>
-          <execution>
-	    <id>validate</id>
-            <phase>test</phase>
-	    <goals>
-	      <goal>run</goal>
-	    </goals>
-	    <configuration>
-	      <target name="validate_spark" if="tests" description="Validate all test queries on Apache Spark">
-		<property name="runtime_classpath" refid="maven.runtime.classpath" />
-		<echo message="Evaluating test queries in Apache Spark local mode:" />
-		<java classname="org.apache.mrql.Test" classpath="../lib/mrql-spark-${project.version}.jar:${runtime_classpath}" dir=".." fork="yes" error="/dev/null">
-		  <arg line="-local" />
-		  <arg line="-spark" />
-		  <arg file="../tests/queries" />
-		  <arg file="../tests/results/spark" />
-		  <arg file="../tests/error_log.txt" />
 		</java>
 	      </target>
   	    </configuration>

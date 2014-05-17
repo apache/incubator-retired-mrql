@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-C = source(line,"tests/data/customer.tbl","|",type(<CUSTKEY:int,NAME:string,ADDRESS:string>));
-O = source(line,"tests/data/orders.tbl","|",type(<ORDERKEY:string,CUSTKEY:int,ORDERSTATUS:any,TOTALPRICE:float>));
+C = source(line,"../tests/data/customer.tbl","|",type(<CUSTKEY:int,NAME:string,ADDRESS:string>));
+O = source(line,"../tests/data/orders.tbl","|",type(<ORDERKEY:string,CUSTKEY:int,ORDERSTATUS:any,TOTALPRICE:float>));
 
 select <N: c.NAME, A: avg(select o.TOTALPRICE from o in O where o.CUSTKEY=c.CUSTKEY)>
  from c in C

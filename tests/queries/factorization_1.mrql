@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-Mmatrix = source(line,"tests/data/Xmatrix.txt",",",type( (double,long,long) ));
-Hmatrix = source(line,"tests/data/Ymatrix.txt",",",type( (double,long,long) ));
-Wmatrix = source(line,"tests/data/Zmatrix.txt",",",type( (double,long,long) ));
+Mmatrix = source(line,"../tests/data/Xmatrix.txt",",",type( (double,long,long) ));
+Hmatrix = source(line,"../tests/data/Ymatrix.txt",",",type( (double,long,long) ));
+Wmatrix = source(line,"../tests/data/Zmatrix.txt",",",type( (double,long,long) ));
 
 
 macro transpose ( X ) {

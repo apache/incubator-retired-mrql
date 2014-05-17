@@ -193,9 +193,9 @@ public class Printer {
         try {
             if (x instanceof Inv)
                 return print(((Inv)x).value(),type);
-            if (type.equals(#<XML>))
+            if (!Config.testing && type.equals(#<XML>))
                 return print_XML((Union)x);
-            if (type.equals(#<JSON>))
+            if (!Config.testing && type.equals(#<JSON>))
                 return print_JSON((Union)x);
             match TypeInference.expand(type) {
             case persistent(`tp):
@@ -207,9 +207,10 @@ public class Printer {
                     if (vals.size() == 0)
                         return "{}";
                     String s = "{ "+print(vals.get(0),tp);
-                    for ( int i = 1; i < vals.size(); i++ )
+                    for ( int i = 1; i < vals.size() && (Config.max_bag_size_print < 0
+                                                         || i < Config.max_bag_size_print); i++ )
                         s += ", "+print(vals.get(i),tp);
-                    if (vals.size() == Config.max_bag_size_print)
+                    if (Config.max_bag_size_print > 0 && vals.size() >= Config.max_bag_size_print)
                         return s+", ... }";
                     else return s+" }";
                 } else return print(x,#<bag(`tp)>);
@@ -220,9 +221,10 @@ public class Printer {
                     if (vals.size() == 0)
                         return "[]";
                     String s = "[ "+print(vals.get(0),tp);
-                    for ( int i = 1; i < vals.size(); i++ )
+                    for ( int i = 1; i < vals.size() && (Config.max_bag_size_print < 0
+                                                         || i < Config.max_bag_size_print); i++ )
                         s += ", "+print(vals.get(i),tp);
-                    if (vals.size() == Config.max_bag_size_print)
+                    if (Config.max_bag_size_print > 0 && vals.size() >= Config.max_bag_size_print)
                         return s+", ... ]";
                     else return s+" ]";
                 } else return print(x,#<list(`tp)>);

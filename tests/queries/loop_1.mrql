@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-E = source(line,"tests/data/points.txt",",",type( < X: double, Y: double > ));
+E = source(line,"../tests/data/points.txt",",",type( < X: double, Y: double > ));
 
 repeat xx = select x from <X:x,Y:y> in E
 step select (n,true) from x in xx group by n: x
@@ -38,18 +38,18 @@ repeat xx = select x from <X:x,Y:y> in E
 step select (x+1,true) from x in xx
 limit 2;
 
-repeat xx = {1,2}
-step select (x+y as int) from x in xx, <X:*,Y:y> in E
-limit 2;
-
-repeat xx = {1,2}
-step select (x+y as int,true) from x in xx, <X:*,Y:y> in E
-limit 2;
-
 repeat (xx,yy) = ({1,2},{3,4})
 step ((select x+y from x in xx, y in yy),
       (select x*y from x in xx, y in yy))
 limit 2;
+
+repeat xx = {1,2}
+step select (x+y as int) from x in xx, <X:*,Y:y> in E
+limit 1;
+
+repeat xx = {1,2}
+step select (x+y as int,true) from x in xx, <X:*,Y:y> in E
+limit 1;
 
 repeat (xx,yy) = ((select x from <X:x,Y:y> in E where y < 10),
                   (select y from <X:x,Y:y> in E where x < 10))

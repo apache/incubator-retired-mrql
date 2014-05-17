@@ -570,7 +570,7 @@ public class Bag extends MRData implements Iterable<MRData> {
         StringBuffer b = new StringBuffer("{ ");
         int i = 0;
         for ( MRData e: this )
-            if ( i++ < Config.max_bag_size_print )
+            if ( i++ < Config.max_bag_size_print || Config.max_bag_size_print < 0 )
                 b.append(((i>1)?", ":"")+e);
             else return b.append(", ... }").toString();
         return b.append(" }").toString();

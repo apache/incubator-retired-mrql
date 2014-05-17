@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-E = source(line,"tests/data/employee.txt",",",type(<name:string,dno:int,address:string>));
-D = source(line,"tests/data/department.txt",",",type(<name:string,dno:int>));
+E = source(line,"../tests/data/employee.txt",",",type(<name:string,dno:int,address:string>));
+D = source(line,"../tests/data/department.txt",",",type(<name:string,dno:int>));
 
 select e.name from e in E where e.dno=10;
 

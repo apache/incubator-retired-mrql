@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-Xvector = source(line,"tests/data/Xvector.txt",",",type( (double,long) ));
-Yvector = source(line,"tests/data/Yvector.txt",",",type( (double,long) ));
-Xmatrix = source(line,"tests/data/Xmatrix.txt",",",type( (double,long,long) ));
-Ymatrix = source(line,"tests/data/Ymatrix.txt",",",type( (double,long,long) ));
+Xvector = source(line,"../tests/data/Xvector.txt",",",type( (double,long) ));
+Yvector = source(line,"../tests/data/Yvector.txt",",",type( (double,long) ));
+Xmatrix = source(line,"../tests/data/Xmatrix.txt",",",type( (double,long,long) ));
+Ymatrix = source(line,"../tests/data/Ymatrix.txt",",",type( (double,long,long) ));
 
 
 // inner product:

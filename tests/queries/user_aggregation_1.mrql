@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-E = source(line,"tests/data/employee.txt",",",type(<name:string,dno:int,address:string>));
+E = source(line,"../tests/data/employee.txt",",",type(<name:string,dno:int,address:string>));
 
 aggregation aggr(\(x:int,y:int):int.x+y,0):int;
 

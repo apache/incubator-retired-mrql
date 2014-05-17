@@ -558,7 +558,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
             case GroupByJoin(`kx,`ky,`gx,`gy,`acc,`zero,`r,`x,`y,`o):
                 final int n = (int)Math.floor(Math.sqrt(4.0*Config.nodes));
                 final int m = n;
-                System.out.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
+                System.err.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
                 final org.apache.mrql.Function fkx = evalF(kx,env);
                 final org.apache.mrql.Function fky = evalF(ky,env);
                 final org.apache.mrql.Function fgx = evalF(gx,env);

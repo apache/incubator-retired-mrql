@@ -214,7 +214,7 @@ final public class MapReduceEvaluator extends Evaluator {
                 DataSet Y = eval(y,env,"-");
                 int n = (int)Math.floor(Math.sqrt(4.0*Config.nodes));
                 int m = n;
-                System.out.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
+                System.err.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
                 return GroupByJoinPlan.groupByJoin(closure(kx,env),closure(ky,env),
                                                    closure(gx,env),closure(gy,env),
                                                    closure(mp,env),closure(c,env),closure(r,env),
