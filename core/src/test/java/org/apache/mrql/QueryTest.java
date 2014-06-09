@@ -28,6 +28,8 @@ import junit.framework.TestCase;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.BeforeClass;
+import org.apache.log4j.*;
+import java.util.Enumeration;
 
 public abstract class QueryTest extends TestCase {
 	private static String TEST_QUERY_DIR = "../tests/queries";
@@ -50,6 +52,9 @@ public abstract class QueryTest extends TestCase {
 		if(evaluator==null)
 			evaluator = createEvaluator();
 		Translator.global_reset();
+                for ( Enumeration en = LogManager.getCurrentLoggers(); en.hasMoreElements(); )
+                    ((Logger)en.nextElement()).setLevel(Level.WARN);
+                LogManager.getRootLogger().setLevel(Level.WARN);
 	}
 
 	public void tearDown() throws IOException {
@@ -216,7 +221,7 @@ public abstract class QueryTest extends TestCase {
             Config.hadoop_mode = hm;
             if (!equal_value(v1,v2)) {
                 System.err .println("*** "+file1+" (query "+i+"):\nFound: "+v1+"\nExpected: "+v2);
-                return 0;  // should be i
+                return i;
             };
             line1 = reader1.readLine();
             line2 = reader2.readLine();

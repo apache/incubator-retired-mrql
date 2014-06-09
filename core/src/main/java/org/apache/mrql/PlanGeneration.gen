@@ -700,7 +700,17 @@ final public class PlanGeneration extends AlgebraicOptimization {
                                                        lambda(`v,cmap(lambda(`vx,cmap(lambda(`vy,`b),nth(`nx,1))),
                                                                       nth(`ny,0))),
                                                        null,null,`X,`Y,false))))))>;
-        case MapAggregateReduce2(`mx,`my,lambda(`v,`b),null,null,`x,`y,false):
+        case MapAggregateReduce2(`mx,`my,
+                                 lambda(`v,cmap(lambda(`vy,cmap(lambda(`vx,`b),nth(`ny,0))),nth(`nx,1))),
+                                 null,null,`x,`y,false):
+            if (Config.noMapJoin)
+                fail;
+            if (!nx.equals(v) || !ny.equals(v) || occurences(v,b) > 0)
+                fail;
+            return physical_plan(#<MapAggregateReduce2(`mx,`my,
+                                                       lambda(`v,cmap(lambda(`vx,cmap(lambda(`vy,`b),nth(`nx,1))),nth(`ny,0))),
+                                                       null,null,`x,`y,false)>);
+        case xxxMapAggregateReduce2(`mx,`my,lambda(`v,`b),null,null,`x,`y,false):
             if (Config.noMapJoin)
                 fail;
             Tree X = new_var();

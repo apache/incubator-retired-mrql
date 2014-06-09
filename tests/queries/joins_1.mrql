@@ -49,7 +49,7 @@ select (k,e) from e in E group by k: e.dno;
 
 (select (k,e) from e in E group by k: e.dno)[10];
 
-(select e from e in E order by e.dno)[1:2];
+(select e from e in E order by e.dno, e.name)[1:2];
 
 select (k,e) from e in E group by k: e.dno order by inv(k);
 

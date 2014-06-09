@@ -438,9 +438,9 @@ public class BSPTranslator extends TypeInference {
                                                 lambda(tuple(xs,ys),cmap(lambda(x,apply(`r,tuple(x,ys))),xs)),
                                                 `acc,`zero,`x,`y)>);
         case GroupByJoin(`kx,`ky,lambda(`vx,`gx),lambda(`vy,`gy),`acc,`zero,`r,`x,`y,`o):
-            int n = (int)Math.floor(Math.sqrt(4.0*Config.nodes));
+            int n = (int)Math.floor(Math.sqrt(Config.nodes));
             int m = n;
-            System.err.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
+            // System.err.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
             Tree xkey = #<cmap(lambda(i,bag(tuple(call(plus,call(mod,call(hash_code,`gx),`m),call(times,`m,i)),
                                                   tuple(1,call(plus,call(mod,call(hash_code,`gx),`m),call(times,`m,i)),`vx)))),
                                range(0,`(n-1)))>;
@@ -527,14 +527,14 @@ public class BSPTranslator extends TypeInference {
                                                       tuple(bag(),
                                                             tuple(`k0,callM(plus,`plusM,steps,1)),
                                                             if(callM(gt,`gtM,steps,`max),
-                                                               TRUE(),           // if # of steps <= limit, exit
+                                                               TRUE(),           // if # of steps > limit, exit
                                                                callM(not,`notM,  // ... else check the stopping condition
                                                                      aggregate(lambda(tuple(x,y),callM(or,`orM,x,y)),
                                                                                false,
                                                                                map(lambda(tuple(x,bb),bb),
                                                                                    getCache(cache,`step_cache_num))))))),
                                               tuple(ts,tuple(kk,steps),FALSE()))))>,
-                              #<tuple(`k0,1)>,
+                              #<tuple(`k0,2)>,
                               #<false>,
                               sources);
             case `x: throw new Error("Cannot compile the repeat function: "+x);
@@ -571,7 +571,7 @@ public class BSPTranslator extends TypeInference {
                                                                                       map(lambda(tuple(x,bb),bb),
                                                                                           getCache(cache,`step_cache_num)))))))),
                                                  tuple(ts,tuple(kk,steps,false,bag()),FALSE())))))>,
-                                  #<tuple(`k0,1,true,map(lambda(x,tuple(x,false)),`ds))>,
+                                  #<tuple(`k0,2,true,map(lambda(x,tuple(x,false)),`ds))>,
                                   #<false>,
                                   sources);
                 return #<Collect(`res)>;   // must return a memory bag

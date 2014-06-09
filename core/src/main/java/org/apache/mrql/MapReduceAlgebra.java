@@ -399,7 +399,8 @@ final public class MapReduceAlgebra {
         hashTable.clear();
     }
 
-    /** An equi-join combined with a group-by implemented using hashing
+    /** An equi-join combined with a group-by implemented using a sort-merge join
+        combined with hash-based groupby/aggregation
      * @param kx left key function from a to k
      * @param ky right key function from b to k
      * @param gx group-by key function from a to k1
@@ -412,6 +413,82 @@ final public class MapReduceAlgebra {
      * @return a value of type {d}
      */
     final public static Bag mergeGroupByJoin ( final Function kx, final Function ky,
+                                               final Function gx, final Function gy,
+                                               final Function acc, MRData zero,
+                                               final Function r,
+                                               Bag X, Bag Y ) {
+        Bag tbag = new Bag(2);
+        Tuple pair = new Tuple(2);
+        pair.set(1,new Tuple(2));
+        final Map<MRData,MRData> hashTable = new HashMap<MRData,MRData>(1000);
+        Bag xs = map(new Function() {
+                public MRData eval ( final MRData e ) {
+                    Tuple t = (Tuple)e;
+                    return new Tuple(new Tuple(t.first(),kx.eval(t.second())),t.second());
+                } }, X);
+	xs.sort();
+	X = null;
+        Bag ys = map(new Function() {
+                public MRData eval ( final MRData e ) {
+                    Tuple t = (Tuple)e;
+                    return new Tuple(new Tuple(t.first(),ky.eval(t.second())),t.second());
+                } }, Y);
+	ys.sort();
+	Y = null;
+	Bag res = new Bag();
+	MRData partition = null;
+	int i = 0;
+	int j = 0;
+	while ( i < xs.size() && j < ys.size() ) {
+	    Tuple x = (Tuple)xs.get(i);
+	    Tuple y = (Tuple)ys.get(j);
+            int cmp = x.first().compareTo(y.first());
+	    if ( cmp > 0 ) j++;
+	    else if ( cmp < 0 ) i++;
+	    else { // when cmp == 0
+		Tuple key = (Tuple)x.first();
+                if (partition == null)
+                    partition = key.first();
+                else if (!partition.equals(key.first())) {
+                    partition = key.first();
+                    flush_table(hashTable,r,res);
+                };
+		int k = i;
+		int l = j;
+		for ( ; k < xs.size() && key.compareTo(((Tuple)xs.get(k)).first()) == 0; k++ ) {
+		    MRData xx = ((Tuple)xs.get(k)).second();
+		    for ( l = j; l < ys.size() && key.compareTo(((Tuple)ys.get(l)).first()) == 0; l++ ) {
+			MRData yy = ((Tuple)ys.get(l)).second();
+                        Tuple gkey = new Tuple(gx.eval(xx),gy.eval(yy));
+                        MRData old = hashTable.get(gkey);
+                        if (old == null)
+                            old = zero;
+                        pair.set(0,old);
+                        ((Tuple)pair.get(1)).set(0,xx).set(1,yy);
+                        hashTable.put(gkey,acc.eval(pair));
+		    }
+		};
+		i = k;
+		j = l;
+	    }
+	};
+        flush_table(hashTable,r,res);
+        return res;
+    }
+
+    /** An equi-join combined with a group-by implemented using hashing
+     * @param kx left key function from a to k
+     * @param ky right key function from b to k
+     * @param gx group-by key function from a to k1
+     * @param gy group-by key function from b to k2
+     * @param acc accumulator from (c,(a,b)) to c
+     * @param zero of type c
+     * @param r reducer from ((k1,k2),c) to d
+     * @param X left input of type {a}
+     * @param Y right input of type {b}
+     * @return a value of type {d}
+     */
+    final public static Bag mergeGroupByJoin2 ( final Function kx, final Function ky,
                                                final Function gx, final Function gy,
                                                final Function acc, MRData zero,
                                                final Function r,

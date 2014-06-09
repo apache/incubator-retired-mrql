@@ -271,13 +271,13 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
             int limit = ((MR_int)evalE(num,env)).get();
             MR_rdd[] s = new MR_rdd[vs.length()];
             for ( int i = 0; i < vs.length(); i++ )
-                s[i] = new MR_rdd(eval(ss.nth(i),env));
+                s[i] = new MR_rdd(eval(ss.nth(i),env).cache());
             for ( int n = 0; n < limit; n++ ) {
                 Environment nenv = env;
                 for ( int i = 0; i < vs.length(); i ++ )
                     nenv = new Environment(vs.nth(i).toString(),s[i],nenv);
                 for ( int i = 0; i < vs.length(); i ++ )
-                    s[i] = new MR_rdd(eval(bs.nth(i),nenv));
+                    s[i] = new MR_rdd(eval(bs.nth(i),nenv).cache());
             };
             Tuple t = new Tuple(vs.length());
             for ( int i = 0; i < vs.length(); i++ )
@@ -346,9 +346,9 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                                 final String counter ) {
         JavaRDD<MRData> rd = eval(e,env);
         long count = 0;
+        rd = rd.cache();
         if (!counter.equals("-")) {
             final Accumulator<Integer> c = spark_context.intAccumulator(0);
-            rd = rd.cache();
             rd.foreach(new VoidFunction<MRData>() {
                     public void call ( MRData value ) {
                         if (((MR_bool)((Tuple)value).second()).get())
@@ -556,9 +556,9 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                             }
                         });
             case GroupByJoin(`kx,`ky,`gx,`gy,`acc,`zero,`r,`x,`y,`o):
-                final int n = (int)Math.floor(Math.sqrt(4.0*Config.nodes));
+                final int n = (int)Math.floor(Math.sqrt(Config.nodes));
                 final int m = n;
-                System.err.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
+                // System.err.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
                 final org.apache.mrql.Function fkx = evalF(kx,env);
                 final org.apache.mrql.Function fky = evalF(ky,env);
                 final org.apache.mrql.Function fgx = evalF(gx,env);
@@ -712,8 +712,8 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                                            public Integer call ( Integer x, Integer y ) { return x+y; }
                                        });
                     i++;
-                    cont = true_results > 0 && i <= max_num;
-                    System.out.println("Repeat #"+i+": "+true_results+" true results");
+                    cont = true_results > 0 && i < max_num;
+                    System.err.println("Repeat #"+i+": "+true_results+" true results");
                 } while (cont);
                 return res;
             case Closure(lambda(`v,`b),`s,`m):
@@ -728,8 +728,8 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                     old = n;
                     n = res.count();
                     i++;
-                    System.out.println("Repeat #"+i+": "+(old-n)+" new records");
-                } while (old < n && i <= max_num);
+                    System.err.println("Repeat #"+i+": "+(old-n)+" new records");
+                } while (old < n && i < max_num);
                 return res;
             case Generator(`min,`max,`size):
                 DataSet ds = Plan.generator(((MR_long)evalE(min,env)).get(),
@@ -746,7 +746,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
             case let(`v,`u,`body):
                 return eval(body,new Environment(v.toString(),evalE(u,env),env));
             case Let(`v,`u,`body):
-                return eval(body,new Environment(v.toString(),new MR_rdd(eval(u,env)),env));
+                return eval(body,new Environment(v.toString(),new MR_rdd(eval(u,env).cache()),env));
             case If(`c,`x,`y):
                 if (((MR_bool)evalE(c,env)).get())
                     return eval(x,env);

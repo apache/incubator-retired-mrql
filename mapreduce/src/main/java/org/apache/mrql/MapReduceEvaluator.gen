@@ -212,9 +212,9 @@ final public class MapReduceEvaluator extends Evaluator {
             case GroupByJoin(`kx,`ky,`gx,`gy,`mp,`c,`r,`x,`y,`o):
                 DataSet X = eval(x,env,"-");
                 DataSet Y = eval(y,env,"-");
-                int n = (int)Math.floor(Math.sqrt(4.0*Config.nodes));
+                int n = (int)Math.floor(Math.sqrt(Config.nodes));
                 int m = n;
-                System.err.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
+                // System.err.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
                 return GroupByJoinPlan.groupByJoin(closure(kx,env),closure(ky,env),
                                                    closure(gx,env),closure(gy,env),
                                                    closure(mp,env),closure(c,env),closure(r,env),
