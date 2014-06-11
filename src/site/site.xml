@@ -46,7 +46,6 @@
       <item name="Wiki" href="http://wiki.apache.org/mrql/" />
       <item name="JIRA" href="https://issues.apache.org/jira/browse/MRQL" />
       <item name="GIT" href="https://git-wip-us.apache.org/repos/asf?p=incubator-mrql.git" />
-      <item name="Twitter" href="http://twitter.com/apacheMRQL" />
     </links>
 
    <breadcrumbs position="left">
@@ -73,7 +72,7 @@
     <menu name="Related Projects">
       <item name="Hadoop" href="http://hadoop.apache.org/" />
       <item name="Hama" href="http://hama.apache.org/" />
-      <item name="Spark" href="http://spark.incubator.apache.org/" />
+      <item name="Spark" href="http://spark.apache.org/" />
     </menu>
 
     <menu name="ASF">

@@ -35,6 +35,7 @@ The MRQL query language is powerful enough to express most common data analysis 
     <p>
       <ul>
         <li>2013-03-13: MRQL project enters Apache Incubation.</li>
+        <li>2013-10-31: First release, MRQL-0.9.0-incubating</li>
       </ul>
     </p>    
 

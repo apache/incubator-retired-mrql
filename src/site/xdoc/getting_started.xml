@@ -28,7 +28,8 @@ xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd
 Apache MRQL can run in three modes: in Map-Reduce mode using Apache Hadoop, in BSP mode (Bulk Synchronous Parallel mode) using Apache Hama, and in Spark mode using Apache Spark.
 </p>
 <p>
-The MRQL MapReduce mode has been tested on Apache Hadoop MapReduce releases 1.0.1, and 1.0.3. You can download the latest tarball from Apache Hadoop. The BSP and Spark modes are optional. The BSP mode has been tested on Apache Hama 0.5.0 and 0.6.2. You can download the latest tarball from Apache Hama. The Spark mode has been tested on Apache Spark 0.8.0-incubating in both local and standalone deploy modes.
+The MRQL MapReduce mode has been tested on Apache Hadoop MapReduce releases 1.x, and 2.x (Yarn). You can download the latest tarball from <a href="http://hadoop.apache.org/releases.html">Apache Hadoop</a>. The BSP and Spark modes are optional. The BSP mode has been tested on Apache Hama 0.6.2 and 0.6.3. You can download the latest tarball from <a href="http://hama.apache.org/">Apache Hama</a>. The Spark mode has been tested on Apache Spark 1.0.0 in local, standalone deploy, and Yarn modes.
+You can download the latest tarball prebuilt for Hadoop1 or Hadoop2 from <a href="http://spark.apache.org/">Apache Spark</a>.
 </p>
 <p>
 The following instructions assume that you have already installed Apache Hadoop MapReduce and you have deployed it on your cluster successfully.
@@ -48,9 +49,13 @@ Change the configuration file <code>conf/mrql-env.sh</code> to match your Hama i
 </p>
     <subsection name="How to run MRQL on a Spark standalone cluster"></subsection>
 <p>
-Follow the instructions in <a href="http://spark.incubator.apache.org/docs/latest/spark-standalone.html">Spark Standalone Mode</a> to set up and start Apache Spark in standalone deploy mode.
+Follow the instructions in <a href="http://spark.apache.org/docs/latest/spark-standalone.html">Spark Standalone Mode</a> to set up and start Apache Spark in standalone deploy mode.
 Change the configuration file <code>conf/mrql-env.sh</code> to match your Spark installation. 
 For a test, run the <a href="https://wiki.apache.org/mrql/Pagerank">PageRank example</a> or the <a href="https://wiki.apache.org/mrql/Kmeans">k-means clustering example</a> on a Spark cluster.
+</p>
+    <subsection name="How to run MRQL in Spark mode on a Yarn cluster"></subsection>
+<p>
+Set SPARK_MASTER=yarn-client in conf/mrql-env.sh (see <a href="http://spark.apache.org/docs/latest/running-on-yarn.html">Running Spark on YARN</a>).
 </p>
     <section name="How to Recompile MRQL"></section>
 <p>
@@ -58,7 +63,7 @@ Download the latest stable MRQL source release from <a href="http://www.apache.o
 <pre>
 git clone https://git-wip-us.apache.org/repos/asf/incubator-mrql.git
 </pre>
-To build MRQL using maven, use <code>mvn install</code>. To validate the installation use <code>mvn install -Dtests</code>, which runs the queries in <code>tests/queries</code> in memory, local Hadoop mode, local Hama mode, and local Spark mode.
+To build MRQL using maven, use <code>mvn clean install</code>. To validate the installation use <code>mvn -DskipTests=false clean install</code>, which runs the queries in <code>tests/queries</code> in memory, local Hadoop mode, local Hama mode, and local Spark mode.
 </p>
 
   </body>
