@@ -16,7 +16,40 @@
  limitations under the License.
 ***************************************************************************
 
+Release Notes - Apache MRQL 0.9.2
+---------------------------------
+
+New Features
+
+[MRQL-23] Add support for Yarn
+[MRQL-29] Support for Spark 0.9.0
+
+Bugs
+
+[MRQL-22] The compiler must load the hadoop core lib before compilation
+[MRQL-28] Fixed dumping of HDFS sequence file in Spark mode
+[MRQL-31] Broken hyperlink in website
+[MRQL-33] Fix various bugs in iteration queries
+[MRQL-36] Fix evaluation errors during Junit testing
+
+Improvements
+
+[MRQL-21] Modify shell scripts to work on Mac OS
+[MRQL-24] Improve Serializable methods for Spark
+[MRQL-25] Changed Translator/Evaluator interface to improve Spark efficiency
+[MRQL-26] Support for Spark 0.8.1
+[MRQL-27] Improve the build process and support hadoop 0.20.x
+[MRQL-30] Improved run scripts and support for Spark on YARN
+[MRQL-32] Refactoring directory structure for Eclipse
+[MRQL-34] Introduce junit for testing
+[MRQL-37] Support installation on a Cloudera CDH distribution
+
+Tasks
+
+[MRQL-20] Fix maven problems to prepare a new release candidate
+
 Release Notes - Apache MRQL 0.9.0
+---------------------------------
 
 New Features
 

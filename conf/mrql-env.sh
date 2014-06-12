@@ -49,7 +49,7 @@ JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 
 
 # Required: Hadoop configuration. Supports versions 0.20.x, 1.x, and 2.x (YARN)
-HADOOP_VERSION=1.2.1
+HADOOP_VERSION=2.2.0
 # The Hadoop installation directory
 HADOOP_HOME=${HOME}/hadoop-${HADOOP_VERSION}
 # The Hadoop job tracker (as defined in mapred-site.xml)
@@ -58,7 +58,7 @@ MAPRED_JOB_TRACKER=localhost:9001
 FS_DEFAULT_NAME=hdfs://localhost:9000/
 
 
-# Optional: Hama configuration. Supports versions 0.5.0, 0.6.0, 0.6.2, and 0.6.3
+# Optional: Hama configuration. Supports versions 0.6.2 and 0.6.3 (but not 0.6.4)
 HAMA_VERSION=0.6.3
 # The Hadoop installation directory
 HAMA_HOME=${HOME}/hama-${HAMA_VERSION}
@@ -67,10 +67,11 @@ BSP_MASTER_ADDRESS=localhost:40000
 HAMA_ZOOKEEPER_QUORUM=localhost
 
 
-# Optional: Spark configuration. Supports versions 0.8.1 and 0.9.0
+# Optional: Spark configuration. Supports version 1.0.0 only
+# (Spark versions 0.8.1, 0.9.0, and 0.9.1 are supported by MRQL 0.9.0)
 # Use either the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
 # Tested in local, standalone deploy, and Yarn modes
-SPARK_HOME=${HOME}/spark-0.9.0-incubating-bin-hadoop1
+SPARK_HOME=${HOME}/spark-1.0.0-bin-hadoop2
 # URI of the Spark master node (to run Spark on a YARN cluster, set it to "yarn-client")
 SPARK_MASTER=spark://crete:7077
 # For a Yarn cluster set it to the number of workers to start on,
@@ -89,7 +90,12 @@ HAMA_JAR=${HAMA_HOME}/hama-core-${HAMA_VERSION}.jar
 
 # YARN-enabled assembly jar
 if [[ -d ${SPARK_HOME}/assembly/target ]]; then
-   SPARK_JAR=`ls ${SPARK_HOME}/assembly/target/scala-*/*`
+   # old Spark (0.x)
+   SPARK_JAR=`ls ${SPARK_HOME}/assembly/target/scala-*/*.jar`
+else if [[ -d ${SPARK_HOME}/lib ]]; then
+   # new Spark (1.x)
+   SPARK_JAR=`ls ${SPARK_HOME}/lib/spark-assembly-*.jar`
+fi
 fi
 
 if [[ -f ${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar ]]; then
