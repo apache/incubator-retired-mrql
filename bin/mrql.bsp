@@ -49,8 +49,12 @@ if (! [ -a $FULL_JAR ]); then
    popd > /dev/null
 fi
 
-if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
+if [ "$1" == "-local" ]; then
+   export HAMA_CLASSPATH=$FULL_JAR  # needed for Hama 0.6.4 in local mode
+   $HAMA_HOME/bin/hama jar $FULL_JAR org.apache.mrql.Main -bsp $*
+else if [ "$1" == "-dist" ]; then
    $HAMA_HOME/bin/hama jar $FULL_JAR org.apache.mrql.Main -bsp $*
 else
    $JAVA_HOME/bin/java -classpath "$FULL_JAR:$HAMA_JAR:$HADOOP_JARS" org.apache.mrql.Main -bsp $*
+fi
 fi

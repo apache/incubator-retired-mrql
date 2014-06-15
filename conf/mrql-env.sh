@@ -28,9 +28,6 @@
 # build MRQL on Hadoop 2.x (yarn):
 # mvn -Pyarn -Dyarn.version=2.2.0 -Dhadoop.version=1.2.1 install
 #
-# build MRQL on Hadoop 0.20.x:
-# mvn -PMultipleInputs -Dhadoop.version=0.20.2 install
-#
 #--------------------------------------------------------------------------------
 #
 # Set Apache MRQL-specific environment variables here:
@@ -48,8 +45,8 @@ CUP_JAR=${HOME}/.m2/repository/net/sf/squirrel-sql/thirdparty/non-maven/java-cup
 JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 
 
-# Required: Hadoop configuration. Supports versions 0.20.x, 1.x, and 2.x (YARN)
-HADOOP_VERSION=2.2.0
+# Required: Hadoop configuration. Supports versions 1.x and 2.x (YARN)
+HADOOP_VERSION=1.2.1
 # The Hadoop installation directory
 HADOOP_HOME=${HOME}/hadoop-${HADOOP_VERSION}
 # The Hadoop job tracker (as defined in mapred-site.xml)
@@ -58,7 +55,7 @@ MAPRED_JOB_TRACKER=localhost:9001
 FS_DEFAULT_NAME=hdfs://localhost:9000/
 
 
-# Optional: Hama configuration. Supports versions 0.6.2 and 0.6.3 (but not 0.6.4)
+# Optional: Hama configuration. Supports versions 0.6.2, 0.6.3, and 0.6.4
 HAMA_VERSION=0.6.3
 # The Hadoop installation directory
 HAMA_HOME=${HOME}/hama-${HAMA_VERSION}
@@ -69,9 +66,9 @@ HAMA_ZOOKEEPER_QUORUM=localhost
 
 # Optional: Spark configuration. Supports version 1.0.0 only
 # (Spark versions 0.8.1, 0.9.0, and 0.9.1 are supported by MRQL 0.9.0)
-# Use either the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
+# Use the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
 # Tested in local, standalone deploy, and Yarn modes
-SPARK_HOME=${HOME}/spark-1.0.0-bin-hadoop2
+SPARK_HOME=${HOME}/spark-1.0.0-bin-hadoop1
 # URI of the Spark master node (to run Spark on a YARN cluster, set it to "yarn-client")
 SPARK_MASTER=spark://crete:7077
 # For a Yarn cluster set it to the number of workers to start on,
@@ -80,7 +77,7 @@ SPARK_WORKER_INSTANCES=1
 # Number of cores for the workers
 SPARK_WORKER_CORES=2
 # Memory per Worker (e.g. 1000M, 2G)
-SPARK_WORKER_MEMORY=2G
+SPARK_WORKER_MEMORY=1G
 # Memory for Master (e.g. 1000M, 2G)
 SPARK_MASTER_MEMORY=512M
 
