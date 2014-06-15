@@ -44,6 +44,21 @@
       <directory>../src</directory>
     </fileSet>
     <fileSet>
+      <directory>../core/src</directory>
+    </fileSet>
+    <fileSet>
+      <directory>../gen/src</directory>
+    </fileSet>
+    <fileSet>
+      <directory>../mapreduce/src</directory>
+    </fileSet>
+    <fileSet>
+      <directory>../bsp/src</directory>
+    </fileSet>
+    <fileSet>
+      <directory>../spark/src</directory>
+    </fileSet>
+    <fileSet>
       <directory>../queries</directory>
     </fileSet>
     <fileSet>
