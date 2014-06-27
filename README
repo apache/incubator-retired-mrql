@@ -57,8 +57,14 @@ and our wiki, at:
 Getting Started
 ===============
 
-- Installation Instructions and a quick tutorial:
-  http://wiki.apache.org/mrql/GettingStarted
+Installation instructions and a quick tutorial:
+
+   http://wiki.apache.org/mrql/GettingStarted
+
+To build MRQL using maven, use 'mvn clean install'. To validate the
+installation use 'mvn -DskipTests=false clean install', which runs the
+queries in 'tests/queries' in memory, local Hadoop mode, local Hama
+mode, and local Spark mode.
 
 Useful mailing lists
 ====================

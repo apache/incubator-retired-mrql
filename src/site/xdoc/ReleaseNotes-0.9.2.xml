@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties></properties>
+  <title>Release Notes</title>
+  <body>
+    <section name="Release Notes - Apache MRQL 0.9.2-incubating"></section>
+
+<h3>New Features</h3>
+<ul>
+<li><b>[MRQL-23]</b> Add support for Yarn</li>
+<li><b>[MRQL-29]</b> Support for Spark 0.9.0</li>
+</ul>
+<h3>Bugs</h3>
+<ul>
+<li><b>[MRQL-22]</b> The compiler must load the hadoop core lib before compilation</li>
+<li><b>[MRQL-28]</b> Fixed dumping of HDFS sequence file in Spark mode</li>
+<li><b>[MRQL-31]</b> Broken hyperlink in website</li>
+<li><b>[MRQL-33]</b> Fix various bugs in iteration queries</li>
+<li><b>[MRQL-36]</b> Fix evaluation errors during Junit testing</li>
+</ul>
+<h3>Improvements</h3>
+<ul>
+<li><b>[MRQL-21]</b> Modify shell scripts to work on Mac OS</li>
+<li><b>[MRQL-24]</b> Improve Serializable methods for Spark</li>
+<li><b>[MRQL-25]</b> Changed Translator/Evaluator interface to improve Spark efficiency</li>
+<li><b>[MRQL-26]</b> Support for Spark 0.8.1</li>
+<li><b>[MRQL-27]</b> Improve the build process and support hadoop 0.20.x</li>
+<li><b>[MRQL-30]</b> Improved run scripts and support for Spark on YARN</li>
+<li><b>[MRQL-32]</b> Refactoring directory structure for Eclipse</li>
+<li><b>[MRQL-34]</b> Introduce junit for testing</li>
+<li><b>[MRQL-37]</b> Support installation on a Cloudera CDH distribution</li>
+<li><b>[MRQL-38]</b> Support for Spark 1.0.0</li>
+</ul>
+<h3>Tasks</h3>
+<ul>
+<li><b>[MRQL-39]</b> Prepare for 0.9.2 release</li>
+</ul>
+  </body>
+</document>

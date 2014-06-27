@@ -36,7 +36,7 @@ The following instructions assume that you have already installed Apache Hadoop 
 </p>
     <subsection name="How to install MRQL"></subsection>
 <p>
-Download the latest stable MRQL binary release from <a href="http://www.apache.org/dist/incubator/mrql/">http://www.apache.org/dist/incubator/mrql/</a> and extract the files. The scripts <code>bin/mrql</code>, <code>bin/mrql.bsp</code>, and <code>bin/mrql.spark</code> evaluate MRQL queries in Hadoop, Hama, and Spark modes, respectively.
+Download the latest stable MRQL binary release from <a href="http://www.apache.org/dyn/closer.cgi/incubator/mrql">http://www.apache.org/dyn/closer.cgi/incubator/mrql</a> and extract the files. The scripts <code>bin/mrql</code>, <code>bin/mrql.bsp</code>, and <code>bin/mrql.spark</code> evaluate MRQL queries in Hadoop, Hama, and Spark modes, respectively.
 </p>
     <subsection name="How to run MRQL on a Hadoop MapReduce cluster"></subsection>
 <p>
@@ -59,7 +59,7 @@ Set SPARK_MASTER=yarn-client in conf/mrql-env.sh (see <a href="http://spark.apac
 </p>
     <section name="How to Recompile MRQL"></section>
 <p>
-Download the latest stable MRQL source release from <a href="http://www.apache.org/dist/incubator/mrql/">http://www.apache.org/dist/incubator/mrql/</a> and extract the files. You can get the latest source code using:
+Download the latest stable MRQL source release from <a href="http://www.apache.org/dyn/closer.cgi/incubator/mrql">http://www.apache.org/dyn/closer.cgi/incubator/mrql</a> and extract the files. You can get the latest source code using:
 <pre>
 git clone https://git-wip-us.apache.org/repos/asf/incubator-mrql.git
 </pre>

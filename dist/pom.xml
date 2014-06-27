@@ -17,7 +17,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>mrql-dist</artifactId>
+  <artifactId>apache-mrql</artifactId>
   <packaging>pom</packaging>
   <name>Apache MRQL assembly</name>
 
@@ -45,7 +45,7 @@
               </descriptors>
               <tarLongFileMode>gnu</tarLongFileMode>
               <appendAssemblyId>true</appendAssemblyId>
-              <finalName>mrql-${project.version}-src</finalName>
+              <finalName>apache-mrql-${project.version}</finalName>
             </configuration>
           </execution>
           <execution>
@@ -60,7 +60,7 @@
               </descriptors>
               <tarLongFileMode>gnu</tarLongFileMode>
               <appendAssemblyId>true</appendAssemblyId>
-              <finalName>mrql-${project.version}-bin</finalName>
+              <finalName>apache-mrql-${project.version}</finalName>
             </configuration>
           </execution>
         </executions>

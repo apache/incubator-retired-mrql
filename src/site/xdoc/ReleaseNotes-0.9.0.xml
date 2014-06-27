@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties></properties>
+  <title>Release Notes</title>
+  <body>
+    <section name="Release Notes - Apache MRQL 0.9.0-incubating"></section>
+
+<h3>New Features</h3>
+<ul>
+<li><b>[MRQL-1]</b> New MRQL website</li>
+<li><b>[MRQL-4]</b> Create a testbed for MRQL queries using JUnit</li>
+</ul>
+<h3>Bugs</h3>
+<ul>
+<li><b>[MRQL-2]</b> Mavenize MRQL</li>
+<li><b>[MRQL-5]</b> JSON parser has a null scanner</li>
+<li><b>[MRQL-7]</b> Refactor directory layout to be more Maven compliant</li>
+<li><b>[MRQL-9]</b> Make BSP mode compatible with Hama 0.7.0</li>
+<li><b>[MRQL-10]</b> Add dist module to generate release tarball</li>
+</ul>
+<h3>Improvements</h3>
+<ul>
+<li><b>[MRQL-3]</b> some trivial code improvements</li>
+<li><b>[MRQL-6]</b> Add developers guide to the website</li>
+<li><b>[MRQL-8]</b> Overload projections to work on JSON data</li>
+<li><b>[MRQL-12]</b> Support query evaluation in Spark mode</li>
+</ul>
+<h3>Tasks</h3>
+<ul>
+<li><b>[MRQL-11]</b> Establish whether "Apache MRQL" is a suitable name</li>
+<li><b>[MRQL-13]</b> Umbrella task for first Apache MRQL release</li>
+<li><b>[MRQL-14]</b> Add the "-SNAPSHOT" suffix</li>
+<li><b>[MRQL-15]</b> Setup svnpubsub for the MRQL dist directory</li>
+<li><b>[MRQL-16]</b> correct source files. ASF licenses, and POMs for release</li>
+<li><b>[MRQL-17]</b> Update the MRQL status page</li>
+<li><b>[MRQL-18]</b> correct NOTICE, DISCLAIMER, xdoc</li>
+<li><b>[MRQL-19]</b> Fix license issues to prepare a new release candidate</li>
+<li><b>[MRQL-20]</b> Fix maven problems to prepare a new release candidate</li>
+</ul>
+  </body>
+</document>
