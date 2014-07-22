@@ -424,12 +424,13 @@ final public class PlanGeneration extends AlgebraicOptimization {
            return makePlan(#<tuple(...el)>);
        case project(`x,`a):
            Tree tp = TypeInference.type_inference(x);
-           match tp {
-           case XML:
+           if (tp.equals(#<XML>) || tp.equals(global_datatype_env.lookup(#<XML>.toString())))
                return makePlan(#<call(XMLchildren,`(new StringLeaf(a.toString())),`x)>);
-           case `S(XML):
+           match tp {
+           case `S(`xtp):
                if (is_collection(S))
-                   return makePlan(#<call(XMLchildren,`(new StringLeaf(a.toString())),`x)>);
+                   if (xtp.equals(#<XML>) || xtp.equals(global_datatype_env.lookup(#<XML>.toString())))
+                       return makePlan(#<call(XMLchildren,`(new StringLeaf(a.toString())),`x)>);
            };
            match TypeInference.expand(tp) {
            case record(...bl):
