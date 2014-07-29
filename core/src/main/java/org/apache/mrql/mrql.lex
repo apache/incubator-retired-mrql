@@ -38,6 +38,8 @@ import org.apache.mrql.gen.Tree;
 
   public static int[] nest = new int[1000];
   public static int nest_pos = 0;
+  public static int trace_nest = 0;
+  public static String trace_code = "$(";
 
   static String template = null;
 
@@ -45,6 +47,8 @@ import org.apache.mrql.gen.Tree;
     nest_pos = 0;
     nest[0] = 0;
     prev_char_pos = -1;
+    trace_nest = 0;
+    trace_code = "";
   }
 
   public static void record_begin () {
@@ -55,6 +59,22 @@ import org.apache.mrql.gen.Tree;
     nest_pos--;
   }
 
+  public static void start_trace_code () {
+    trace_nest++;
+    trace_code += "$(";
+  }
+
+  public static String get_trace_code () {
+    int loc = trace_code.lastIndexOf("$");
+    String s = trace_code.substring(loc+2);
+    s = s.substring(0,s.length()-1);
+    trace_nest--;
+    if (loc > 0)
+      loc--;
+    trace_code = trace_code.substring(0,loc)+s;
+    return s.replaceAll("\\p{Space}+"," ");
+  }
+
   public int line_pos () { return yyline+1; }
 
   public int char_pos () { return yychar-prev_char_pos; }
@@ -62,12 +82,14 @@ import org.apache.mrql.gen.Tree;
   public Symbol symbol ( int s ) {
     Tree.line_number = line_pos();
     Tree.position_number = char_pos();
+    if (trace_nest > 0 && s != sym.TRACE) trace_code += yytext();
     return new Symbol(s);
   }
 
   public Symbol symbol ( int s, Object o ) {
     Tree.line_number = line_pos();
     Tree.position_number = char_pos();
+    if (trace_nest > 0) trace_code += yytext();
     return new Symbol(s,o);
   }
 
@@ -160,6 +182,7 @@ DOUBLE = [0-9]+([\.][0-9]+)?([eE][+-]?[0-9]+)?
 <YYINITIAL> "parser"		{ return symbol(sym.PARSER); }
 <YYINITIAL> "include"		{ return symbol(sym.INCLUDE); }
 <YYINITIAL> "aggregation"	{ return symbol(sym.AGGREGATION); }
+<YYINITIAL> "trace"	        { return symbol(sym.TRACE); }
 
 <YYINITIAL> {ID}		{ return symbol(sym.Variable,yytext()); }
 
@@ -180,7 +203,7 @@ DOUBLE = [0-9]+([\.][0-9]+)?([eE][+-]?[0-9]+)?
 <YYINITIAL> \"[^\"]*\"	        { return symbol(sym.String,format(yytext().substring(1,yytext().length()-1))); }
 <YYINITIAL> \'[^\']*\'	        { return symbol(sym.String,format(yytext().substring(1,yytext().length()-1))); }
 
-<YYINITIAL> [ \t\f]             { }
-<YYINITIAL> [\r\n]              { prev_char_pos = yychar; }
+<YYINITIAL> [ \t\f]             { if (trace_nest > 0) trace_code += " "; }
+<YYINITIAL> [\r\n]              { prev_char_pos = yychar; if (trace_nest > 0) trace_code += " "; }
 
 <YYINITIAL> .                   { error("Illegal character: "+yytext()); }

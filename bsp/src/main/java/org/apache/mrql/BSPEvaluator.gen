@@ -222,6 +222,11 @@ final public class BSPEvaluator extends Evaluator {
                 return Plan.merge(eval(x,env),eval(y,env));
             case Dump(`s):
                 return Plan.fileCache((Bag)evalE(s,env));
+            case trace(`msg,`tp,`x):
+                long n = pre_trace(((MR_string)evalE(msg,env)).get());
+                DataSet ds = evalD(x,env);
+                trace(n,tp,new MR_dataset(ds));
+                return ds;
             case apply(`f,`arg):
                 if (!f.is_variable())
                     return ((MR_dataset)evalF(f,env).eval(evalE(arg))).dataset();

@@ -594,6 +594,8 @@ final public class PlanGeneration extends AlgebraicOptimization {
            if (!is_dataset_expr(x) || !is_dataset_expr(y))
                fail;
            return #<Merge(`(makePlan(x)),`(makePlan(y)))>;
+       case trace(`msg,`tp,`x):
+           return #<trace(`msg,`tp,`(makePlan(x)))>;
        case call(`f,...el):
            if (!f.is_variable())
                fail;

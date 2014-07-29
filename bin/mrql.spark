@@ -28,6 +28,10 @@ MRQL_HOME="$(cd `dirname $0`/..; pwd -P)"
 
 . "$MRQL_HOME/conf/mrql-env.sh"
 
+if [[ !(-f ${SPARK_JAR}) ]]; then
+   echo "*** Cannot find the Spark jar file. Need to edit mrql-env.sh"; exit -1
+fi
+
 GEN_JAR=`ls "$MRQL_HOME"/lib/mrql-gen-*.jar`
 CORE_JAR=`ls "$MRQL_HOME"/lib/mrql-core-*.jar`
 MRQL_JAR=`ls "$MRQL_HOME"/lib/mrql-spark-*.jar`

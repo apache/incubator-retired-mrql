@@ -749,6 +749,11 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                 if (((MR_bool)evalE(c,env)).get())
                     return eval(x,env);
                 else return eval(y,env);
+            case trace(`msg,`tp,`x):
+                long n = pre_trace(((MR_string)evalE(msg,env)).get());
+                JavaRDD<MRData> ds = evalD(x,env);
+                trace(n,tp,new Bag(ds.take(Config.max_bag_size_print)));
+                return ds;
             case apply(`f,`arg):
                 MRData x = evalE(e,env);
                 if (x instanceof MR_dataset)

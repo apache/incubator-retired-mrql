@@ -58,6 +58,7 @@ final public class TopLevel extends Interpreter {
             Tree plan = translate_expression(e);
             query_plan = plan;
             tab_count = -3;
+            trace_count = 0;
             if (plan == null)
                 return null;
             if (Config.hadoop_mode)

@@ -367,6 +367,9 @@ final public class Compiler extends Translator {
         else if (e.is_string())
             return "(new MR_string("+e.toString()+"))";
         match e {
+        case trace(`msg,`tp,`x):
+            return "Interpreter.trace(Interpreter.pre_trace(((MR_string)("
+                +compileE(msg)+")).get()),"+reify(tp)+","+compileE(x)+")";
         case callM(and,_,`x,`y):
             return "(new MR_bool(((MR_bool)"+compileE(x)
                 +").get() && ((MR_bool)"+compileE(y)+").get()))";

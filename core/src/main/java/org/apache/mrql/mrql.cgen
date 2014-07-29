@@ -34,7 +34,7 @@ parser code {:
         sym.SOME, sym.ALL, sym.GTR, sym.SEP, sym.STORE, sym.DUMP, sym.TYPE, sym.DATA, sym.REPEAT,
         sym.STEP, sym.LIMIT, sym.LET, sym.ATSYM, sym.EXCLAMATION,
         sym.Variable, sym.Integer, sym.Double, sym.String, sym.Decimal,
-        sym.START_TEMPLATE, sym.END_TEMPLATE, sym.TEXT
+        sym.START_TEMPLATE, sym.END_TEMPLATE, sym.TEXT, sym.TRACE
     };
 
     static String[] token_names = {
@@ -49,7 +49,7 @@ parser code {:
         "some", "all", ">", "|", "store", "dump", "type", "data", "repeat",
         "step", "limit", "let", "@", "!",
         "Variable", "Integer", "Double", "String", "Decimal",
-        "[|", "|]", "Text"
+        "[|", "|]", "Text", "trace"
     };
 
     public static String print ( Symbol s ) {
@@ -94,7 +94,7 @@ terminal IF, THEN, ELSE, SELECT, FROM, HAVING, LB, RB, LP, RP, LSB, RSB, LDOT, S
          UNION, INTERSECT, EXCEPT, EXISTS, IN, COMMA, DOT, COLON, ASSIGN, SEMI, WHERE,
          ORDER, GROUP, BY, ASCENDING, DESCENDING, UMINUS, FUNCTION, DISTINCT, BSLASH,
          SOME, ALL, GTR, SEP, STORE, TYPE, DATA, CASE, ATSYM, XPATH, REPEAT, STEP, LIMIT,
-         LET, IMPORT, PARSER, AGGREGATION, INCLUDE, EXCLAMATION, MACRO, DUMP;
+         LET, IMPORT, PARSER, AGGREGATION, INCLUDE, EXCLAMATION, MACRO, DUMP, TRACE;
 
 terminal String         Variable;
 terminal Long           Integer;
@@ -236,6 +236,9 @@ expr            ::= mrql:e                              {: RESULT = e; :}
                                                         {: RESULT = Translator.template(#<template(`(s.substring(1,s.length()-1)),...t,text(`e))>); :}
                 |   START_TEMPLATE:s END_TEMPLATE:e     {: RESULT = Translator.template(#<template(`(s.substring(1,s.length()-1)),text(`e))>); :}
                 |   const:c                             {: RESULT = c; :}
+                |   TRACE                               {: MRQLLex.start_trace_code(); :}
+                    LP expr:e                           {: RESULT = #<trace(`(new StringLeaf(MRQLLex.get_trace_code())),none,`e)>; :}
+                    RP
                 ;
 template        ::= template:t TEXT:s                   {: RESULT = t.append(#<text(`s)>); :}
                 |   template:t expr:e                   {: RESULT = t.append(e); :}

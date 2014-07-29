@@ -271,6 +271,16 @@ final public class MapReduceEvaluator extends Evaluator {
                 if (((MR_bool)evalE(c,env)).get())
                     return eval(x,env,"-");
                 else return eval(y,env,"-");
+            case trace(`msg,`tp,`x):
+                long n = pre_trace(((MR_string)evalE(msg,env)).get());
+                DataSet ds = evalD(x,env,counter);
+                if (!counter.equals("-")) // if inside a repeat loop
+                    match tp {
+                    case `T(tuple(`etp,bool)):
+                        tp = #<`T(`etp)>;
+                    };
+                trace(n,tp,new MR_dataset(ds));
+                return ds;
             case apply(`f,`arg):
                 if (!f.is_variable())
                     return ((MR_dataset)evalF(f,env).eval(evalE(arg))).dataset();

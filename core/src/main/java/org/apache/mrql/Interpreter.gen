@@ -192,11 +192,27 @@ public class Interpreter extends TypeInference {
 
     static int tab_count = -3;
 
+    static long trace_count = 0;
+
     public static String tabs ( int n ) {
         StringBuffer b = new StringBuffer();
         for ( int i = 0; i < n; i++)
             b.append(' ');
         return b.toString();
+    }
+
+    public static long pre_trace ( String msg ) {
+        tab_count += 3;
+        trace_count++;
+        System.out.println(tabs(tab_count)+"*** "+trace_count+": "+msg);
+        return trace_count;
+    }
+
+    public static MRData trace ( long count, Tree type, MRData value ) {
+        System.out.print(tabs(tab_count)+"--> "+count+": ");
+        System.out.println(Printer.print(value,type));
+        tab_count -= 3;
+        return value;
     }
 
     /** evaluate an MRQL expression in memory and print tracing info */
@@ -303,6 +319,9 @@ public class Interpreter extends TypeInference {
         case range(`min,`max):
             return MapReduceAlgebra.generator(((MR_long)evalE(min,env)).get(),
                                               ((MR_long)evalE(max,env)).get());
+        case trace(`msg,`tp,`x):
+            String m = ((MR_string)evalE(msg,env)).get();
+            return trace(pre_trace(m),tp,evalE(x,env));
         case call(`f,...args):
             Tuple t = new Tuple(args.length());
             int i = 0;
@@ -519,10 +538,6 @@ public class Interpreter extends TypeInference {
             if (!(t instanceof Tuple))
                 throw new Error("Expected a tuple in function application: "+t);
             return ((Lambda)fnc).lambda().eval(t);
-        case trace(`x):
-            MRData z = evalE(x,env);
-            System.err.println("*** "+x+": "+z);
-            return z;
         case _:
             try {
                 if (Config.hadoop_mode)
@@ -698,6 +713,9 @@ public class Interpreter extends TypeInference {
                     });
             case let(`v,`u,`body):
                 return evalM(body,new Environment(v.toString(),evalE(u,env),env));
+            case trace(`msg,`tp,`x):
+                String m = ((MR_string)evalE(msg,env)).get();
+                return (Bag)trace(pre_trace(m),tp,evalM(x,env));
             case apply(`f,`arg):
                 if (!f.is_variable())
                     return (Bag)evalF(f,env).eval(evalE(arg));

@@ -1221,6 +1221,18 @@ public class TypeInference extends Translator {
             fail
         case call(avg,`s):
             return type_inference(#<call(div,typed(call(sum,`s),double),call(count,`s))>);
+        case trace(`msg,`t,`x):
+            if (unify(type_inference2(msg),#<string>) == null)
+                type_error(e,"Expected a string in the trace message");
+            Tree tp = type_inference2(x);
+            match tp {
+            case `T(_):
+                if (Config.bsp_mode && is_persistent_collection(T))
+                    type_error(e,"Cannot trace expressions of persistent type in BSP mode: "+x);
+            }; 
+            if (t.equals(#<none>))
+                ((Node)e).children.tail.head = tp;       // destructive
+            return tp;
         case apply(lambda(`v,`b),`arg):
             type_env.begin_scope();
             type_env.insert(v.toString(),type_inference(arg));

@@ -35,7 +35,7 @@ public class BSPTranslator extends TypeInference {
     final static int coerceM = ClassImporter.find_method_number("coerce",#[any,int]);
 
     final static Trees planNames = plans_with_distributed_lambdas
-        .append(#[ParsedSource,Generator,BinarySource,GroupByJoin,Repeat,Closure,repeat]);
+        .append(#[ParsedSource,Generator,BinarySource,GroupByJoin,Repeat,Closure,repeat,trace]);
 
     private static int source_num = 0;
 
@@ -113,6 +113,8 @@ public class BSPTranslator extends TypeInference {
             return #<repeat(`(preprocess(f)),`(preprocess(ds)),`max)>;
         case Closure(`f,`ds,`max):
             return #<Closure(`(preprocess(f)),`(preprocess(ds)),`max)>;
+        case trace(`msg,`tp,`x):
+            return #<trace(`msg,`tp,`(preprocess(x)))>;
         case `f(...):
             if (! #[ParsedSource,Generator,BinarySource].member(#<`f>))
                 fail;
@@ -129,6 +131,8 @@ public class BSPTranslator extends TypeInference {
     /** returns the source num of a BSP operation */
     private static int source_num ( Tree e ) {
         match e {
+        case trace(`msg,`tp,`x):
+            return source_num(x);
         case BSP(tuple(`i,...),...):
             return (int)((LongLeaf)i).value();
         case BSP(`i,...):
@@ -171,6 +175,8 @@ public class BSPTranslator extends TypeInference {
 
     private static Tree set_cache_num ( Tree e, int n ) {
         match e {
+        case trace(`msg,`tp,`x):
+            return set_cache_num(x,n);
         case BSP(`m,...r):
             return subst_setCache_num(source_num(e),n,#<BSP(`n,...r)>);
         case BSPSource(_,`x):
@@ -182,6 +188,8 @@ public class BSPTranslator extends TypeInference {
     // return the source numbers of a BSP operation
     private static Trees source_nums ( Tree e ) {
         match e {
+        case trace(`msg,`tp,`x):
+            return source_nums(x);
         case BSP(`i,...):
             return #[`i];
         case Merge(`x,`y):
@@ -689,7 +697,7 @@ public class BSPTranslator extends TypeInference {
         return e;
     }
 
-    /** simplify the BSP plan by fusing consequtive BSP plans */
+    /** simplify the BSP plan by fusing consecutive BSP plans */
     private static Tree bspSimplify ( Tree e ) {
         match e {
         case BSP(`n,`s2,`k2,`o,...r,BSP(_,`s1,`k1,_,...s),...t):
