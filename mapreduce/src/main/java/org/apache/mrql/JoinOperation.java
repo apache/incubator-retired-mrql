@@ -289,7 +289,9 @@ final public class JoinOperation extends MapReducePlan {
             };
             pair.set(0,left);
             pair.set(1,right);
-            for ( MRData e: (Bag)reduce_fnc.eval(pair) ) {
+            Bag s = (Bag)reduce_fnc.eval(pair);
+            s.materialize();
+            for ( MRData e: s ) {
                 ckey.set(key.key);
                 write(ckey,e,context);
             }
