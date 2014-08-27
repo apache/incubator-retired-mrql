@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.*;
 final public class MR_bool extends MRData {
     private boolean value;
 
+    public MR_bool () {}
+
     public MR_bool ( boolean i ) { value = i; }
 
     public void materializeAll () {};

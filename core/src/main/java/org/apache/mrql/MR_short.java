@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.*;
 final public class MR_short extends MRData {
     private short value;
 
+    public MR_short () {}
+
     public MR_short ( short i ) { value = i; }
 
     public void materializeAll () {};

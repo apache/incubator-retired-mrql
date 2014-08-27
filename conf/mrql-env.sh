@@ -46,7 +46,7 @@ JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 
 
 # Required: Hadoop configuration. Supports versions 1.x and 2.x (YARN)
-HADOOP_VERSION=1.2.1
+HADOOP_VERSION=2.2.0
 # The Hadoop installation directory
 HADOOP_HOME=${HOME}/hadoop-${HADOOP_VERSION}
 # The Hadoop job tracker (as defined in mapred-site.xml)
@@ -64,15 +64,17 @@ BSP_MASTER_ADDRESS=localhost:40000
 HAMA_ZOOKEEPER_QUORUM=localhost
 
 
-# Optional: Spark configuration. Supports version 1.0.0 only
+# Optional: Spark configuration. Supports versions 1.0.0 and 1.0.2 only
 # (Spark versions 0.8.1, 0.9.0, and 0.9.1 are supported by MRQL 0.9.0)
 # Use the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
 # Tested in local, standalone deploy, and Yarn modes
-SPARK_HOME=${HOME}/spark-1.0.0-bin-hadoop1
-# URI of the Spark master node (to run Spark on a YARN cluster, set it to "yarn-client")
-SPARK_MASTER=spark://crete:7077
+SPARK_HOME=${HOME}/spark-1.0.2-bin-hadoop2
+# URI of the Spark master node:
+#   to run Spark on Standalone Mode, set it to spark://`hostname`:7077
+#   to run Spark on a YARN cluster, set it to "yarn-client"
+SPARK_MASTER=yarn-client
 # For a Yarn cluster set it to the number of workers to start on,
-#  for local/standalone set it to 1
+#   for local/standalone set it to 1
 SPARK_WORKER_INSTANCES=1
 # Number of cores for the workers
 SPARK_WORKER_CORES=2
@@ -81,9 +83,23 @@ SPARK_WORKER_MEMORY=1G
 # Memory for Master (e.g. 1000M, 2G)
 SPARK_MASTER_MEMORY=512M
 
+
+# Optional: Flink configuration. Supports version 0.6-incubating
+# Note: for yarn, set yarn.nodemanager.vmem-check-enabled to false in yarn-site.xml
+FLINK_VERSION=yarn-0.6-incubating
+# Flink installation directory
+FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
+# Flink JobManager (on a yarn cluster, it is printed when you run yarn-session.sh)
+if [ "$FLINK_MASTER" = "" ]; then
+    FLINK_MASTER=`hostname`
+fi
+
+
 # Claspaths
 
 HAMA_JAR=${HAMA_HOME}/hama-core-${HAMA_VERSION}.jar
+
+FLINK_JAR=`ls ${FLINK_HOME}/lib/flink-*.jar`
 
 # YARN-enabled assembly jar
 if [[ -d ${SPARK_HOME}/assembly/target ]]; then

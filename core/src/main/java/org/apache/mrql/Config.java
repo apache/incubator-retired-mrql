@@ -39,6 +39,8 @@ final public class Config {
     public static boolean bsp_mode = false;
     // true, for Spark mode
     public static boolean spark_mode = false;
+    // true, for Flink mode
+    public static boolean flink_mode = false;
     // if true, it process the input interactively
     public static boolean interactive = true;
     // compile the MR functional arguments to Java bytecode at run-time
@@ -91,6 +93,7 @@ final public class Config {
         conf.setBoolean("mrql.map.reduce.mode",map_reduce_mode);
         conf.setBoolean("mrql.bsp.mode",bsp_mode);
         conf.setBoolean("mrql.spark.mode",spark_mode);
+        conf.setBoolean("mrql.flink.mode",flink_mode);
         conf.setBoolean("mrql.interactive",interactive);
         conf.setBoolean("mrql.compile.functional.arguments",compile_functional_arguments);
         conf.setBoolean("mrql.trace",trace);
@@ -121,6 +124,7 @@ final public class Config {
         map_reduce_mode = conf.getBoolean("mrql.map.reduce.mode",map_reduce_mode);
         bsp_mode = conf.getBoolean("mrql.bsp.mode",bsp_mode);
         spark_mode = conf.getBoolean("mrql.spark.mode",spark_mode);
+        flink_mode = conf.getBoolean("mrql.flink.mode",flink_mode);
         interactive = conf.getBoolean("mrql.interactive",interactive);
         compile_functional_arguments = conf.getBoolean("mrql.compile.functional.arguments",compile_functional_arguments);
         trace = conf.getBoolean("mrql.trace",trace);
@@ -169,6 +173,9 @@ final public class Config {
                 i++;
             } else if (args[i].equals("-spark")) {
                 spark_mode = true;
+                i++;
+            } else if (args[i].equals("-flink")) {
+                flink_mode = true;
                 i++;
             } else if (args[i].equals("-bsp_tasks")) {
                 if (++i >= args.length && Integer.parseInt(args[i]) < 1)

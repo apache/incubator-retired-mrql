@@ -28,6 +28,8 @@ public class ParsedDataSource extends DataSource {
     public Class<? extends Parser> parser;
     public Trees args;
 
+    ParsedDataSource () {}
+
     ParsedDataSource ( int source_num,
                        String path,
                        Class<? extends Parser> parser,

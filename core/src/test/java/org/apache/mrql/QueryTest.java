@@ -49,7 +49,7 @@ public abstract class QueryTest extends TestCase {
 		resultDir = new File(TEST_RESULT_DIR);
 		resultDir.mkdirs();
 
-		if(evaluator==null)
+		// if(evaluator==null) // the spark evaluator needs to be recreated
 			evaluator = createEvaluator();
 		Translator.global_reset();
                 for ( Enumeration en = LogManager.getCurrentLoggers(); en.hasMoreElements(); )

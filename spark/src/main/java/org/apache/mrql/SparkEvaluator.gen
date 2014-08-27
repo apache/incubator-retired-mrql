@@ -97,7 +97,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
 
     final public void initialize_query () {
         Plan.distribute_compiled_arguments(Plan.conf);
-        if (Config.compile_functional_arguments)
+        if (spark_context != null && Config.compile_functional_arguments)
             spark_context.addJar(Plan.conf.get("mrql.jar.path"));
     }
 
@@ -169,21 +169,21 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
     @Override
     final public void dump ( String file, Tree type, MRData data ) throws Exception {
         if (data instanceof MR_dataset && ((MR_dataset)data).dataset().source.get(0) instanceof RDDDataSource) {
-	    Path path = new Path(file);
-	    FileSystem fs = path.getFileSystem(Plan.conf);
-	    PrintStream ftp = new PrintStream(fs.create(path.suffix(".type")));
+            Path path = new Path(file);
+            FileSystem fs = path.getFileSystem(Plan.conf);
+            PrintStream ftp = new PrintStream(fs.create(path.suffix(".type")));
             fs.delete(path,true);
-	    ftp.print("2@"+type.toString()+"\n");
-	    ftp.close();
+            ftp.print("2@"+type.toString()+"\n");
+            ftp.close();
             // in Spark mode, a dataset has always one RDD datasource
-	    JavaRDD<MRData> rdd = ((RDDDataSource)((MR_dataset)data).dataset().source.get(0)).rdd.cache();
+            JavaRDD<MRData> rdd = ((RDDDataSource)((MR_dataset)data).dataset().source.get(0)).rdd.cache();
             rdd.mapToPair(new PairFunction<MRData,MRContainer,MRContainer>() {
                     final MRContainer zero = new MRContainer(new MR_int(0));
                     public Tuple2<MRContainer,MRContainer> call ( MRData value ) {
                         return new Tuple2<MRContainer,MRContainer>(zero,new MRContainer(value));
                     }
                 }).saveAsHadoopFile(file,MRContainer.class,MRContainer.class,SequenceFileOutputFormat.class);
-	} else super.dump(file,type,data);
+        } else super.dump(file,type,data);
     }
 
     /** dump MRQL data into text a CVS file */
@@ -191,26 +191,26 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
     final public void dump_text ( String file, Tree type, MRData data ) throws Exception {
         if (data instanceof MR_dataset && ((MR_dataset)data).dataset().source.get(0) instanceof RDDDataSource) {
             // in Spark mode, a dataset has always one RDD datasource
-	    JavaRDD<MRData> rdd = ((RDDDataSource)((MR_dataset)data).dataset().source.get(0)).rdd.cache();
-	    int ps = Config.max_bag_size_print;
-	    Config.max_bag_size_print = -1;
-	    match type {
-	    case `T(tuple(...tps)):
-		final Trees ts = tps;
-		rdd.map(new Function<MRData,String>() {
+            JavaRDD<MRData> rdd = ((RDDDataSource)((MR_dataset)data).dataset().source.get(0)).rdd.cache();
+            int ps = Config.max_bag_size_print;
+            Config.max_bag_size_print = -1;
+            match type {
+            case `T(tuple(...tps)):
+                final Trees ts = tps;
+                rdd.map(new Function<MRData,String>() {
                         public String call ( MRData value ) {
-			    Tuple t = (Tuple)value;
-			    String s = Printer.print(t.get((short)0),ts.nth(0));
-			    for ( short i = 1; i < t.size(); i++ )
-				s += ","+Printer.print(t.get(i),ts.nth(i));
-			    return s;
-			}
-		    }).saveAsTextFile(file);
-	    case _:
-		rdd.saveAsTextFile(file);
-	    };
-	    Config.max_bag_size_print = ps;
-	} else super.dump_text(file,type,data);
+                            Tuple t = (Tuple)value;
+                            String s = Printer.print(t.get((short)0),ts.nth(0));
+                            for ( short i = 1; i < t.size(); i++ )
+                                s += ","+Printer.print(t.get(i),ts.nth(i));
+                            return s;
+                        }
+                    }).saveAsTextFile(file);
+            case _:
+                rdd.saveAsTextFile(file);
+            };
+            Config.max_bag_size_print = ps;
+        } else super.dump_text(file,type,data);
     }
 
     private static Function2<MRData,MRData,MRData> accumulator ( final Tree acc_fnc, final Environment env ) {
@@ -554,7 +554,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                             }
                         });
             case GroupByJoin(`kx,`ky,`gx,`gy,`acc,`zero,`r,`x,`y,`o):
-                final int n = (int)Math.floor(Math.sqrt(Config.nodes));
+                final int n = Math.max(2,(int)Math.floor(Math.sqrt(Config.nodes)));
                 final int m = n;
                 // System.err.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
                 final org.apache.mrql.Function fkx = evalF(kx,env);

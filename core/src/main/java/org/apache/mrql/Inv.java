@@ -25,6 +25,8 @@ import java.io.DataOutput;
 final public class Inv extends MRData {
     private MRData value;
 
+    public Inv () {}
+
     Inv ( MRData v ) { value = v; }
 
     public void materializeAll () { value.materializeAll(); };

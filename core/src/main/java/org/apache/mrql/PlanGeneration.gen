@@ -672,6 +672,12 @@ final public class PlanGeneration extends AlgebraicOptimization {
         match plan {
         case MapReduce2(`mx,`my,`r,`x,`y,`o):
             return physical_plan(#<MapAggregateReduce2(`mx,`my,`r,null,null,`x,`y,`o)>);
+        case MapAggregateReduce2(`mx,`my,lambda(`v,`b),`acc,`zero,`x,`y,false):
+            if (!Config.flink_mode)
+                fail;
+            return #<MapAggregateReduce2(`mx,`my,lambda(`v,`b),`acc,`zero,
+                                         `(physical_plan(x)),
+                                         `(physical_plan(y)),false)>;
         // convert a reduce-side join to a fragment-replicate join, if either of the join
         //   inputs is small to fit in memory (dataset sizes are extracted from file statistics)
         case MapAggregateReduce2(`mx,`my,
@@ -750,6 +756,8 @@ final public class PlanGeneration extends AlgebraicOptimization {
         case CrossProduct(`mx,`my,`r,`x,`y):
             return physical_plan(#<CrossAggregateProduct(`mx,`my,`r,null,null,`x,`y)>);
         case CrossAggregateProduct(`mx,`my,lambda(`v,`b),`acc,`zero,`x,`y):
+            if (Config.flink_mode)
+                fail;
             Tree X = new_var();
             Tree Y = new_var();
             Tree nv = new_var();

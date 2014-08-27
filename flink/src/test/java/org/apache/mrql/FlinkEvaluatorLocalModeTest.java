@@ -22,7 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.GenericOptionsParser;
 
-public class SparkQueryLocalModeTest extends QueryTest {
+public class FlinkEvaluatorLocalModeTest extends EvaluatorTest {
 
 	public void tearDown() throws IOException {
 		super.tearDown();
@@ -31,30 +31,31 @@ public class SparkQueryLocalModeTest extends QueryTest {
 
 	@Override
 	protected Evaluator createEvaluator() throws Exception {
-		Configuration conf = new Configuration();
+		Configuration conf = null;
 
 		Config.bsp_mode = false;
-		Config.spark_mode = true;
+		Config.spark_mode = false;
+		Config.flink_mode = true;
 		Config.map_reduce_mode = false;
 
-		Evaluator.evaluator = new SparkEvaluator();
+		Evaluator.evaluator = new FlinkEvaluator();
 
 		Config.quiet_execution = true;
 
-		String[] args = new String[] { "-local", "-spark" };
+		String[] args = new String[] { "-local", "-flink" };
 
 		conf = Evaluator.evaluator.new_configuration();
 		GenericOptionsParser gop = new GenericOptionsParser(conf, args);
 		conf = gop.getConfiguration();
 
 		args = gop.getRemainingArgs();
-		
+
 		Config.hadoop_mode = true;
-		Config.testing = true;		
+		Config.testing = true;
 		Config.parse_args(args, conf);
 		
 		Evaluator.evaluator.init(conf);
-
+		
 		return Evaluator.evaluator;
 	}
 }

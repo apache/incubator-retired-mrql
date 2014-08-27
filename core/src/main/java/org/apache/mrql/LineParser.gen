@@ -26,7 +26,7 @@ import org.apache.hadoop.util.LineReader;
 
 
 /** A parser for line-oriented, character delimited text files (such as CVS) */
-final public class LineParser implements Parser {
+public class LineParser implements Parser {
     final static int maxLineLength = 1000;
     boolean in_memory;
     FSDataInputStream fsin;     // for HDFS processing

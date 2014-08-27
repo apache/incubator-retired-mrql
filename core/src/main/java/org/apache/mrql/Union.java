@@ -29,6 +29,8 @@ public class Union extends MRData {
     private byte tag;
     private MRData value;
 
+    public Union () {}
+
     public Union ( byte tag, MRData value ) {
         this.tag = tag;
         this.value = value;

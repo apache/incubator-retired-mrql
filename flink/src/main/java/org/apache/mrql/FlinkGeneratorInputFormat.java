@@ -17,27 +17,12 @@
  */
 package org.apache.mrql;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.flink.api.common.io.FileInputFormat;
 
-public class SparkQueryInMemoryTest extends QueryTest {
 
-	@Override
-	protected Evaluator createEvaluator() throws Exception {
-		Configuration conf = null;
-
-		Config.bsp_mode = false;
-		Config.spark_mode = true;
-		Config.map_reduce_mode = false;
-
-		Evaluator.evaluator = new SparkEvaluator();
-
-		Config.quiet_execution = true;
-		Config.hadoop_mode = false;
-		Config.testing = true;
-		Config.parse_args(new String[] { "-spark" }, conf);
-		
-		Evaluator.evaluator.init(conf);
-		
-		return Evaluator.evaluator;
-	}
+/** the FileInputFormat for data generators: it creates HDFS files, where each file contains
+ *  an (offset,size) pair that generates the range of values [offset,offset+size] */
+final public class FlinkGeneratorInputFormat extends FlinkMRQLFileInputFormat {
+    /** the Flink input format for this input */
+    public FileInputFormat<FData> inputFormat ( String path ) { return null; }
 }

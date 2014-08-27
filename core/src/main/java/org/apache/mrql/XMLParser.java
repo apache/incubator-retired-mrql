@@ -31,7 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 
 
 /** An XML parser */
-final public class XMLParser implements Parser {
+public class XMLParser implements Parser {
     String[] tags;          // split tags
     Tree xpath;             // XPath query for fragmentation
     XMLSplitter splitter;

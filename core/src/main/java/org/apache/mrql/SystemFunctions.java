@@ -361,10 +361,23 @@ final public class SystemFunctions {
     }
  
     /** used in avg */
-    public static MR_double avg_value ( MRData t ) {
-        MR_double sum = (MR_double)((Tuple)t).first();
-        MR_long count = (MR_long)((Tuple)t).second();
-        return new MR_double(sum.get()/count.get());
+    public static MR_double avg_value ( MRData value ) {
+        Tuple t = (Tuple)value;
+        double sum = 0.0;
+        if (t.first() instanceof MR_double)
+            sum = ((MR_double)t.first()).get();
+        else if (t.first() instanceof MR_int)
+            sum = ((MR_int)t.first()).get();
+        else if (t.first() instanceof MR_long)
+            sum = ((MR_long)t.first()).get();
+        else if (t.first() instanceof MR_float)
+            sum = ((MR_float)t.first()).get();
+        long count = 0;
+        if (t.second() instanceof MR_long)
+            count = ((MR_long)t.second()).get();
+        else if (t.second() instanceof MR_int)
+            count = ((MR_int)t.second()).get();
+        return new MR_double(sum/count);
     }
 
     public static MR_string text ( Union node ) {

@@ -28,6 +28,8 @@ final public class Tuple extends MRData {
 
     MRData[] tuple;
 
+    public Tuple () { tuple = new MRData[0]; }
+
     public Tuple ( int size ) {
         tuple = new MRData[size];
     }

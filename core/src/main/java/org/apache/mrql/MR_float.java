@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.*;
 final public class MR_float extends MRData {
     private float value;
 
+    public MR_float () {}
+
     public MR_float ( float x ) { value = x; }
 
     public MR_float ( double x ) { value = (float)x; }

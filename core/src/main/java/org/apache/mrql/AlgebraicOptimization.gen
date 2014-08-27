@@ -69,13 +69,17 @@ public class AlgebraicOptimization extends Simplification {
         case mapReduce2(`mx,`my,`r,cmap(lambda(`v,`b),`X),`Y,`o):
             match X {
             case groupBy(...): ;
-            case _: return translate(#<mapReduce2(lambda(`v,cmap(`mx,`b)),`my,`r,`X,`Y,`o)>);
+            case _:
+                Tree nmx = simplify(#<cmap(`mx,`b)>);
+                return translate(#<mapReduce2(lambda(`v,`nmx),`my,`r,`X,`Y,`o)>);
             };
             fail
         case mapReduce2(`mx,`my,`r,`X,cmap(lambda(`v,`b),`Y),`o):
             match Y {
             case groupBy(...): ;
-            case _: return translate(#<mapReduce2(`mx,lambda(`v,cmap(`my,`b)),`r,`X,`Y,`o)>);
+            case _:
+                Tree nmy = simplify(#<cmap(`my,`b)>);
+                return translate(#<mapReduce2(`mx,lambda(`v,`nmy),`r,`X,`Y,`o)>);
             };
             fail
         case crossProduct(`mx,`my,`r,cmap(lambda(`vx,`bx),`X),cmap(lambda(`vy,`by),`Y)):

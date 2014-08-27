@@ -20,57 +20,32 @@ package org.apache.mrql;
 import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.fs.*;
+import org.apache.flink.api.java.DataSet;
 
 
-/** a container for byte values */
-final public class MR_byte extends MRData {
-    private byte value;
+/** a wrapper of a DataSet<FData> as an MRData */
+final public class MR_flink extends MRData {
+    public DataSet<FData> flink;
 
-    public MR_byte () {}
-
-    public MR_byte ( byte i ) { value = i; }
-
-    public MR_byte ( int i ) { value = (byte)i; }
+    public MR_flink ( DataSet<FData> d ) { flink = d; }
 
     public void materializeAll () {};
 
-    public byte get () { return value; }
-
-    public void set ( byte v ) { value = v; }
+    public DataSet<FData> flink () { return flink; }
 
     final public void write ( DataOutput out ) throws IOException {
-        out.writeByte(MRContainer.BYTE);
-        out.writeByte(value);
-    }
-
-    final public static MR_byte read ( DataInput in ) throws IOException {
-        return new MR_byte(in.readByte());
+        throw new Error("DataSets are not serializable");
     }
 
     public void readFields ( DataInput in ) throws IOException {
-        value = in.readByte();
+        throw new Error("DataSets are not serializable");
     }
 
     public int compareTo ( MRData x ) {
-        assert(x instanceof MR_byte);
-        byte v = ((MR_byte) x).value;
-        return (value == v) ? 0 : ((value < v) ? -1 : 1);
-    }
-
-    final public static int compare ( byte[] x, int xs, int xl, byte[] y, int ys, int yl, int[] size ) {
-        size[0] = 2;
-        return x[xs]-y[ys];
+        throw new Error("DataSets cannot be compared");
     }
 
     public boolean equals ( Object x ) {
-        return x instanceof MR_byte && ((MR_byte)x).value==value;
-    }
-
-    public int hashCode () { return Math.abs(value); }
-
-    public String toString () {
-        return Integer.toString(value);
+        throw new Error("DataSets cannot be compared");
     }
 }

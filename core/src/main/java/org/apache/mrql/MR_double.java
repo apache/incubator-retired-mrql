@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.*;
 final public class MR_double extends MRData {
     private double value;
 
+    public MR_double () {}
+
     public MR_double ( double x ) { value = x; }
 
     public void materializeAll () {};

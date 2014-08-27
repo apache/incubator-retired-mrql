@@ -15,29 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.mrql;
 
-import org.apache.hadoop.conf.Configuration;
+import java.io.IOException;
+import org.apache.flink.core.memory.DataInputView;
+import org.apache.flink.core.memory.DataOutputView;
+import org.apache.flink.core.io.IOReadableWritable;
 
-public class SparkEvaluatorInMemoryTest  extends EvaluatorTest {
+final public class FDataContainer extends MRContainer implements IOReadableWritable, Comparable<MRContainer> {
 
-	@Override
-	protected Evaluator createEvaluator() throws Exception {
-		Configuration conf = null;
+    FDataContainer ( MRData d ) { super(d); }
 
-		Config.bsp_mode = false;
-		Config.spark_mode = true;
-		Config.map_reduce_mode = false;
+    @Override
+    public void read ( DataInputView in ) throws IOException {
+        data = super.read(in);
+    }
 
-		Evaluator.evaluator = new SparkEvaluator();
-
-		Config.quiet_execution = true;		
-		Config.hadoop_mode = false;
-		Config.testing = true;
-		Config.parse_args(new String[] {"-spark"}, conf);
-		
-		Evaluator.evaluator.init(conf);
-		
-		return Evaluator.evaluator;
-	}
+    @Override
+    public void write ( DataOutputView out ) throws IOException {
+        super.write(out);
+    }
 }

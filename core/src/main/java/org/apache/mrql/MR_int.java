@@ -26,6 +26,8 @@ import org.apache.hadoop.fs.*;
 final public class MR_int extends MRData {
     private int value;
 
+    public MR_int () {}
+
     public MR_int ( int i ) { value = i; }
 
     public void materializeAll () {};

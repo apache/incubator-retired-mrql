@@ -61,6 +61,8 @@ final public class Main {
             Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.BSPEvaluator").newInstance();
         else if (Config.spark_mode)
             Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.SparkEvaluator").newInstance();
+        else if (Config.flink_mode)
+            Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.FlinkEvaluator").newInstance();
         else // when Config.map_reduce_mode but also the default
             Evaluator.evaluator = (Evaluator)Class.forName("org.apache.mrql.MapReduceEvaluator").newInstance();
     }
@@ -77,12 +79,15 @@ final public class Main {
 
     public static void main ( String[] args ) throws Exception {
         Config.hadoop_mode = false;
+        if (args.length == 2 && args[0].equals("args"))  // needed for mrql.flink script
+            args = args[1].substring(1).split("!");
         for ( String arg: args ) {
             Config.hadoop_mode |= arg.equals("-local") || arg.equals("-dist");
             Config.bsp_mode |= arg.equals("-bsp");
             Config.spark_mode |= arg.equals("-spark");
+            Config.flink_mode |= arg.equals("-flink");
         };
-        Config.map_reduce_mode = !Config.bsp_mode && !Config.spark_mode;
+        Config.map_reduce_mode = !Config.bsp_mode && !Config.spark_mode && !Config.flink_mode;
         initialize_evaluator();
 	if (Config.hadoop_mode) {
 	    conf = Evaluator.evaluator.new_configuration();
@@ -110,6 +115,8 @@ final public class Main {
                 System.out.print("distributed ");
             if (Config.spark_mode)
                 System.out.println("Spark mode using "+Config.nodes+" tasks)");
+            else if (Config.flink_mode)
+                System.out.println("Flink mode using "+Config.nodes+" tasks)");
             else if (Config.bsp_mode)
                 System.out.println("Hama BSP mode over "+Config.nodes+" BSP tasks)");
             else if (Config.nodes > 0)

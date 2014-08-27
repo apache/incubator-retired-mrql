@@ -23,7 +23,7 @@
   <version>0.9.4-incubating-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache MRQL parent POM</name>
-  <description>Apache MRQL is a query processing and optimization system for large-scale, distributed data analysis, built on top of Apache Hadoop, Hama, and Spark</description>
+  <description>Apache MRQL is a query processing and optimization system for large-scale, distributed data analysis, built on top of Apache Hadoop, Hama, Spark, and Flink</description>
   <url>http://mrql.incubator.apache.org/</url>
   <inceptionYear>2013</inceptionYear>
   <licenses>
@@ -47,8 +47,9 @@
     <hadoop.version>1.2.1</hadoop.version>
     <yarn.version>2.2.0</yarn.version>
     <hama.version>0.6.3</hama.version>
-    <spark.version>1.0.0</spark.version>
+    <spark.version>1.0.2</spark.version>
     <scala.version>2.10</scala.version>
+    <flink.version>0.6-incubating</flink.version>
     <skipTests>true</skipTests>
   </properties>
 
@@ -58,6 +59,7 @@
     <module>mapreduce</module>
     <module>bsp</module>
     <module>spark</module>
+    <module>flink</module>
     <module>dist</module>
   </modules>
 

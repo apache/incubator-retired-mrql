@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.*;
 final public class MR_string extends MRData {
     private String value;
 
+    public MR_string () {}
+
     public MR_string ( String s ) { value = s; }
 
     public void materializeAll () {};
