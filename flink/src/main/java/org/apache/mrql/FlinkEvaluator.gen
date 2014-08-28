@@ -19,7 +19,7 @@ package org.apache.mrql;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.io.PrintStream;
+import java.io.*;
 import java.net.URI;
 import java.net.URL;
 import org.apache.mrql.gen.*;
@@ -60,7 +60,7 @@ final public class FlinkEvaluator extends Evaluator {
         DataSource.parserDirectory.put("line",FlinkLineParser.class);
         if (Config.local_mode) {
             flink_env = ExecutionEnvironment.createLocalEnvironment(Config.nodes);
-            // curently, the compiler desn't work in local mode
+            // curently, the compiler doesn't work in local mode
             Config.compile_functional_arguments = false;
             Config.write(Plan.conf);
         } else flink_env = ExecutionEnvironment.getExecutionEnvironment();
@@ -77,11 +77,10 @@ final public class FlinkEvaluator extends Evaluator {
                 String master_node = System.getenv("FLINK_MASTER");
                 if (Config.compile_functional_arguments)
                     flink_env = ExecutionEnvironment.createRemoteEnvironment(master_node,6123,
-                                        flink_jar.toURI().getPath(),Plan.conf.get("mrql.jar.path"));
+                                        Config.nodes,flink_jar.toURI().getPath(),Plan.conf.get("mrql.jar.path"));
                 else flink_env = ExecutionEnvironment.createRemoteEnvironment(master_node,6123,
-                                        flink_jar.toURI().getPath());
-                flink_env.setDefaultLocalParallelism(Config.nodes);
-            };
+                                        Config.nodes,flink_jar.toURI().getPath());
+            } else flink_env.setDefaultLocalParallelism(Config.nodes);
         } catch (Exception ex) {
             throw new Error(ex);
         }
@@ -107,17 +106,40 @@ final public class FlinkEvaluator extends Evaluator {
     }
 
     /** returns the absolute path relative to the directory that contains the MRQL executable */
-    private String absolute_path ( String path) {
+    private static String absolute_path ( String path) {
         try {
             URI uri = new URI(path);
             if (uri.getScheme() == null)
-                if (uri.toString().startsWith("/"))
+                if (Config.hadoop_mode && !Config.local_mode)
+                    if (uri.toString().startsWith("/"))
+                        uri = new URI("hdfs:"+uri);
+                    else uri = new URI("hdfs:/user/"+System.getProperty("user.name")+"/"+uri);
+                else if (uri.toString().startsWith("/"))
                     uri = new URI("file:"+uri);
                 else uri = new URI("file:"+System.getProperty("user.dir")+"/"+uri);
             uri = uri.normalize();
             return uri.toString();
         } catch (Exception ex) {
             throw new Error("Wrong pathname: "+path);
+        }
+    }
+
+    /** for dumped data to a file, return the MRQL type of the data */
+    @Override
+    public Tree get_type ( String file ) {
+        try {
+            Path path = new Path(absolute_path(file));
+            FileSystem fs = path.getFileSystem();
+            BufferedReader ftp = new BufferedReader(new InputStreamReader(fs.open(path.suffix(".type"))));
+            String s[] = ftp.readLine().split("@");
+            ftp.close();
+            if (s.length != 2 )
+                return null;
+            if (!s[0].equals("2"))
+                throw new Error("The binary file has been created in java mode and cannot be read in hadoop mode");
+            return Tree.parse(s[1]);
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -131,39 +153,18 @@ final public class FlinkEvaluator extends Evaluator {
         ftp.close();
         if (data instanceof MR_dataset)
             data = Plan.collect(((MR_dataset)data).dataset());
-        DataSet<Long> d = flink_env.generateSequence(0L,0L); // need just one record
-        DataSet<FData> res = (data instanceof Bag)
-                             ? d.flatMap(new bag_dumper(new FData(data)))
-                             : d.map(new value_dumper(new FData(data)));
-        res.write(new FlinkOutputFormat(),path.toString(),
-                  org.apache.flink.core.fs.FileSystem.WriteMode.OVERWRITE);
-        flink_env.execute("MRQL dump");
-    }
-
-    public static final class bag_dumper extends RichFlatMapFunction<Long,FData> {
-        final FData container = new FData(new MR_int(0));
-        final FData value;
-
-        bag_dumper ( FData value ) { this.value = value; }
-
-        @Override
-        public void flatMap ( Long ignore, Collector<FData> out ) throws Exception {
-            for ( MRData e: (Bag)value.data() ) {
+        FlinkOutputFormat of = new FlinkOutputFormat();
+        of.setOutputFilePath(path);
+        of.setWriteMode(org.apache.flink.core.fs.FileSystem.WriteMode.OVERWRITE);
+        of.open(0,2);
+        if (data instanceof Bag) {
+            final FData container = new FData(new MR_int(0));
+            for ( MRData e: (Bag)data ) {
                 container.data = e;
-                out.collect(container);
+                of.writeRecord(container);
             }
-        }
-    }
-
-    public static final class value_dumper extends RichMapFunction<Long,FData> {
-        final FData value;
-
-        value_dumper ( FData value ) { this.value = value; }
-
-        @Override
-        public FData map ( Long ignore ) {
-            return value;
-        }
+        } else of.writeRecord(new FData(data));
+        of.close();
     }
 
     private static MRData aggregate ( DataSet<FData> data_set, MRData zero, Tree acc_fnc, Tree merge_fnc ) {
@@ -267,6 +268,7 @@ final public class FlinkEvaluator extends Evaluator {
             flink_env.execute("MRQL query");
             return new org.apache.mrql.DataSet(new FlinkDataSource(d,path,needs_sorting(e)),0L,0L);
         } catch (Exception ex) {
+            System.err.println(ex.getMessage());
             throw new Error("Cannot evaluate the query: "+e);
         }
     }
@@ -289,6 +291,7 @@ final public class FlinkEvaluator extends Evaluator {
                 System.out.println(tabs(tab_count)+"-> "+out);
                 tab_count -= 3;
             } catch (Exception ex) {
+                System.err.println(ex.getMessage());
                 throw new Error("Cannot collect the operator output: "+e);
             };
         return res;

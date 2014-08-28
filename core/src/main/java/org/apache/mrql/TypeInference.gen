@@ -594,7 +594,7 @@ public class TypeInference extends Translator {
                 type_error(e,"The source file must be a constant string: "+print_query(f));
             Tree tp = null;
             if (Config.hadoop_mode)
-                tp = Plan.get_type(f.stringValue());
+                tp = Evaluator.evaluator.get_type(f.stringValue());
             else tp = MapReduceAlgebra.get_type(f.stringValue());
             if (tp == null)
                 type_error(e,"Cannot find the type of file "+f);

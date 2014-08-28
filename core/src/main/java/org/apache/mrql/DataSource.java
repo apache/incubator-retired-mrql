@@ -86,7 +86,9 @@ public class DataSource {
         this.path = path;
         this.inputFormat = inputFormat;
         to_be_merged = false;
-        try {
+        if (Config.flink_mode)
+            dataSourceDirectory.put(path,this);
+        else try {
             Path p = new Path(path);
             FileSystem fs = p.getFileSystem(conf);
             String complete_path = fs.getFileStatus(p).getPath().toString();

@@ -335,24 +335,6 @@ public class Plan {
         return new DataSet(new BinaryDataSource(0,newpath,conf),0,0);
     }
 
-    /** for dumped data to a file, return the MRQL type of the data */
-    public final static Tree get_type ( String file ) {
-        try {
-            Path path = new Path(file);
-            FileSystem fs = path.getFileSystem(conf);
-            BufferedReader ftp = new BufferedReader(new InputStreamReader(fs.open(path.suffix(".type"))));
-            String s[] = ftp.readLine().split("@");
-            ftp.close();
-            if (s.length != 2 )
-                return null;
-            if (!s[0].equals("2"))
-                throw new Error("The binary file has been created in java mode and cannot be read in hadoop mode");
-            return Tree.parse(s[1]);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     /** create a new PrintStream from the file */
     final static PrintStream print_stream ( String file )  throws Exception {
         Path path = new Path(file);

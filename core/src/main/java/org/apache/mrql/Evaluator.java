@@ -149,4 +149,22 @@ abstract public class Evaluator extends Interpreter {
 	Config.max_bag_size_print = ps;
 	out.close();
     }
+
+    /** for dumped data to a file, return the MRQL type of the data */
+    public Tree get_type ( String file ) {
+        try {
+            Path path = new Path(file);
+            FileSystem fs = path.getFileSystem(Plan.conf);
+            BufferedReader ftp = new BufferedReader(new InputStreamReader(fs.open(path.suffix(".type"))));
+            String s[] = ftp.readLine().split("@");
+            ftp.close();
+            if (s.length != 2 )
+                return null;
+            if (!s[0].equals("2"))
+                throw new Error("The binary file has been created in java mode and cannot be read in hadoop mode");
+            return Tree.parse(s[1]);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }
