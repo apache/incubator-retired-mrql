@@ -55,36 +55,31 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
     final static String core_jar = Interpreter.class.getProtectionDomain().getCodeSource().getLocation().toString();
     final static String gen_jar = Tree.class.getProtectionDomain().getCodeSource().getLocation().toString();
     final static String scanner_jar = Scanner.class.getProtectionDomain().getCodeSource().getLocation().toString();
-    static String data_source_directory;
     final static Bag empty_bag = new Bag();
-    static Broadcast<String> data_source_directory_b;
+    // an HDFS tmp file used to hold the data source directory information in distributed mode
+    final static String data_source_dir_name = "tmp/"+System.getenv("USER")+"_data_source_dir.txt";
+    private static boolean first_time = true; // true at the beginning of a query execution
 
     /** initialize the Spark evaluator */
     final public void init ( Configuration conf ) {
         Config.spark_mode = true;
-        try {
-            if (Config.hadoop_mode && Config.local_mode)
-                spark_context = new JavaSparkContext("local["+Config.nodes+"]",
-                                                     "Apache MRQL Local Spark Evaluator");
-            else if (Config.hadoop_mode) {
-                HashMap<String,String> env = new HashMap<String,String>();
-                data_source_directory = System.getenv("FS_DEFAULT_NAME")+"/"+Plan.new_path(conf);
-                env.put("mrql.data.source.directory",data_source_directory);
-                spark_context = new JavaSparkContext(System.getenv("SPARK_MASTER"),
-                                                     "Apache MRQL Spark Evaluator",
-                                                     System.getenv("SPARK_HOME"),
-                                                     new String[]{spark_jar,core_jar,gen_jar,scanner_jar},
-                                                     env);
-                Plan.conf = spark_context.hadoopConfiguration();
-                FileSystem.setDefaultUri(Plan.conf,System.getenv("FS_DEFAULT_NAME"));
-            };
-            if (!Config.info) {
-                for ( Enumeration en = LogManager.getCurrentLoggers(); en.hasMoreElements(); )
-                    ((Logger)en.nextElement()).setLevel(Level.WARN);
-                LogManager.getRootLogger().setLevel(Level.WARN);
-            }
-        } catch (IOException ex) {
-            throw new Error(ex);
+        if (Config.hadoop_mode && Config.local_mode)
+            spark_context = new JavaSparkContext("local["+Config.nodes+"]",
+                                                 "Apache MRQL Local Spark Evaluator");
+        else if (Config.hadoop_mode) {
+            HashMap<String,String> env = new HashMap<String,String>();
+            spark_context = new JavaSparkContext(System.getenv("SPARK_MASTER"),
+                                                 "Apache MRQL Spark Evaluator",
+                                                 System.getenv("SPARK_HOME"),
+                                                 new String[]{spark_jar,core_jar,gen_jar,scanner_jar},
+                                                 env);
+            Plan.conf = spark_context.hadoopConfiguration();
+            FileSystem.setDefaultUri(Plan.conf,System.getenv("FS_DEFAULT_NAME"));
+        };
+        if (!Config.info) {
+            for ( Enumeration en = LogManager.getCurrentLoggers(); en.hasMoreElements(); )
+                ((Logger)en.nextElement()).setLevel(Level.WARN);
+            LogManager.getRootLogger().setLevel(Level.WARN);
         }
     }
 
@@ -96,6 +91,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
     }
 
     final public void initialize_query () {
+        first_time = true;
         Plan.distribute_compiled_arguments(Plan.conf);
         if (spark_context != null && Config.compile_functional_arguments)
             spark_context.addJar(Plan.conf.get("mrql.jar.path"));
@@ -125,16 +121,12 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
         if (Config.local_mode)
             return;
         DataSource.dataSourceDirectory.distribute(Plan.conf);
-        Path path = new Path(data_source_directory);
+        Path path = new Path(data_source_dir_name);
         FileSystem fs = path.getFileSystem(Plan.conf);
         PrintStream ps = new PrintStream(fs.create(path,true));
         ps.println(Plan.conf.get("mrql.data.source.directory"));
         ps.close();
-        data_source_directory_b = spark_context.broadcast(data_source_directory);
     }
-
-    // a tmp file used to hold the data source directory information
-    final static String data_source_dir_name = "/tmp/"+System.getenv("USER")+"_data_source_dir.txt";
 
     /** executed by a worker when reading parsed input (see SparkParsedInputFormat) */
     public static void load_source_dir () throws IOException {
@@ -146,23 +138,13 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
         };
         if (Config.local_mode)
             return;
-        // the name of the file that contains the source directory details is broadcast to workers
-        if (data_source_directory_b != null)
-            data_source_directory = data_source_directory_b.value();
-        else data_source_directory = data_source_dir_name;
-        Path path = new Path(data_source_directory);
+        // the name of the file that contains the source directory details is read from an HDFS file by workers
+        Path path = new Path(data_source_dir_name);
         FileSystem fs = path.getFileSystem(Plan.conf);
         BufferedReader ftp = new BufferedReader(new InputStreamReader(fs.open(path)));
         Plan.conf.set("mrql.data.source.directory",ftp.readLine());
         DataSource.dataSourceDirectory.read(Plan.conf);
         ftp.close();
-        if (data_source_directory_b != null) {
-            path = new Path(data_source_dir_name);
-            fs = path.getFileSystem(Plan.conf);
-            PrintStream ps = new PrintStream(fs.create(path,true));
-            ps.println(Plan.conf.get("mrql.data.source.directory"));
-            ps.close();
-        }
     }
 
     /** dump MRQL data into a sequence file */
@@ -213,10 +195,20 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
         } else super.dump_text(file,type,data);
     }
 
+    private static void set_global_env ( Environment env ) {
+        if (true || first_time) {  // Bug: it doesn't need to be executed more than once per worker
+            // pass the global bindings to workers
+            set_global_bindings(env);
+            first_time = false;
+        }
+    }
+
     private static Function2<MRData,MRData,MRData> accumulator ( final Tree acc_fnc, final Environment env ) {
+        final Environment master_env = global_env;
         final org.apache.mrql.Function f = evalF(acc_fnc,env);
         return new Function2<MRData,MRData,MRData>() {
             public MRData call ( MRData x, MRData y ) {
+                set_global_env(master_env);
                 return f.eval(new Tuple(x,y));
             }
         };
@@ -383,9 +375,11 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
 
     /* convert an MRQL lambda to a Spark Function */
     private static FlatMapFunction<MRData,MRData> cmap_fnc ( Tree fnc, Environment env ) {
+        final Environment master_env = global_env;
         final org.apache.mrql.Function f = evalF(fnc,env);
         return new FlatMapFunction<MRData,MRData>() {
             public Iterable<MRData> call ( MRData value ) {
+                set_global_env(master_env);
                 return (Bag)f.eval(value);
             }
         };
@@ -425,15 +419,10 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
     }
 
     private static JavaRDD<MRData> containerData ( JavaPairRDD<MRContainer,MRContainer> rd ) {
-        final Environment env = Interpreter.global_env;
+        final Environment master_env = global_env;
         return rd.map(new Function<Tuple2<MRContainer,MRContainer>,MRData>() {
-                boolean first = true;
                 public MRData call ( Tuple2<MRContainer,MRContainer> value ) {
-                    if (first) {
-                        // need to pass the global bindings (the in-memory repeat vars) to workers
-                        Interpreter.set_global_bindings(env);
-                        first = false;
-                    };
+                    set_global_env(master_env);
                     return value._2.data();
                 }
             });
@@ -457,8 +446,10 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
     }
 
     private static FlatMapFunction<Iterator<MRData>,MRData> combiner_fnc ( final org.apache.mrql.Function f ) {
+        final Environment master_env = global_env;
         return new FlatMapFunction<Iterator<MRData>,MRData>() {
                   public Iterable<MRData> call ( final Iterator<MRData> i ) {
+                      set_global_env(master_env);
                       return MapReduceAlgebra.cmap(new org.apache.mrql.Function() {
                               public MRData eval ( MRData x ) {
                                   final MRData key = ((Tuple)x).first();
@@ -502,6 +493,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
      * @return a Spark RDD
      */
     final public JavaRDD<MRData> evalD ( final Tree e, final Environment env ) {
+        final Environment master_env = global_env;
         try {
             match e {
             case MapAggregateReduce(`m,`r,null,_,`s,`o):
@@ -528,6 +520,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                     .cartesian(eval(y,env).flatMap(cmap_fnc(my,env)))
                     .flatMap(new FlatMapFunction<Tuple2<MRData,MRData>,MRData>() {
                             public Iterable<MRData> call ( Tuple2<MRData,MRData> value ) {
+                                set_global_env(master_env);
                                 return (Bag)fr.eval(new Tuple(value._1,value._2));
                             }
                         });
@@ -538,18 +531,21 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                 JavaPairRDD<MRData,MRData> xs
                     = eval(x,env).flatMapToPair(new PairFlatMapFunction<MRData,MRData,MRData>() {
                             public Iterable<Tuple2<MRData,MRData>> call ( MRData value ) {
+                                set_global_env(master_env);
                                 return joinIterator(((Bag)fx.eval(value)).iterator());
                             }
                         });
                 JavaPairRDD<MRData,MRData> ys
                     = eval(y,env).flatMapToPair(new PairFlatMapFunction<MRData,MRData,MRData>() {
                             public Iterable<Tuple2<MRData,MRData>> call ( MRData value ) {
+                                set_global_env(master_env);
                                 return joinIterator(((Bag)fy.eval(value)).iterator());
                             }
                         });
                 return xs.cogroup(ys)
                     .flatMap(new FlatMapFunction<Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>>,MRData>() {
                             public Iterable<MRData> call ( Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>> value ) {
+                                set_global_env(master_env);
                                 return (Bag)fr.eval(new Tuple(bag(value._2._1),bag(value._2._2)));
                             }
                         });
@@ -569,6 +565,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                 final JavaPairRDD<MRData,MRData> xs
                     = eval(x,env).flatMapToPair(new PairFlatMapFunction<MRData,MRData,MRData>() {
                             public Iterable<Tuple2<MRData,MRData>> call ( final MRData value ) {
+                                set_global_env(master_env);
                                 return new Iterable<Tuple2<MRData,MRData>>() {
                                     public Iterator<Tuple2<MRData,MRData>> iterator() {
                                         return new Iterator<Tuple2<MRData,MRData>>() {
@@ -590,6 +587,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                 final JavaPairRDD<MRData,MRData> ys
                     = eval(y,env).flatMapToPair(new PairFlatMapFunction<MRData,MRData,MRData>() {
                             public Iterable<Tuple2<MRData,MRData>> call ( final MRData value ) {
+                                set_global_env(master_env);
                                 return new Iterable<Tuple2<MRData,MRData>>() {
                                     public Iterator<Tuple2<MRData,MRData>> iterator() {
                                         return new Iterator<Tuple2<MRData,MRData>>() {
@@ -638,12 +636,14 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                 final Broadcast<List<Tuple2<MRData,MRData>>> ys
                     = spark_context.broadcast(eval(y,env).flatMapToPair(new PairFlatMapFunction<MRData,MRData,MRData>() {
                                 public Iterable<Tuple2<MRData,MRData>> call ( MRData value ) {
+                                    set_global_env(master_env);
                                     return joinIterator(((Bag)fy.eval(value)).iterator());
                                 }
                             }).collect());
                 return eval(x,env).flatMap(new FlatMapFunction<MRData,MRData>() {
                         final Hashtable<MRData,Bag> built_table = make_built_table(ys.value());
                         public Iterable<MRData> call ( MRData value ) {
+                            set_global_env(master_env);
                             final Iterator<MRData> i = ((Bag)fx.eval(value)).iterator();
                             return new Iterable<MRData>() {
                                 public Iterator<MRData> iterator() {

@@ -33,7 +33,7 @@ CORE_JAR=`ls "$MRQL_HOME"/lib/mrql-core-*.jar`
 MRQL_JAR=`ls "$MRQL_HOME"/lib/mrql-flink-*.jar`
 FULL_JAR="$MRQL_HOME/lib/mrql-all-flink.jar"
 
-export FLINK_HOME FLINK_JAR FLINK_MASTER
+export FLINK_HOME FLINK_JARS FLINK_MASTER
 
 if (! [ -a $FULL_JAR ]); then
    rm -rf "$MRQL_HOME/tmp/classes"
@@ -54,5 +54,5 @@ if [ "$1" == "-dist" ]; then
     args=${args// /\!}
     $FLINK_HOME/bin/flink run $FULL_JAR -c org.apache.mrql.Main -v args $args
 else 
-    $JAVA_HOME/bin/java -classpath "$FULL_JAR:$FLINK_JAR" org.apache.mrql.Main -flink $*
+    $JAVA_HOME/bin/java -classpath "$FULL_JAR:$FLINK_JARS" org.apache.mrql.Main -flink $*
 fi

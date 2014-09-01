@@ -89,6 +89,8 @@ SPARK_MASTER_MEMORY=512M
 FLINK_VERSION=yarn-0.6-incubating
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
+#   (use this for a Flink snapshot):
+#FLINK_HOME=${HOME}/flink-${FLINK_VERSION}/flink-dist/target/flink-${FLINK_VERSION}-bin/flink-${FLINK_VERSION}
 # Flink JobManager (on a yarn cluster, it is printed when you run yarn-session.sh)
 if [ "$FLINK_MASTER" = "" ]; then
     FLINK_MASTER=`hostname`
@@ -98,8 +100,11 @@ fi
 # Claspaths
 
 HAMA_JAR=${HAMA_HOME}/hama-core-${HAMA_VERSION}.jar
+FLINK_JARS=.
+for I in ${FLINK_HOME}/lib/*.jar; do
+    FLINK_JARS=${FLINK_JARS}:$I
+done
 
-FLINK_JAR=`ls ${FLINK_HOME}/lib/flink-*.jar`
 
 # YARN-enabled assembly jar
 if [[ -d ${SPARK_HOME}/assembly/target ]]; then

@@ -51,6 +51,8 @@ import org.apache.flink.api.java.operators.GroupReduceOperator;
 final public class FlinkEvaluator extends Evaluator {
     final static URL flink_jar = FlinkEvaluator.class.getProtectionDomain().getCodeSource().getLocation();
     public static ExecutionEnvironment flink_env;
+    // an HDFS tmp file used to hold the data source directory information in distributed mode
+    final static String data_source_dir_name = "hdfs:/user/"+System.getenv("USER")+"/tmp/data_source_dir.txt";
 
     /** initialize the Flink evaluator */
     final public void init ( Configuration conf ) {
@@ -106,7 +108,7 @@ final public class FlinkEvaluator extends Evaluator {
     }
 
     /** returns the absolute path relative to the directory that contains the MRQL executable */
-    private static String absolute_path ( String path) {
+    public static String absolute_path ( String path) {
         try {
             URI uri = new URI(path);
             if (uri.getScheme() == null)
@@ -620,7 +622,7 @@ final public class FlinkEvaluator extends Evaluator {
                 final int m = n;
                 // System.err.println("Using a groupBy join on a "+n+"*"+m+" grid of partitions");
                 final DataSet<FData> xs = eval(x,env).flatMap(new group_join_left(gx,m,n));
-                final DataSet<FData> ys = eval(y,env).flatMap(new group_join_right(gx,m,n));
+                final DataSet<FData> ys = eval(y,env).flatMap(new group_join_right(gy,m,n));
                 return xs.union(ys).groupBy(new join_key())
                          .reduceGroup(new group_join_reducer(kx,ky,gx,gy,acc,r,zero));
             case Merge(`x,`y):

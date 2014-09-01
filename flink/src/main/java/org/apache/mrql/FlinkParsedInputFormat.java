@@ -18,6 +18,7 @@
 package org.apache.mrql;
 
 import java.io.*;
+import java.net.URI;
 import java.util.Iterator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.flink.api.java.DataSet;
@@ -48,13 +49,16 @@ final public class FlinkParsedInputFormat extends FlinkMRQLFileInputFormat {
         public void open ( FileInputSplit split ) throws IOException {
             super.open(split);
             restore_data_sources(data_sources);
-            ParsedDataSource ds = (ParsedDataSource)DataSource.get(split.getPath().toString(),Plan.conf);
+            String path = split.getPath().toString();
             try {
+                URI uri = new URI(path);
+                path = uri.getScheme()+":"+uri.getPath(); // ignore host
+                ParsedDataSource ds = (ParsedDataSource)DataSource.get(path,Plan.conf);
                 parser = (FlinkParser)ds.parser.newInstance();
+                parser.initialize(ds.args);
             } catch (Exception ex) {
-                throw new Error("Unrecognized parser: "+ds.parser);
+                throw new Error("Cannot parse the file: "+path);
             };
-            parser.initialize(ds.args);
             parser.open(stream,splitStart,splitStart+splitLength-1);
             eof = false;
         }
