@@ -53,6 +53,8 @@ final public class FlinkEvaluator extends Evaluator {
     public static ExecutionEnvironment flink_env;
     // an HDFS tmp file used to hold the data source directory information in distributed mode
     final static String data_source_dir_name = "hdfs:/user/"+System.getenv("USER")+"/tmp/data_source_dir.txt";
+    static String master_host = "localhost";
+    static int master_port = 6123;
 
     /** initialize the Flink evaluator */
     final public void init ( Configuration conf ) {
@@ -65,7 +67,16 @@ final public class FlinkEvaluator extends Evaluator {
             // curently, the compiler doesn't work in local mode
             Config.compile_functional_arguments = false;
             Config.write(Plan.conf);
-        } else flink_env = ExecutionEnvironment.getExecutionEnvironment();
+        } else {
+            String master_node = System.getenv("FLINK_MASTER");
+            if (master_node == null)
+                throw new Error("Need to run the Flink application master first: $FLINK_HOME/bin/yarn-session.sh");
+            String[] m = master_node.split(":");
+            if (m.length != 2)
+                throw new Error("Need both host name and port number for the Flink application master: "+master_node);
+            master_host = m[0];
+            master_port = Integer.parseInt(m[1]);
+        }
     }
 
     /** shutdown the Flink evaluator */
@@ -76,15 +87,14 @@ final public class FlinkEvaluator extends Evaluator {
         try {
             if (!Config.local_mode) {
                 Plan.distribute_compiled_arguments(Plan.conf);
-                String master_node = System.getenv("FLINK_MASTER");
                 if (Config.compile_functional_arguments)
-                    flink_env = ExecutionEnvironment.createRemoteEnvironment(master_node,6123,
+                    flink_env = ExecutionEnvironment.createRemoteEnvironment(master_host,master_port,
                                         Config.nodes,flink_jar.toURI().getPath(),Plan.conf.get("mrql.jar.path"));
-                else flink_env = ExecutionEnvironment.createRemoteEnvironment(master_node,6123,
+                else flink_env = ExecutionEnvironment.createRemoteEnvironment(master_host,master_port,
                                         Config.nodes,flink_jar.toURI().getPath());
             } else flink_env.setDefaultLocalParallelism(Config.nodes);
         } catch (Exception ex) {
-            throw new Error(ex);
+            throw new Error("Cannot initialize the Flink evaluator: "+ex);
         }
     }
 

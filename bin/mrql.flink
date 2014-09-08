@@ -50,6 +50,9 @@ if (! [ -a $FULL_JAR ]); then
 fi
 
 if [ "$1" == "-dist" ]; then
+    if ([ -a $FLINK_HOME/conf/.yarn-jobmanager ]); then
+	export FLINK_MASTER=`cat $FLINK_HOME/conf/.yarn-jobmanager`
+    fi
     args=" -flink $*"
     args=${args// /\!}
     $FLINK_HOME/bin/flink run $FULL_JAR -c org.apache.mrql.Main -v args $args

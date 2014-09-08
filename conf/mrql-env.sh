@@ -93,7 +93,7 @@ FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
 #FLINK_HOME=${HOME}/flink-${FLINK_VERSION}/flink-dist/target/flink-${FLINK_VERSION}-bin/flink-${FLINK_VERSION}
 # Flink JobManager (on a yarn cluster, it is printed when you run yarn-session.sh)
 if [ "$FLINK_MASTER" = "" ]; then
-    FLINK_MASTER=`hostname`
+    FLINK_MASTER=`hostname`:6123
 fi
 
 

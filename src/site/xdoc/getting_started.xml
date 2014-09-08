@@ -28,8 +28,7 @@ xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd
 Apache MRQL can run in three modes: in Map-Reduce mode using Apache Hadoop, in BSP mode (Bulk Synchronous Parallel mode) using Apache Hama, and in Spark mode using Apache Spark.
 </p>
 <p>
-The MRQL MapReduce mode has been tested on Apache Hadoop MapReduce releases 1.x, and 2.x (Yarn). You can download the latest tarball from <a href="http://hadoop.apache.org/releases.html">Apache Hadoop</a>. The BSP and Spark modes are optional. The BSP mode has been tested on Apache Hama 0.6.2, 0.6.3, and 0.6.4. You can download the latest tarball from <a href="http://hama.apache.org/">Apache Hama</a>. The Spark mode has been tested on Apache Spark 1.0.0 in local, standalone deploy, and Yarn modes.
-You can download the latest tarball prebuilt for Hadoop1 or Hadoop2 from <a href="http://spark.apache.org/">Apache Spark</a>.
+The MRQL MapReduce mode has been tested on Apache Hadoop MapReduce releases 1.x, and 2.x (Yarn). You can download the latest tarball from <a href="http://hadoop.apache.org/releases.html">Apache Hadoop</a>. The BSP and Spark modes are optional. The BSP mode has been tested on Apache Hama 0.6.2, 0.6.3, and 0.6.4. You can download the latest tarball from <a href="http://hama.apache.org/">Apache Hama</a>. The Spark mode has been tested on Apache Spark 1.0.0 and 1.0.2 in local, standalone deploy, and Yarn modes. You can download the latest tarball prebuilt for Hadoop1 or Hadoop2 from <a href="http://spark.apache.org/">Apache Spark</a>. The Flink mode has been tested on Apache Flink 0.6-incubating in local and Yarn modes. You can download the latest tarball prebuilt for Hadoop2 from <a href="http://http://flink.incubator.apache.org/downloads.html/">Apache Flink</a>.
 </p>
 <p>
 The following instructions assume that you have already installed Apache Hadoop MapReduce and you have deployed it on your cluster successfully.
@@ -56,6 +55,10 @@ For a test, run the <a href="https://wiki.apache.org/mrql/Pagerank">PageRank exa
     <subsection name="How to run MRQL in Spark mode on a Yarn cluster"></subsection>
 <p>
 Set SPARK_MASTER=yarn-client in conf/mrql-env.sh (see <a href="http://spark.apache.org/docs/latest/running-on-yarn.html">Running Spark on YARN</a>).
+</p>
+    <subsection name="How to run MRQL in Flink mode on a Yarn cluster"></subsection>
+<p>
+First, start the Flink application manager on Yarn using ${FLINK_HOME}/bin/yarn-session.sh -n #_of_nodes (see <a href="http://flink.incubator.apache.org/docs/0.6-incubating/yarn_setup.html">Yarn Setup</a>). Then run the <a href="https://wiki.apache.org/mrql/Pagerank">PageRank example</a> using the bin/mrql.flink script.
 </p>
     <section name="How to Recompile MRQL"></section>
 <p>

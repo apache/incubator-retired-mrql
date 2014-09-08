@@ -29,6 +29,7 @@ xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd
 <li>in Map-Reduce mode using Apache Hadoop,</li>
 <li>in BSP mode (Bulk Synchronous Parallel mode) using Apache Hama, and</li>
 <li>in Spark mode using Apache Spark.</li>
+<li>in Flink mode using Apache Flink.</li>
 </ol>
 The MRQL query language is powerful enough to express most common data analysis tasks over many forms of raw in-situ data, such as XML and JSON documents, binary files, and CSV documents. MRQL is more powerful than other current high-level MapReduce languages, such as Hive and PigLatin, since it can operate on more complex data and supports more powerful query constructs, thus eliminating the need for using explicit MapReduce code. With MRQL, users are able to express complex data analysis tasks, such as PageRank, k-means clustering, matrix factorization, etc, using SQL-like queries exclusively, while the MRQL query processing system is able to compile these queries to efficient Java code.</p>
     <section name="News"></section>
