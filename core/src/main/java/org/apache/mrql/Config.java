@@ -59,7 +59,7 @@ final public class Config {
     // max number of bag elements to print
     public static int max_bag_size_print = 20;
     // max size of materialized vector before is spilled to a file:
-    public static int max_materialized_bag = 500000;
+    public static long max_materialized_bag = 500000L;
     // max number of incoming messages before a sub-sync()
     public static int bsp_msg_size = Integer.MAX_VALUE;
     // number of elements per mapper to process the range min...max
@@ -101,7 +101,7 @@ final public class Config {
         conf.setInt("mrql.mapjoin.size",mapjoin_size);
         conf.setInt("mrql.in.mapper.size",map_cache_size);
         conf.setInt("mrql.max.bag.size.print",max_bag_size_print);
-        conf.setInt("mrql.max.materialized.bag",max_materialized_bag);
+        conf.setLong("mrql.max.materialized.bag",max_materialized_bag);
         conf.setInt("mrql.bsp.msg.size",bsp_msg_size);
         conf.setLong("mrql.range.split.size",range_split_size);
         conf.setInt("mrql.max.merged.streams",max_merged_streams);
@@ -132,7 +132,7 @@ final public class Config {
         mapjoin_size = conf.getInt("mrql.mapjoin.size",mapjoin_size);
         map_cache_size = conf.getInt("mrql.in.mapper.size",map_cache_size);
         max_bag_size_print = conf.getInt("mrql.max.bag.size.print",max_bag_size_print);
-        max_materialized_bag = conf.getInt("mrql.max.materialized.bag",max_materialized_bag);
+        max_materialized_bag = conf.getLong("mrql.max.materialized.bag",max_materialized_bag);
         bsp_msg_size = conf.getInt("mrql.bsp.msg.size",bsp_msg_size);
         range_split_size = conf.getLong("mrql.range.split.size",range_split_size);
         max_merged_streams = conf.getInt("mrql.max.merged.streams",max_merged_streams);
@@ -210,7 +210,7 @@ final public class Config {
             } else if (args[i].equals("-bag_size")) {
                 if (++i >= args.length && Integer.parseInt(args[i]) < 10000)
                     throw new Error("Expected max size of materialized bag > 10000");
-                max_materialized_bag = Integer.parseInt(args[i]);
+                max_materialized_bag = Long.parseLong(args[i]);
                 i++;
             } else if (args[i].equals("-bag_print")) {
                 if (++i >= args.length)

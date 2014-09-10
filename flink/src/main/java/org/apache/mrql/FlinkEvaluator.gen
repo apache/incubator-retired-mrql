@@ -62,6 +62,8 @@ final public class FlinkEvaluator extends Evaluator {
         DataSource.parserDirectory.put("xml",FlinkXMLParser.class);
         DataSource.parserDirectory.put("json",FlinkJsonParser.class);
         DataSource.parserDirectory.put("line",FlinkLineParser.class);
+        // Disable bag materialization (it uses the Hadoop HDFS library instead of Flink's)
+        Config.max_materialized_bag = Long.MAX_VALUE;
         if (Config.local_mode) {
             flink_env = ExecutionEnvironment.createLocalEnvironment(Config.nodes);
             // curently, the compiler doesn't work in local mode
@@ -179,14 +181,45 @@ final public class FlinkEvaluator extends Evaluator {
         of.close();
     }
 
-    private static MRData aggregate ( DataSet<FData> data_set, MRData zero, Tree acc_fnc, Tree merge_fnc ) {
+    /** dump MRQL data into a text CVS file */
+    @Override
+    public void dump_text ( String file, Tree type, MRData data ) throws Exception {
+        int ps = Config.max_bag_size_print;
+        Config.max_bag_size_print = -1;
+        Path path = new Path(absolute_path(file));
+        FileSystem fs = path.getFileSystem();
+        final PrintStream out = new PrintStream(fs.create(path,true));
+        if (data instanceof MR_dataset)
+            data = Plan.collect(((MR_dataset)data).dataset());
+        if (Translator.collection_type(type)) {
+            Tree tp = ((Node)type).children().head();
+            if (tp instanceof Node && ((Node)tp).name().equals("tuple")) {
+                Trees ts = ((Node)tp).children();
+                for ( MRData x: (Bag)data ) {
+                    Tuple t = (Tuple)x;
+                    out.print(print(t.get((short)0),ts.nth(0)));
+                    for ( short i = 1; i < t.size(); i++ )
+                        out.print(","+print(t.get(i),ts.nth(i)));
+                    out.println();
+                }
+            } else for ( MRData x: (Bag)data )
+                       out.println(print(x,tp));
+        } else out.println(print(data,query_type));
+        Config.max_bag_size_print = ps;
+        out.close();
+    }
+
+    private static MRData aggregate ( DataSet<FData> data_set, MRData zero, Tree acc_fnc, Tree merge_fnc, Tree type ) {
         DataSet<FData> d = data_set.flatMap(new FlinkDataSource.reduce_mapper(zero,acc_fnc.toString(),
                                                                               merge_fnc.toString()));
         d.print();  // needs a datasink (prints the aggregation value)
         try {
             // due to a Flink bug, we cannot return a custom object (FData) from an accumulator
             String value = FlinkEvaluator.flink_env.execute("MRQL aggregator").getAccumulatorResult("reducer");
-            return MRQL.query(value);  // parse the value using the MRQL query parser (ugly)
+            Tree tp = TopLevel.query_type;
+            MRData res = MRQL.query(value+" as "+type);  // parse the value using the MRQL query parser (ugly)
+            TopLevel.query_type = tp;
+            return res;
         } catch (Exception ex) {
             throw new Error("Evaluation error during aggregation: "+ex);
         }
@@ -204,25 +237,26 @@ final public class FlinkEvaluator extends Evaluator {
                                     Tree plan,
                                     Environment env ) throws Exception {
         MRData z = evalE(zero,env);
+        Tree type = TypeInference.type_inference(zero);
         match plan {
         case AggregateMap(`m,`acc,_,`s):
-            return aggregate(evalD(#<cMap(`m,`s)>,env),z,acc,merge);
+            return aggregate(evalD(#<cMap(`m,`s)>,env),z,acc,merge,type);
         case MapAggregateReduce(`m,`r,`acc,_,`s,`o):
             if (acc.equals(#<null>))
                 fail;
-            return aggregate(evalD(#<MapReduce(`m,`r,`s,`o)>,env),z,acc,merge);
+            return aggregate(evalD(#<MapReduce(`m,`r,`s,`o)>,env),z,acc,merge,type);
         case CrossAggregateProduct(`mx,`my,`r,`acc,_,`x,`y):
             if (acc.equals(#<null>))
                 fail;
-            return aggregate(evalD(#<CrossProduct(`mx,`my,`r,`x,`y)>,env),z,acc,merge);
+            return aggregate(evalD(#<CrossProduct(`mx,`my,`r,`x,`y)>,env),z,acc,merge,type);
         case MapAggregateReduce2(`mx,`my,`r,`acc,_,`x,`y,`o):
             if (acc.equals(#<null>))
                 fail;
-            return aggregate(evalD(#<MapReduce2(`mx,`my,`r,`x,`y,`o)>,env),z,acc,merge);
+            return aggregate(evalD(#<MapReduce2(`mx,`my,`r,`x,`y,`o)>,env),z,acc,merge,type);
         case MapAggregateJoin(`mx,`my,`r,`acc,_,`x,`y):
             if (acc.equals(#<null>))
                 fail;
-            return aggregate(evalD(#<MapJoin(`mx,`my,`r,`x,`y)>,env),z,acc,merge);
+            return aggregate(evalD(#<MapJoin(`mx,`my,`r,`x,`y)>,env),z,acc,merge,type);
         };
         throw new Error("Unrecognized aggregation: "+plan);
     }
