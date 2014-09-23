@@ -64,11 +64,11 @@ BSP_MASTER_ADDRESS=localhost:40000
 HAMA_ZOOKEEPER_QUORUM=localhost
 
 
-# Optional: Spark configuration. Supports versions 1.0.0 and 1.0.2 only
+# Optional: Spark configuration. Supports versions 1.0.0, 1.0.2, and 1.1.0
 # (Spark versions 0.8.1, 0.9.0, and 0.9.1 are supported by MRQL 0.9.0)
-# Use the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
+# You may use the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
 # Tested in local, standalone deploy, and Yarn modes
-SPARK_HOME=${HOME}/spark-1.0.2-bin-hadoop2
+SPARK_HOME=${HOME}/spark-1.1.0-bin-hadoop2.3
 # URI of the Spark master node:
 #   to run Spark on Standalone Mode, set it to spark://`hostname`:7077
 #   to run Spark on a YARN cluster, set it to "yarn-client"
@@ -108,11 +108,9 @@ done
 
 # YARN-enabled assembly jar
 if [[ -d ${SPARK_HOME}/assembly/target ]]; then
-   # old Spark (0.x)
-   SPARK_JAR=`ls ${SPARK_HOME}/assembly/target/scala-*/*.jar`
+   SPARK_JARS=`ls ${SPARK_HOME}/assembly/target/scala-*/*.jar`
 else if [[ -d ${SPARK_HOME}/lib ]]; then
-   # new Spark (1.x)
-   SPARK_JAR=`ls ${SPARK_HOME}/lib/spark-assembly-*.jar`
+   SPARK_JARS=`ls ${SPARK_HOME}/lib/spark-assembly-*.jar`
 fi
 fi
 
@@ -133,4 +131,9 @@ fi
 
 if [[ !(-f ${JLINE_JAR}) ]]; then
    echo "*** Cannot find the JLine jar file. Need to edit mrql-env.sh"; exit -1
+fi
+
+export MRQL_HOME="$(cd `dirname $0`/..; pwd -P)"
+if [[ !(-f `echo ${MRQL_HOME}/lib/mrql-core-*.jar`) ]]; then
+   echo "*** Need to compile MRQL first using 'mvn clean install'"; exit -1
 fi

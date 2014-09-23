@@ -28,32 +28,20 @@ MRQL_HOME="$(cd `dirname $0`/..; pwd -P)"
 
 . "$MRQL_HOME/conf/mrql-env.sh"
 
-if [[ !(-f ${SPARK_JAR}) ]]; then
+if [[ !(-f ${SPARK_JARS}) ]]; then
    echo "*** Cannot find the Spark jar file. Need to edit mrql-env.sh"; exit -1
 fi
 
 GEN_JAR=`ls "$MRQL_HOME"/lib/mrql-gen-*.jar`
 CORE_JAR=`ls "$MRQL_HOME"/lib/mrql-core-*.jar`
 MRQL_JAR=`ls "$MRQL_HOME"/lib/mrql-spark-*.jar`
-FULL_JAR="$MRQL_HOME/lib/mrql-all-spark.jar"
 
-export SPARK_HOME SPARK_JAR FS_DEFAULT_NAME SPARK_MASTER SPARK_WORKER_INSTANCES SPARK_WORKER_CORES SPARK_WORKER_MEMORY SPARK_MASTER_MEMORY
-export SPARK_YARN_APP_JAR=$FULL_JAR
+export SPARK_HOME FS_DEFAULT_NAME SPARK_MASTER SPARK_WORKER_INSTANCES SPARK_WORKER_CORES SPARK_WORKER_MEMORY SPARK_MASTER_MEMORY
 
-if (! [ -a $FULL_JAR ]); then
-   rm -rf "$MRQL_HOME/tmp/classes"
-   mkdir -p "$MRQL_HOME/tmp/classes"
-   pushd $MRQL_HOME/tmp/classes > /dev/null
-   $JAVA_HOME/bin/jar xf $CUP_JAR
-   $JAVA_HOME/bin/jar xf $JLINE_JAR
-   $JAVA_HOME/bin/jar xf $GEN_JAR
-   $JAVA_HOME/bin/jar xf $CORE_JAR
-   $JAVA_HOME/bin/jar xf $MRQL_JAR
-   cd ..
-   $JAVA_HOME/bin/jar cf $FULL_JAR -C classes/ .
-   popd > /dev/null
+SPARK_CLASSPATH="$CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$MRQL_JAR:$SPARK_JARS:$HADOOP_JARS"
+
+if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
+   $SPARK_HOME/bin/spark-submit --class org.apache.mrql.Main --jars $CUP_JAR,$JLINE_JAR,$GEN_JAR,$CORE_JAR $MRQL_JAR -spark $*
+else
+   $JAVA_HOME/bin/java -classpath $SPARK_CLASSPATH org.apache.mrql.Main -spark $*
 fi
-
-SPARK_CLASSPATH="$CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$MRQL_JAR:$SPARK_JAR:$HADOOP_JARS"
-
-$JAVA_HOME/bin/java -classpath $SPARK_CLASSPATH org.apache.mrql.Main -spark $*

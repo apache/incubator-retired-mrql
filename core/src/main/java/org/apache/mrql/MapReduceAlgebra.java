@@ -583,7 +583,8 @@ final public class MapReduceAlgebra {
                     };
                     s.add(t.first());
                 };
-                System.err.println("*** Repeat #"+i+": "+c+" true results");
+                if (!Config.testing)
+                    System.err.println("*** Repeat #"+i+": "+c+" true results");
             } else throw new Error("Wrong repeat");
         } while (cont && i < max_num);
         return s;
@@ -614,7 +615,8 @@ final public class MapReduceAlgebra {
                 n = s.size();
             } else if (d instanceof MR_dataset) {
                 DataSet ds = ((MR_dataset)d).dataset();
-                System.err.println("*** Repeat #"+i+": "+(ds.records-n)+" new records");
+                if (!Config.testing)
+                    System.err.println("*** Repeat #"+i+": "+(ds.records-n)+" new records");
                 old = n;
                 n = ds.records;
                 s = Plan.collect(ds);

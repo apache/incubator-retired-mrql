@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import scala.Tuple2;
+import org.apache.spark.SparkConf;
 import org.apache.spark.TaskContext;
 import org.apache.spark.Partition;
 import org.apache.spark.Accumulator;
@@ -63,16 +64,20 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
     /** initialize the Spark evaluator */
     final public void init ( Configuration conf ) {
         Config.spark_mode = true;
-        if (Config.hadoop_mode && Config.local_mode)
-            spark_context = new JavaSparkContext("local["+Config.nodes+"]",
-                                                 "Apache MRQL Local Spark Evaluator");
-        else if (Config.hadoop_mode) {
-            HashMap<String,String> env = new HashMap<String,String>();
-            spark_context = new JavaSparkContext(System.getenv("SPARK_MASTER"),
-                                                 "Apache MRQL Spark Evaluator",
-                                                 System.getenv("SPARK_HOME"),
-                                                 new String[]{spark_jar,core_jar,gen_jar,scanner_jar},
-                                                 env);
+        SparkConf spark_conf = new SparkConf();
+        spark_conf.setAppName("MRQL");
+        if (Config.hadoop_mode && Config.local_mode) {
+            spark_conf.setMaster("local["+Config.nodes+"]");
+            spark_context = new JavaSparkContext(spark_conf);
+            Plan.conf = spark_context.hadoopConfiguration();
+            FileSystem.setDefaultUri(Plan.conf,"file:///");
+        } else if (Config.hadoop_mode) {
+            spark_conf.setMaster(System.getenv("SPARK_MASTER"));
+            spark_conf.setSparkHome(System.getenv("SPARK_HOME"));
+            spark_conf.setJars(new String[]{spark_jar,core_jar,gen_jar,scanner_jar});
+            spark_conf.set("spark.logConf","false");
+            spark_conf.set("spark.eventLog.enabled","false");
+            spark_context = new JavaSparkContext(spark_conf);
             Plan.conf = spark_context.hadoopConfiguration();
             FileSystem.setDefaultUri(Plan.conf,System.getenv("FS_DEFAULT_NAME"));
         };
@@ -85,9 +90,11 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
 
     /** shutdown the Spark evaluator */
     final public void shutdown ( Configuration conf ) {
-        spark_context.stop();
-        spark_context = null;
-        System.clearProperty("spark.driver.port");
+        if (Config.local_mode) {
+            spark_context.stop();
+            spark_context = null;
+            System.clearProperty("spark.driver.port");
+        }
     }
 
     final public void initialize_query () {
@@ -290,17 +297,43 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
             });
     }
 
-    // changed since Spark 0.8.1
-    final static TaskContext context = new TaskContext(0,0,(long)0,Config.local_mode,null);
+    // Return the RDD elements at the given position
+    private static Iterator<MRData> partition ( final JavaRDD<MRData> rdd, final int position ) {
+        /* Doesn't work (needs the right TaskContext)
+        TaskContext context = new TaskContext(0,0,(long)0,Config.local_mode,null);
+        List<Partition> ps = rdd.splits();
+        return rdd.iterator(ps.get(position),context);
+        */
+        return rdd.mapPartitionsWithIndex(new Function2<Integer,Iterator<MRData>,Iterator<MRData>>() {
+                public Iterator<MRData> call ( Integer partition, Iterator<MRData> values ) {
+                    if (partition == position)
+                        return values;
+                    else return new ArrayList<MRData>().iterator();
+                }
+            },true).collect().iterator();
+    }
+
+    final static int MAX_CACHE_SIZE = 1000;
 
     /** Convert a Spark RDD into a lazy bag
      * @param rdd the Spark RDD
      * @return a lazy bag that contains all RDD elements
      */
-    public static Bag bag ( final JavaRDD<MRData> rdd ) {
+    public static Bag bag ( final JavaRDD<MRData> rdd ) throws IOException {
         final JavaRDD<MRData> rd = rdd.cache();
-        rd.count();  // force the evaluation of all pending Spark operations
-        final List<Partition> ps = rd.splits();
+        if (rd.count() <= MAX_CACHE_SIZE) {  // small RDD
+            final Iterator<MRData> i = rd.collect().iterator();
+            return new Bag(new BagIterator() {
+                    public MRData next () {
+                        return i.next();
+                    }
+                    public boolean hasNext () {
+                        return i.hasNext();
+                    }
+                });
+        };
+        // return the RDD elements lazily, one partition at a time
+        final int splits = rd.splits().size();
         return new Bag(new BagIterator() {
                 Iterator<MRData> i = null;
                 int c = 0;
@@ -311,9 +344,9 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                     do {
                         if (i != null && i.hasNext()) 
                             return true;
-                        if (c >= ps.size())
+                        if (c >= splits)
                             return false;
-                        i = rdd.iterator(ps.get(c++),context);
+                        i = partition(rd,c++);
                     } while (true);
                 }
             });
@@ -711,7 +744,8 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                                        });
                     i++;
                     cont = true_results > 0 && i < max_num;
-                    System.err.println("Repeat #"+i+": "+true_results+" true results");
+                    if (!Config.testing)
+                        System.err.println("Repeat #"+i+": "+true_results+" true results");
                 } while (cont);
                 return res;
             case Closure(lambda(`v,`b),`s,`m):
@@ -726,7 +760,8 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
                     old = n;
                     n = res.count();
                     i++;
-                    System.err.println("Repeat #"+i+": "+(old-n)+" new records");
+                    if (!Config.testing)
+                        System.err.println("Repeat #"+i+": "+(old-n)+" new records");
                 } while (old < n && i < max_num);
                 return res;
             case Generator(`min,`max,`size):

@@ -16,7 +16,10 @@
  * limitations under the License.
  */
 
-DBLP = source(xml,args[0],{"article","incollection","book","inproceedings"});
+// PageRank on the DBLP bibliography.
+// You can download dblp.xml.gz from http://dblp.uni-trier.de/xml/
+
+DBLP = source(xml,args[0],{"article","inproceedings"});
 
 graph = select (key,select text(x) from x in c)
           from a in DBLP,

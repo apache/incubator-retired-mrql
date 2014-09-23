@@ -166,9 +166,9 @@ public class DataSource {
         int count = num;
         try {
             ArrayList<MRData> res = new ArrayList<MRData>();
-            Iterator<MRData> it = inputFormat.newInstance().materialize(new Path(path)).iterator();
+            Iterator<MRData> it = inputFormat.newInstance().collect(new DataSet(this,0,0),false).iterator();
             for ( int i = num; (num < 0 || i > 0) && it.hasNext(); i-- )
-                if (Config.hadoop_mode && Config.bsp_mode)
+                if (Config.hadoop_mode && Config.bsp_mode && !to_be_merged)
                     res.add(((Tuple)it.next()).get(1));  // strip tag in BSP mode
                 else res.add(it.next());
             return res;

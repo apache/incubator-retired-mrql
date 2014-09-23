@@ -53,8 +53,8 @@ public abstract class QueryTest extends TestCase {
 			evaluator = createEvaluator();
 		Translator.global_reset();
                 for ( Enumeration en = LogManager.getCurrentLoggers(); en.hasMoreElements(); )
-                    ((Logger)en.nextElement()).setLevel(Level.WARN);
-                LogManager.getRootLogger().setLevel(Level.WARN);
+                    ((Logger)en.nextElement()).setLevel(Level.ERROR);
+                LogManager.getRootLogger().setLevel(Level.ERROR);
 	}
 
 	public void tearDown() throws IOException {
@@ -155,6 +155,7 @@ public abstract class QueryTest extends TestCase {
 	}
 
     private int queryAndCompare ( File query, File resultDir ) throws Exception {
+        System.err.println("Testing "+query);
         Translator.global_reset();
         String qname = query.getName();
         qname = qname.substring(0,qname.length()-5);

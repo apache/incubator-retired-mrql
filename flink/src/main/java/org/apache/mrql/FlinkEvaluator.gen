@@ -69,7 +69,7 @@ final public class FlinkEvaluator extends Evaluator {
             // curently, the compiler doesn't work in local mode
             Config.compile_functional_arguments = false;
             Config.write(Plan.conf);
-        } else {
+        } else if (Config.distributed_mode) {
             String master_node = System.getenv("FLINK_MASTER");
             if (master_node == null)
                 throw new Error("Need to run the Flink application master first: $FLINK_HOME/bin/yarn-session.sh");
@@ -94,7 +94,8 @@ final public class FlinkEvaluator extends Evaluator {
                                         Config.nodes,flink_jar.toURI().getPath(),Plan.conf.get("mrql.jar.path"));
                 else flink_env = ExecutionEnvironment.createRemoteEnvironment(master_host,master_port,
                                         Config.nodes,flink_jar.toURI().getPath());
-            } else flink_env.setDefaultLocalParallelism(Config.nodes);
+            } else if (Config.distributed_mode)
+                flink_env.setDefaultLocalParallelism(Config.nodes);
         } catch (Exception ex) {
             throw new Error("Cannot initialize the Flink evaluator: "+ex);
         }
@@ -149,9 +150,11 @@ final public class FlinkEvaluator extends Evaluator {
             ftp.close();
             if (s.length != 2 )
                 return null;
-            if (!s[0].equals("2"))
-                throw new Error("The binary file has been created in java mode and cannot be read in hadoop mode");
-            return Tree.parse(s[1]);
+            if (s[0].equals("2"))
+                throw new Error("This is a Hadoop Sequence and cannot be read as a Flink binary file: "+file);
+            else if (!s[0].equals("3"))
+                throw new Error("The binary file has been created in java mode and cannot be read in hadoop mode: "+file);
+            else return Tree.parse(s[1]);
         } catch (Exception e) {
             return null;
         }
@@ -163,7 +166,7 @@ final public class FlinkEvaluator extends Evaluator {
         Path path = new Path(absolute_path(file));
         FileSystem fs = path.getFileSystem();
         PrintStream ftp = new PrintStream(fs.create(path.suffix(".type"),true));
-        ftp.print("2@"+type.toString()+"\n");
+        ftp.print("3@"+type.toString()+"\n");
         ftp.close();
         if (data instanceof MR_dataset)
             data = Plan.collect(((MR_dataset)data).dataset());
