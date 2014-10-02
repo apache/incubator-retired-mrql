@@ -130,6 +130,8 @@ public class Interpreter extends TypeInference {
             return #<`(((MR_float)x).get())>;
         else if (x instanceof MR_double)
             return #<callM(coerce,`coerce_method,`((float)(((MR_double)x).get())),`(MRContainer.DOUBLE))>;
+        else if (x instanceof MR_bool)
+            return (((MR_bool)x).get()) ? #<true> : #<false>;
         throw new Error("wrong MRData: "+x);
     }
 

@@ -73,11 +73,15 @@ parser code {:
     }
 
     public int line_pos () {
-        return ((MRQLLex)getScanner()).line_pos();
+        if (getScanner() != null)
+           return ((MRQLLex)getScanner()).line_pos();
+        else return 0;
     }
 
     public int char_pos () {
-        return ((MRQLLex)getScanner()).char_pos();
+        if (getScanner() != null)
+           return ((MRQLLex)getScanner()).char_pos();
+        else return 0;
     }
 
     public void syntax_error ( Symbol token ) {

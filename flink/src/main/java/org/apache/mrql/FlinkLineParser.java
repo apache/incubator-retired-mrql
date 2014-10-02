@@ -50,13 +50,14 @@ final public class FlinkLineParser extends LineParser implements FlinkParser {
         try {
             if (in_memory)
                 return buffered_in.readLine();
-            while (pos < end) {
+            while (pos <= end) {
                 line = in.readLine();
-                if (line == null || line.length == 0)
+                if (line == null)
                     return null;
                 pos += line.length;
                 if (line.length < maxLineLength)
                     return new String(line);
+                else return "";
             };
             return null;
         } catch ( Exception e ) {

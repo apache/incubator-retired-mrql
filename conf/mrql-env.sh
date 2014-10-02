@@ -86,7 +86,7 @@ SPARK_MASTER_MEMORY=512M
 
 # Optional: Flink configuration. Supports version 0.6-incubating
 # Note: for yarn, set yarn.nodemanager.vmem-check-enabled to false in yarn-site.xml
-FLINK_VERSION=yarn-0.6-incubating
+FLINK_VERSION=yarn-0.6.1-incubating
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
 #   (use this for a Flink snapshot):

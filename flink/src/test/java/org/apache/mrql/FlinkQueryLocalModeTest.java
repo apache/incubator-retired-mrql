@@ -50,7 +50,7 @@ public class FlinkQueryLocalModeTest extends QueryTest {
 
 		args = gop.getRemainingArgs();
 		
-		Config.hadoop_mode = false;
+		Config.hadoop_mode = true;
 		Config.testing = true;		
 		Config.parse_args(args, conf);
 

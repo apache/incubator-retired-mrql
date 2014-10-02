@@ -281,10 +281,4 @@ final public class FlinkDataSource extends DataSource implements Serializable {
             r.add(value);
         }
     }
-
-    /** accumulate all dataset values */
-    @Override
-    public MRData reduce ( MRData zero, Function acc ) {
-        throw new Error("Flink reduce operation is not implemented yet");
-    }
 }
