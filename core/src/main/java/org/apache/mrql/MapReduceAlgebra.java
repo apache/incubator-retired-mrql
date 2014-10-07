@@ -656,40 +656,39 @@ final public class MapReduceAlgebra {
 
     /** parse a text document using a given parser
      * @param parser the parser
-     * @param file the text document (local file)
+     * @param file the text document (local file or directory of files)
      * @param args the arguments to pass to the parser
      * @return a lazy bag that contains the parsed data
      */
     public static Bag parsedSource ( final Parser parser,
-                                     final String file,
+                                     final String path,
                                      Trees args ) {
-        try {
             parser.initialize(args);
-            parser.open(file);
-            return new Bag(new BagIterator() {
-                    Iterator<MRData> result = null;
-                    MRData data;
+            File file = new File(path);
+            final File[] files = (file.isDirectory())
+                                 ? file.listFiles()
+                                 : new File[]{file};
+            final int dl = files.length;
+            parser.open(files[0].toString());
+            return new Bag(new BagIterator () {
+                    Iterator<MRData> iter;
+                    int i = 0;
+                    String line;
                     public boolean hasNext () {
-                        try {
-                            while (result == null || !result.hasNext()) {
-                                String s = parser.slice();
-                                if (s == null)
-                                    return false;
-                                result = parser.parse(s).iterator();
-                            };
-                            data = (MRData)result.next();
-                            return true;
-                        } catch (Exception e) {
-                            throw new Error(e);
-                        }
+                        while (iter == null || !iter.hasNext()) {
+                            line = parser.slice();
+                            while (line == null)
+                                if (++i < dl)
+                                    parser.open(files[i].toString());
+                                else return false;
+                            iter = parser.parse(line).iterator();
+                        };
+                        return true;
                     }
                     public MRData next () {
-                        return data;
+                        return iter.next();
                     }
                 });
-        } catch (Exception e) {
-            throw new Error(e);
-        }
     }
 
     /** parse a text document using a given parser

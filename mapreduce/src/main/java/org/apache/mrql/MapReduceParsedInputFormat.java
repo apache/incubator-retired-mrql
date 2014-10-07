@@ -109,8 +109,12 @@ final public class MapReduceParsedInputFormat extends MapReduceMRQLFileInputForm
     public Bag materialize ( final Path path ) throws IOException {
         Configuration conf = Plan.conf;
         ParsedDataSource ds = (ParsedDataSource)DataSource.get(path.toString(),conf);
-        FileSystem fs = path.getFileSystem(conf);
-        FSDataInputStream fsin = fs.open(path);
+        final FileSystem fs = path.getFileSystem(conf);
+        FileStatus[] fds = fs.listStatus(path);
+        final int dl = fds.length;
+        final Path[] paths = new Path[dl];
+        for ( int i = 0; i < dl; i++ )
+            paths[i] = fds[i].getPath();
         Parser p;
         try {
             p = ds.parser.newInstance();
@@ -119,14 +123,22 @@ final public class MapReduceParsedInputFormat extends MapReduceMRQLFileInputForm
         };
         final Parser parser = p;
         parser.initialize(ds.args);
-        parser.open(fsin,0,Long.MAX_VALUE);
+        parser.open(fs.open(paths[0]),0,Long.MAX_VALUE);
         return new Bag(new BagIterator () {
                 Iterator<MRData> iter;
+                int i = 0;
+                String line;
                 public boolean hasNext () {
                     while (iter == null || !iter.hasNext()) {
-                        String line = parser.slice();
-                        if (line == null)
-                            return false;
+                        line = parser.slice();
+                        while (line == null)
+                            if (++i < dl)
+                                try {
+                                    parser.open(fs.open(paths[i]),0,Long.MAX_VALUE);
+                                } catch (IOException ex) {
+                                    throw new Error("Cannot open the file: "+paths[i]);
+                                }
+                            else return false;
                         iter = parser.parse(line).iterator();
                     };
                     return true;
