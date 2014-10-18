@@ -185,8 +185,8 @@ final public class MapJoinOperation extends MapReducePlan {
         if (zero != null) {
             conf.set("mrql.accumulator",acc_fnc.toString());
             conf.set("mrql.zero",zero.toString());
-            conf.set("mapred.min.split.size","268435456");
         } else conf.set("mrql.zero","");
+        setupSplits(new DataSet[]{probe_dataset,built_dataset},conf);
         Job job = new Job(conf,newpath);
         distribute_compiled_arguments(job.getConfiguration());
         job.setJarByClass(MapReducePlan.class);

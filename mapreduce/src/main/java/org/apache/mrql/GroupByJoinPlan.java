@@ -87,7 +87,7 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
  * </pre>
  *   where flush() is: for each ((kx,ky),v) in H: emit r((kx,ky),v)
  */
-final public class GroupByJoinPlan extends Plan {
+final public class GroupByJoinPlan extends MapReducePlan {
 
     /** mapper output key: (partition,joinkey,tag) */
     private final static class GroupByJoinKey implements Writable {
@@ -437,6 +437,7 @@ final public class GroupByJoinPlan extends Plan {
         conf.set("mrql.zero",zero.toString());
         conf.set("mrql.reducer",reduce_fnc.toString());
         conf.set("mrql.counter",stop_counter);
+        setupSplits(new DataSet[]{X,Y},conf);
         Job job = new Job(conf,newpath);
         distribute_compiled_arguments(job.getConfiguration());
         job.setMapOutputKeyClass(GroupByJoinKey.class);

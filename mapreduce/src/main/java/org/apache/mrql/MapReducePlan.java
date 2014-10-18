@@ -39,6 +39,39 @@ public class MapReducePlan extends Plan {
         return rc;
     }
 
+    /** Set hadoop map min and max split size based on number of requested nodes */
+    public static void setupSplits ( DataSet[] dsv, Configuration conf ) throws IOException {
+        int len = 0;
+        for ( DataSet ds: dsv )
+            len += ds.source.size();
+        long[] sizes = new long[len];
+        int i = 0;
+        for ( DataSet ds: dsv )
+            for ( DataSource s: ds.source ) {
+                sizes[i] = s.size(conf);
+                i++;
+            };
+        long total_size = 0;
+        for ( long size: sizes )
+            total_size += size;
+        long split_size = Math.max(total_size/Config.nodes,1024L);
+        int tasks = 0;
+        do {  // adjust split_size
+            tasks = 0;
+            for ( long size: sizes )
+                tasks += (int)Math.ceil(size/(double)split_size);
+            if (tasks > Config.nodes)
+                split_size = (long)Math.ceil((double)split_size*1.01);
+        } while (tasks > Config.nodes);
+        conf.setLong("mapred.min.split.size",split_size);
+        conf.setLong("mapred.max.split.size",split_size);
+    }
+
+    /** Set hadoop map min and max split size based on number of requested nodes */
+    public static void setupSplits ( DataSet ds, Configuration conf ) throws IOException {
+        setupSplits(new DataSet[]{ds},conf);
+    }
+
     /** The Aggregate physical operator
      * @param acc_fnc  the accumulator function from (T,T) to T
      * @param zero  the zero element of type T
