@@ -23,7 +23,7 @@ import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.api.common.io.FileInputFormat;
 
 
-/** Input format for sequence files */
+/** Input format for binary files */
 final public class FlinkBinaryInputFormat extends FlinkMRQLFileInputFormat {
     public FlinkBinaryInputFormat () {}
 

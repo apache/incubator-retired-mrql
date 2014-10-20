@@ -28,23 +28,14 @@ import org.apache.flink.util.Collector;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.api.common.io.FileInputFormat;
-import org.apache.flink.api.common.operators.Order;
-import org.apache.flink.api.java.ExecutionEnvironment;
-import org.apache.flink.api.java.RemoteEnvironment;
+import org.apache.flink.api.common.functions.*;
+import org.apache.flink.api.common.operators.*;
+import org.apache.flink.api.java.*;
 import org.apache.flink.api.java.DataSet;
-import org.apache.flink.api.java.IterativeDataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.io.LocalCollectionOutputFormat;
-import org.apache.flink.api.java.functions.RichMapFunction;
-import org.apache.flink.api.java.functions.RichFlatMapFunction;
-import org.apache.flink.api.java.functions.RichReduceFunction;
-import org.apache.flink.api.java.functions.RichGroupReduceFunction;
-import org.apache.flink.api.java.functions.RichCoGroupFunction;
-import org.apache.flink.api.java.functions.RichCrossFunction;
-import org.apache.flink.api.java.functions.RichJoinFunction;
-import org.apache.flink.api.java.functions.RichFilterFunction;
-import org.apache.flink.api.java.functions.KeySelector;
-import org.apache.flink.api.java.operators.GroupReduceOperator;
+import org.apache.flink.api.java.functions.*;
+import org.apache.flink.api.java.operators.*;
 
 
 /** Evaluates physical plans in Apache Flink mode */
@@ -68,6 +59,7 @@ final public class FlinkEvaluator extends Evaluator {
             flink_env = ExecutionEnvironment.createLocalEnvironment(Config.nodes);
             // curently, the compiler doesn't work in local mode
             Config.compile_functional_arguments = false;
+	    Plan.conf.set("fs.default.name","file:///");
             Config.write(Plan.conf);
         } else if (Config.distributed_mode) {
             String master_node = System.getenv("FLINK_MASTER");
@@ -78,6 +70,7 @@ final public class FlinkEvaluator extends Evaluator {
                 throw new Error("Need both host name and port number for the Flink application master: "+master_node);
             master_host = m[0];
             master_port = Integer.parseInt(m[1]);
+	    Plan.conf.set("fs.default.name",System.getenv("FS_DEFAULT_NAME"));
         }
     }
 
@@ -94,8 +87,7 @@ final public class FlinkEvaluator extends Evaluator {
                                         Config.nodes,flink_jar.toURI().getPath(),Plan.conf.get("mrql.jar.path"));
                 else flink_env = ExecutionEnvironment.createRemoteEnvironment(master_host,master_port,
                                         Config.nodes,flink_jar.toURI().getPath());
-            } else if (Config.distributed_mode)
-                flink_env.setDefaultLocalParallelism(Config.nodes);
+            } else flink_env.setDefaultLocalParallelism(Config.nodes);
         } catch (Exception ex) {
             throw new Error("Cannot initialize the Flink evaluator: "+ex);
         }
@@ -112,7 +104,7 @@ final public class FlinkEvaluator extends Evaluator {
 
     /** return the FileInputFormat for binary files */
     final public Class<? extends MRQLFileInputFormat> binaryInputFormat () {
-        return FlinkBinaryInputFormat.class;
+        return FlinkSequenceInputFormat.class;
     }
 
     /** return the FileInputFormat for data generator files */
@@ -142,46 +134,13 @@ final public class FlinkEvaluator extends Evaluator {
     /** for dumped data to a file, return the MRQL type of the data */
     @Override
     public Tree get_type ( String file ) {
-        try {
-            Path path = new Path(absolute_path(file));
-            FileSystem fs = path.getFileSystem();
-            BufferedReader ftp = new BufferedReader(new InputStreamReader(fs.open(path.suffix(".type"))));
-            String s[] = ftp.readLine().split("@");
-            ftp.close();
-            if (s.length != 2 )
-                return null;
-            if (s[0].equals("2"))
-                throw new Error("This is a Hadoop Sequence and cannot be read as a Flink binary file: "+file);
-            else if (!s[0].equals("3"))
-                throw new Error("The binary file has been created in java mode and cannot be read in hadoop mode: "+file);
-            else return Tree.parse(s[1]);
-        } catch (Exception e) {
-            return null;
-        }
+	return super.get_type(absolute_path(file));
     }
 
-    /** dump MRQL data into a Flink binary file instead of a Hadoop Sequence file */
+    /** dump MRQL data into a Hadoop Sequence file */
     @Override
     public void dump ( String file, Tree type, MRData data ) throws Exception {
-        Path path = new Path(absolute_path(file));
-        FileSystem fs = path.getFileSystem();
-        PrintStream ftp = new PrintStream(fs.create(path.suffix(".type"),true));
-        ftp.print("3@"+type.toString()+"\n");
-        ftp.close();
-        if (data instanceof MR_dataset)
-            data = Plan.collect(((MR_dataset)data).dataset());
-        FlinkOutputFormat of = new FlinkOutputFormat();
-        of.setOutputFilePath(path);
-        of.setWriteMode(org.apache.flink.core.fs.FileSystem.WriteMode.OVERWRITE);
-        of.open(0,2);
-        if (data instanceof Bag) {
-            final FData container = new FData(new MR_int(0));
-            for ( MRData e: (Bag)data ) {
-                container.data = e;
-                of.writeRecord(container);
-            }
-        } else of.writeRecord(new FData(data));
-        of.close();
+	super.dump(absolute_path(file),type,data);
     }
 
     /** dump MRQL data into a text CVS file */
@@ -682,7 +641,7 @@ final public class FlinkEvaluator extends Evaluator {
             case BinarySource(`file,_):
                 final String path = absolute_path(((MR_string)evalE(file,null)).get());
                 new BinaryDataSource(path,Plan.conf);
-                final FileInputFormat<FData> sf = new FlinkBinaryInputFormat().inputFormat(path);
+                final FileInputFormat<FData> sf = new FlinkSequenceInputFormat().inputFormat(path);
                 return flink_env.createInput(sf).map(new restore_global_functions());
             case ParsedSource(`parser,`file,...args):
                 final String path = absolute_path(((MR_string)evalE(file,null)).get());

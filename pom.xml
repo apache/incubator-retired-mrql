@@ -43,10 +43,21 @@
     <relativePath />
   </parent>
 
+  <repositories>
+    <!-- Needed for flink snapshots -->
+    <repository>
+      <id>apache.snapshots</id>
+      <name>Apache Development Snapshot Repository</name>
+      <url>https://repository.apache.org/content/repositories/snapshots/</url>
+      <releases><enabled>false</enabled></releases>
+      <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+  </repositories>
+
   <properties>
     <hadoop.version>1.2.1</hadoop.version>
     <yarn.version>2.2.0</yarn.version>
-    <hama.version>0.6.3</hama.version>
+    <hama.version>0.6.4</hama.version>
     <spark.version>1.1.0</spark.version>
     <scala.version>2.10</scala.version>
     <flink.version>0.6.1-incubating</flink.version>

@@ -656,7 +656,7 @@ final public class MapReduceAlgebra {
 
     /** parse a text document using a given parser
      * @param parser the parser
-     * @param file the text document (local file or directory of files)
+     * @param path the text document (local file or directory of files)
      * @param args the arguments to pass to the parser
      * @return a lazy bag that contains the parsed data
      */

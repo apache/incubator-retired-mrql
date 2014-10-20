@@ -34,7 +34,7 @@ MRQL_JAR=`ls "$MRQL_HOME"/lib/mrql-flink-*.jar`
 FULL_JAR="/tmp/${USER}_mrql_flink.jar"
 CLASS_DIR="/tmp/${USER}_mrql_classes"
 
-export FLINK_HOME FLINK_JARS FLINK_MASTER
+export FLINK_HOME FLINK_JARS FLINK_MASTER FS_DEFAULT_NAME
 
 if [[ ($MRQL_JAR -nt $FULL_JAR) ]]; then
    rm -rf $CLASS_DIR
@@ -45,6 +45,7 @@ if [[ ($MRQL_JAR -nt $FULL_JAR) ]]; then
    $JAVA_HOME/bin/jar xf $GEN_JAR
    $JAVA_HOME/bin/jar xf $CORE_JAR
    $JAVA_HOME/bin/jar xf $MRQL_JAR
+   $JAVA_HOME/bin/jar xf $HDFS_JAR
    cd ..
    $JAVA_HOME/bin/jar cf $FULL_JAR -C $CLASS_DIR .
    popd > /dev/null
@@ -53,6 +54,10 @@ fi
 if [ "$1" == "-dist" ]; then
     if ([ -a $FLINK_HOME/conf/.yarn-jobmanager ]); then
 	export FLINK_MASTER=`cat $FLINK_HOME/conf/.yarn-jobmanager`
+    fi
+    if ([ -a $FLINK_HOME/conf/.yarn-properties ]); then
+	. $FLINK_HOME/conf/.yarn-properties
+	export FLINK_MASTER=$jobManager
     fi
     args=" -flink $*"
     args=${args// /\!}

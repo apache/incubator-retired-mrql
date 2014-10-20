@@ -89,7 +89,9 @@ public class Plan {
             if (!Config.compile_functional_arguments)
                 return;
             Path local_path = new Path("file://"+Compiler.jar_path);
-            if (Config.spark_mode)
+            if (Config.flink_mode)
+                conf.set("mrql.jar.path",Compiler.jar_path);
+            else if (Config.spark_mode)
                 conf.set("mrql.jar.path",local_path.toString());
             else {
                 // distribute the jar file with the compiled arguments to all clients
