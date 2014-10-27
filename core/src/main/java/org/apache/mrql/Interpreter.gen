@@ -135,6 +135,19 @@ public class Interpreter extends TypeInference {
         throw new Error("wrong MRData: "+x);
     }
 
+    private static boolean has_source ( Tree e ) {
+        match e {
+        case Generator(...): return true;
+        case BinarySource(...): return true;
+        case ParsedSource(...): return true;
+        case `f(...as):
+            for ( Tree a: as )
+                if (has_source(a))
+                    return true;
+        };
+        return false;
+    }
+
     /** evaluate an MRQL function in memory */
     private final static Function evalf ( final String v,
                                           final Tree body,
@@ -286,6 +299,11 @@ public class Interpreter extends TypeInference {
             return MapReduceAlgebra.filter(evalF(p,env),evalF(m,env),(Bag)evalE(s,env));
         case map(`m,`s):
             return MapReduceAlgebra.map(evalF(m,env),(Bag)evalE(s,env));
+        case repeat(...):
+            if (!Config.flink_mode || !Config.hadoop_mode || !has_source(e))
+                fail;
+            // send Flink repetitions to the Flink evaluator (they need Flink iterations)
+            return Evaluator.evaluator.aggregate(#<0>,#<0>,e,env);
         case repeat(lambda(`v,`b),`s,`n):
             final String nm = v.toString();
             final Tree body = b;

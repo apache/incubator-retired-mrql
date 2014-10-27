@@ -58,10 +58,11 @@ FS_DEFAULT_NAME=hdfs://localhost:9000/
 # Optional: Hama configuration. Supports versions 0.6.2, 0.6.3, and 0.6.4
 HAMA_VERSION=0.6.4
 # The Hadoop installation directory
-HAMA_HOME=${HOME}/hama-${HAMA_VERSION}
+#HAMA_HOME=${HOME}/hama-${HAMA_VERSION}
+HAMA_HOME=${HOME}/hama-${HAMA_VERSION}-yarn/dist/target/hama-0.6.4/hama-0.6.4/
 # The Hama configuration (as defined in hama-site.xml)
-BSP_MASTER_ADDRESS=`hostname`:40000
-HAMA_ZOOKEEPER_QUORUM=`hostname`
+BSP_MASTER_ADDRESS=localhost:40000
+HAMA_ZOOKEEPER_QUORUM=localhost
 
 
 # Optional: Spark configuration. Supports versions 1.0.0, 1.0.2, and 1.1.0
@@ -86,7 +87,7 @@ SPARK_MASTER_MEMORY=512M
 
 # Optional: Flink configuration. Supports versions 0.6-incubating, 0.6.1-incubating, and 0.7.0-incubating
 # Note: for yarn, set yarn.nodemanager.vmem-check-enabled to false in yarn-site.xml
-FLINK_VERSION=yarn-0.6.1-incubating
+FLINK_VERSION=yarn-0.7.0-incubating
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
 #   (use this for a Flink snapshot):

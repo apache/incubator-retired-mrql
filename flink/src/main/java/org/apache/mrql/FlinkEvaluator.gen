@@ -19,6 +19,7 @@ package org.apache.mrql;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.io.*;
 import java.net.URI;
 import java.net.URL;
@@ -39,7 +40,7 @@ import org.apache.flink.api.java.operators.*;
 
 
 /** Evaluates physical plans in Apache Flink mode */
-final public class FlinkEvaluator extends Evaluator {
+final public class FlinkEvaluator extends Evaluator implements Serializable {
     final static URL flink_jar = FlinkEvaluator.class.getProtectionDomain().getCodeSource().getLocation();
     public static ExecutionEnvironment flink_env;
     // an HDFS tmp file used to hold the data source directory information in distributed mode
@@ -187,6 +188,39 @@ final public class FlinkEvaluator extends Evaluator {
         }
     }
 
+    /* broadcast the loop value to all nodes */
+    public static final class set_environment extends RichMapFunction<FData,FData> {
+        String var;
+
+        set_environment ( String v ) { var = v; }
+
+        @Override
+        public void open ( org.apache.flink.configuration.Configuration parameters ) throws Exception {
+            final Bag value = bag(getRuntimeContext().getBroadcastVariable(var));
+            Interpreter.new_global_binding(var.toString(),value);
+        }
+
+        @Override
+        public FData map ( FData value ) throws Exception {
+            return new FData(((Tuple)value.data()).first());
+        }
+    }
+
+    private static Bag bag ( Collection<Object> values ) {
+        Bag s = new Bag();
+        for ( Object value: values )
+            s.add(((FData)value).data());
+        return s;
+    }
+
+    /* convert a Bag into a DataSet */
+    private static DataSet<FData> dataset ( Bag s ) {
+        ArrayList<FData> a = new ArrayList(s.size());
+        for ( MRData x: s )
+            a.add(new FData(x));
+        return flink_env.fromCollection(a);
+    }
+
     /** The Aggregate physical operator
      * @param merge  the accumulator function from (T,T) to T
      * @param zero  the zero element of type T
@@ -198,23 +232,61 @@ final public class FlinkEvaluator extends Evaluator {
                                     Tree zero,
                                     Tree plan,
                                     Environment env ) throws Exception {
-        MRData z = evalE(zero,env);
+        final MRData z = evalE(zero,env);
         Tree type = TypeInference.type_inference(zero);
         match plan {
+        case repeat(lambda(`v,`b),`s,`n):
+            // Special case for Flink: repetition where the loop result must be shared among nodes
+            final int max_num = ((MR_int)evalE(n,null)).get();
+            final Bag init = (Bag)evalE(s,env);
+            Interpreter.new_global_binding(v.toString(),init);
+            final DataSet<FData> ds = dataset(init);
+            final IterativeDataSet<FData> startOfIteration = ds.iterate(max_num);
+            final DataSet<FData> step = eval(b,env);
+            final DataSet<FData> toBeFedBack = step.map(new set_environment(v.toString()))
+                                                   .withBroadcastSet(startOfIteration,v.toString());
+            // Flink doesn't allow termination criteria for kmeans-like iterations:
+            //   (java.lang.IllegalStateException: Error: Iterative task without a single iterative input)
+            //final DataSet<FData> terminationCriterion = step.filter(new repeat_filter());
+            final DataSet<FData> res = startOfIteration.closeWith(toBeFedBack);//,terminationCriterion);
+            String path = absolute_path(Plan.new_path(Plan.conf));
+            res.write(new FlinkOutputFormat(),path);
+            flink_env.execute("MRQL repeat");
+            Bag bs = new Bag();
+            for ( MRData x: new FlinkDataSource(res,path,false).take(-1) )
+                bs.add(x);
+            return bs;
         case AggregateMap(`m,`acc,_,`s):
-            return aggregate(evalD(#<cMap(`m,`s)>,env),z,acc,merge,type);
+            final DataSet<FData> ds = eval(s,env).mapPartition(new aggregate_partition(m,acc,z));
+            return aggregate(ds,z,merge,merge,type);
         case MapAggregateReduce(`m,`r,`acc,_,`s,`o):
             if (acc.equals(#<null>))
                 fail;
-            return aggregate(evalD(#<MapReduce(`m,`r,`s,`o)>,env),z,acc,merge,type);
+            final DataSet<FData> ds = eval(s,env).flatMap(cmap_fnc(m));
+            final DataSet<FData> gs = ds.groupBy(new KeySelector<FData,FData>() {
+                                                      @Override
+                                                      public FData getKey ( FData value ) {
+                                                          return new FData(((Tuple)value.data()).first());
+                                                      }
+                                             }).reduceGroup(new groupBy_combiner_reducer(r,acc,z));
+            return aggregate(gs,z,merge,merge,type);
         case CrossAggregateProduct(`mx,`my,`r,`acc,_,`x,`y):
             if (acc.equals(#<null>))
                 fail;
-            return aggregate(evalD(#<CrossProduct(`mx,`my,`r,`x,`y)>,env),z,acc,merge,type);
+            final DataSet<FData> xs = eval(x,env).flatMap(cmap_fnc(mx));
+            final DataSet<FData> ys = eval(y,env).flatMap(cmap_fnc(my));
+            final DataSet<FData> ds = xs.cross(ys).with(new cross_combiner_reducer(r,acc,z));
+            return aggregate(ds,z,merge,merge,type);
         case MapAggregateReduce2(`mx,`my,`r,`acc,_,`x,`y,`o):
             if (acc.equals(#<null>))
                 fail;
-            return aggregate(evalD(#<MapReduce2(`mx,`my,`r,`x,`y,`o)>,env),z,acc,merge,type);
+            final DataSet<FData> xs = eval(x,env).flatMap(cmap_fnc(mx));
+            final DataSet<FData> ys = eval(y,env).flatMap(cmap_fnc(my));
+            final DataSet<FData> ds = xs.coGroup(ys)
+                .where(new join_key())
+                .equalTo(new join_key())
+                .with(new join_combiner_reducer(r,acc,z));
+            return aggregate(ds,z,merge,merge,type);
         case MapAggregateJoin(`mx,`my,`r,`acc,_,`x,`y):
             if (acc.equals(#<null>))
                 fail;
@@ -294,9 +366,8 @@ final public class FlinkEvaluator extends Evaluator {
         final DataSet<FData> res = evalD(e,env);
         if (Config.trace_execution) 
             try {
-                List<FData> out = new ArrayList<FData>();
-                res.output(new LocalCollectionOutputFormat(out));
-                System.out.println(tabs(tab_count)+"-> "+out);
+                System.out.println(tabs(tab_count)+"->");
+                res.first(Config.max_bag_size_print).print();
                 tab_count -= 3;
             } catch (Exception ex) {
                 System.err.println(ex.getMessage());
@@ -318,7 +389,7 @@ final public class FlinkEvaluator extends Evaluator {
     }
 
     /* convert the stream of pairs to a bag of their second element */
-    public static Bag bag ( Iterable<FData> values ) {
+    private static Bag bag ( Iterable<FData> values ) {
         Bag s = new Bag();
         for ( FData value: values )
             s.add(((Tuple)value.data()).second());
@@ -415,6 +486,47 @@ final public class FlinkEvaluator extends Evaluator {
         }
     }
 
+    public static final class aggregate_partition extends RichMapPartitionFunction<FData,FData> {
+        final Function m;
+        final Function acc;
+        final MRData zero;
+
+        aggregate_partition ( Tree m, Tree acc, MRData zero ) {
+            this.m = evalF(m,null);
+            this.acc = evalF(acc,null);
+            this.zero = zero;
+        }
+
+        @Override
+        public void mapPartition ( Iterable<FData> values, Collector<FData> out ) throws Exception {
+            MRData aggregated_value = zero;
+            for ( FData value: values )
+                for ( MRData v: (Bag)m.eval(value.data()) )
+                    aggregated_value = acc.eval(new Tuple(aggregated_value,v));
+            out.collect(new FData(aggregated_value));
+        }
+    }
+
+    public static final class groupBy_combiner_reducer extends RichGroupReduceFunction<FData,FData> {
+        final Function r;
+        final Function acc;
+        final MRData zero;
+
+        groupBy_combiner_reducer ( Tree r, Tree acc, MRData zero ) {
+            this.r = evalF(r,null);
+            this.acc = evalF(acc,null);
+            this.zero = zero;
+        }
+
+        @Override
+        public void reduce ( final Iterable<FData> values, Collector<FData> out ) {
+            MRData value = zero;
+            for ( MRData v: (Bag)r.eval(new Tuple(bag(values))) )
+                value = acc.eval(new Tuple(value,v));
+            out.collect(new FData(value));
+        }
+    }
+
     public static final class join_reducer extends RichCoGroupFunction<FData,FData,FData> {
         final Function f;
 
@@ -429,6 +541,26 @@ final public class FlinkEvaluator extends Evaluator {
         }
     }
 
+    public static final class join_combiner_reducer extends RichCoGroupFunction<FData,FData,FData> {
+        final Function r;
+        final Function acc;
+        final MRData zero;
+
+        join_combiner_reducer ( Tree r, Tree acc, MRData zero ) {
+            this.r = evalF(r,null);
+            this.acc = evalF(acc,null);
+            this.zero = zero;
+        }
+
+        @Override
+        public void coGroup ( Iterable<FData> xs, Iterable<FData> ys, Collector<FData> out ) {
+            MRData value = zero;
+            for ( MRData v: (Bag)r.eval(new Tuple(bag(xs),bag(ys))) )
+                value = acc.eval(new Tuple(value,v));
+            out.collect(new FData(value));
+        }
+    }
+
     public static final class cross_reducer extends RichCrossFunction<FData,FData,FData> {
         final Function f;
 
@@ -439,6 +571,23 @@ final public class FlinkEvaluator extends Evaluator {
         @Override
         public FData cross ( FData x, FData y ) throws Exception {
             return new FData(f.eval(new Tuple(x.data(),y.data())));
+        }
+    }
+
+    public static final class cross_combiner_reducer extends RichCrossFunction<FData,FData,FData> {
+        final Function r;
+        final Function acc;
+        final MRData zero;
+
+        cross_combiner_reducer ( Tree r, Tree acc, MRData zero ) {
+            this.r = evalF(r,null);
+            this.acc = evalF(acc,null);
+            this.zero = zero;
+        }
+
+        @Override
+        public FData cross ( FData x, FData y ) throws Exception {
+            return new FData(acc.eval(new Tuple(zero,r.eval(new Tuple(x.data(),y.data())))));
         }
     }
 

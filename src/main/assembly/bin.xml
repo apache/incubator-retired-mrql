@@ -59,6 +59,9 @@
       <directory>../spark/src</directory>
     </fileSet>
     <fileSet>
+      <directory>../flink/src</directory>
+    </fileSet>
+    <fileSet>
       <directory>../queries</directory>
     </fileSet>
     <fileSet>
