@@ -99,14 +99,14 @@ public abstract class EvaluatorTest extends TestCase {
 
 	public void testCore1Math() throws Exception {
 		assertEquals(1, ((MR_int) execute("min({1,2,3});")).get());
-		assertEquals(3.4F, ((MR_float) execute("max({1.2,3.4});")).get());
+		assertEquals(3.4, ((MR_double) execute("max({1.2,3.4});")).get());
 
 		assertEquals((double) 1.0F, ((MR_double) execute("min({1.0 as double,4.8 as double});")).get());
 		assertEquals(3, ((MR_long) execute("count({1,2,3});")).get());
 
-		assertEquals(((double) 1.2F + (double) 3.4F), ((MR_double) execute("sum({1.2,3.4});")).get());
+		assertEquals(1.2 + 3.4, ((MR_double) execute("sum({1.2,3.4});")).get());
 		assertEquals(2.0, ((MR_double) execute("avg({1,2,3});")).get());
-		assertEquals(((double) 1.2F + (double) 3.4F) / 2, ((MR_double) execute("avg({1.2,3.4});")).get());
-		assertEquals(((double) 1.3F + (double) 4.8F) / 2, ((MR_double) execute("avg({1.3 as double,4.8 as double});")).get());
+		assertEquals((1.2 + 3.4) / 2, ((MR_double) execute("avg({1.2,3.4});")).get());
+		assertEquals((1.3F + 4.8F) / 2, (float)((MR_double) execute("avg({1.3 as float,4.8 as float});")).get());
 	}
 }

@@ -264,6 +264,8 @@ public abstract class QueryTest extends TestCase {
             Union t1 = (Union)v1;
             Union t2 = (Union)v2;
             return t1.tag() == t2.tag() && equal_value(t1.value(),t2.value());
-        } else return v1.equals(v2);
+        } else if (v1 instanceof MR_double && v2 instanceof MR_double)
+            return (float)((MR_double)v1).get() == (float)((MR_double)v2).get();
+        else return v1.equals(v2);
     }
 }

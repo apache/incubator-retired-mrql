@@ -1341,7 +1341,7 @@ public class TypeInference extends Translator {
             if (n.is_long())
               return #<int>;
             else if (n.is_double())
-                return #<float>;
+                return #<double>;
             else if (n.is_string())
                 return #<string>;
         };

@@ -265,7 +265,7 @@ public class Interpreter extends TypeInference {
             } else if (e.is_long())
                 return new MR_int((int)e.longValue());
             else if (e.is_double())
-                return new MR_float((float)e.doubleValue());
+                return new MR_double(e.doubleValue());
             else if (e.is_string())
                 return new MR_string(e.stringValue());
         match e {
@@ -273,6 +273,14 @@ public class Interpreter extends TypeInference {
             return (((MR_bool)evalE(x,env)).get()) ? evalE(y,env) : false_value;
         case callM(or,_,`x,`y):
             return (((MR_bool)evalE(x,env)).get()) ? true_value : evalE(y,env);
+        case callM(coerce,_,`x,`n):
+            if (!x.is_long() || n.longValue() != MRContainer.LONG)
+                fail;
+            return new MR_long(x.longValue());
+        case callM(coerce,_,`x,`n):
+            if (!x.is_double() || n.longValue() != MRContainer.FLOAT)
+                fail;
+            return new MR_float((float)x.doubleValue());
         case callM(`f,`n,...args):   // internal function call
             MRData[] as = new MRData[args.length()];
             for ( int i = 0; i < args.length(); i++ )
@@ -432,14 +440,16 @@ public class Interpreter extends TypeInference {
             MRData nv = evalE(n,env);
             final int k = (int)((MR_int)nv).get();
             if (k < 0)
-                throw new Error("Negative list index: "+k);
+                throw new Error("Negative list index: "+k+" (in "+print_query(x)+")");
             if (xv instanceof MR_dataset) {
                 List<MRData> res = ((MR_dataset)xv).dataset().take(k+1);
                 if (k >= res.size())
-                    throw new Error("List index out of bounds: "+k);
+                    throw new Error("List index out of bounds: "+k+" (in "+print_query(x)+" of size "+res.size()+")");
                 return res.get(k);
             };
             Bag b = (Bag)xv;
+            if (k >= b.size())
+                throw new Error("List index out of bounds: "+k+" (in "+print_query(x)+" of size "+b.size()+")");
             return b.get(k);
         case range(`x,`i,`j):
             MRData xv = evalE(x,env);
@@ -448,7 +458,7 @@ public class Interpreter extends TypeInference {
             int ki = (int)((MR_int)ni).get();
             int kj = (int)((MR_int)nj).get();
             if (ki < 0 || kj < ki)
-                throw new Error("Wrong list range: ["+ki+","+kj+"]");
+                throw new Error("Wrong list range: ["+ki+","+kj+"] in "+print_query(x));
             Iterator<MRData> it = (xv instanceof MR_dataset)
                                    ? ((MR_dataset)xv).dataset().take(kj+1).iterator()
                                    : ((Bag)xv).iterator();

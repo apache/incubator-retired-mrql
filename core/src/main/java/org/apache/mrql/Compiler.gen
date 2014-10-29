@@ -363,7 +363,7 @@ final public class Compiler extends Translator {
         else if (e.is_long())
             return "(new MR_int("+((LongLeaf)e).value()+"))";
         else if (e.is_double())
-            return "(new MR_float("+((DoubleLeaf)e).value()+"))";
+            return "(new MR_double("+((DoubleLeaf)e).value()+"))";
         else if (e.is_string())
             return "(new MR_string("+e.toString()+"))";
         match e {

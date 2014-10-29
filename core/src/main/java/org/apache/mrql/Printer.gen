@@ -478,7 +478,7 @@ public class Printer {
         case int: return #<typed(`(((MR_int)x).get()),`type)>;
         case long: return #<typed(`((int)((MR_long)x).get()),`type)>;
         case float: return #<typed(`(((MR_float)x).get()),`type)>;
-        case double: return #<typed(`((float)(((MR_double)x).get())),`type)>;
+        case double: return #<typed(`(((MR_double)x).get()),`type)>;
         };
         throw new Error("wrong type: "+type);
     }
