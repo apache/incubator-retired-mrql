@@ -34,7 +34,7 @@ MRQL_JAR=`ls "$MRQL_HOME"/lib/mrql-bsp-*.jar`
 FULL_JAR="/tmp/${USER}_mrql_bsp.jar"
 CLASS_DIR="/tmp/${USER}_mrql_classes"
 
-export JAVA_HOME FS_DEFAULT_NAME BSP_MASTER_ADDRESS HAMA_ZOOKEEPER_QUORUM
+export JAVA_HOME FS_DEFAULT_NAME BSP_MASTER_ADDRESS HAMA_ZOOKEEPER_QUORUM BSP_SPLIT_INPUT
 
 if [[ ($MRQL_JAR -nt $FULL_JAR) ]]; then
    rm -rf $CLASS_DIR
@@ -52,9 +52,9 @@ fi
 
 if [ "$1" == "-local" ]; then
    export HAMA_CLASSPATH=$FULL_JAR  # needed for Hama 0.6.4 in local mode
-   $HAMA_HOME/bin/hama jar $FULL_JAR org.apache.mrql.Main -bsp $*
+   $HAMA_HOME/bin/hama --config $HAMA_CONFIG jar $FULL_JAR org.apache.mrql.Main -bsp $*
 else if [ "$1" == "-dist" ]; then
-   $HAMA_HOME/bin/hama jar $FULL_JAR org.apache.mrql.Main -bsp $*
+   $HAMA_HOME/bin/hama --config $HAMA_CONFIG jar $FULL_JAR org.apache.mrql.Main -bsp $*
 else
    $JAVA_HOME/bin/java -classpath "$FULL_JAR:$HAMA_JAR:$HADOOP_JARS" org.apache.mrql.Main -bsp $*
 fi

@@ -52,10 +52,6 @@ import org.apache.spark.api.java.function.VoidFunction;
 /** Evaluates physical plans in Apache Spark mode */
 final public class SparkEvaluator extends Evaluator implements Serializable {
     public static JavaSparkContext spark_context;
-    final static String spark_jar = SparkEvaluator.class.getProtectionDomain().getCodeSource().getLocation().toString();
-    final static String core_jar = Interpreter.class.getProtectionDomain().getCodeSource().getLocation().toString();
-    final static String gen_jar = Tree.class.getProtectionDomain().getCodeSource().getLocation().toString();
-    final static String scanner_jar = Scanner.class.getProtectionDomain().getCodeSource().getLocation().toString();
     final static Bag empty_bag = new Bag();
     // an HDFS tmp file used to hold the data source directory information in distributed mode
     final static String data_source_dir_name = "tmp/"+System.getenv("USER")+"_data_source_dir.txt";
@@ -74,7 +70,6 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
         } else if (Config.hadoop_mode) {
             spark_conf.setMaster(System.getenv("SPARK_MASTER"));
             spark_conf.setSparkHome(System.getenv("SPARK_HOME"));
-            spark_conf.setJars(new String[]{spark_jar,core_jar,gen_jar,scanner_jar});
             spark_conf.set("spark.logConf","false");
             spark_conf.set("spark.eventLog.enabled","false");
             spark_context = new JavaSparkContext(spark_conf);

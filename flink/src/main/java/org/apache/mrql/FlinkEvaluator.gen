@@ -44,9 +44,10 @@ final public class FlinkEvaluator extends Evaluator implements Serializable {
     final static URL flink_jar = FlinkEvaluator.class.getProtectionDomain().getCodeSource().getLocation();
     public static ExecutionEnvironment flink_env;
     // an HDFS tmp file used to hold the data source directory information in distributed mode
-    final static String data_source_dir_name = "hdfs:/user/"+System.getenv("USER")+"/tmp/data_source_dir.txt";
+    static String data_source_dir_name;
     static String master_host = "localhost";
     static int master_port = 6123;
+    static String fs_default_name;
 
     /** initialize the Flink evaluator */
     final public void init ( Configuration conf ) {
@@ -60,8 +61,8 @@ final public class FlinkEvaluator extends Evaluator implements Serializable {
             flink_env = ExecutionEnvironment.createLocalEnvironment(Config.nodes);
             // curently, the compiler doesn't work in local mode
             Config.compile_functional_arguments = false;
-	    Plan.conf.set("fs.default.name","file:///");
-            Config.write(Plan.conf);
+            fs_default_name = "file:///";
+	    Plan.conf.set("fs.default.name",fs_default_name);
         } else if (Config.distributed_mode) {
             String master_node = System.getenv("FLINK_MASTER");
             if (master_node == null)
@@ -71,7 +72,9 @@ final public class FlinkEvaluator extends Evaluator implements Serializable {
                 throw new Error("Need both host name and port number for the Flink application master: "+master_node);
             master_host = m[0];
             master_port = Integer.parseInt(m[1]);
-	    Plan.conf.set("fs.default.name",System.getenv("FS_DEFAULT_NAME"));
+            fs_default_name = System.getenv("FS_DEFAULT_NAME");
+            data_source_dir_name = absolute_path("tmp/data_source_dir.txt");
+	    Plan.conf.set("fs.default.name",fs_default_name);
         }
     }
 
@@ -120,8 +123,8 @@ final public class FlinkEvaluator extends Evaluator implements Serializable {
             if (uri.getScheme() == null)
                 if (Config.hadoop_mode && !Config.local_mode)
                     if (uri.toString().startsWith("/"))
-                        uri = new URI("hdfs:"+uri);
-                    else uri = new URI("hdfs:/user/"+System.getProperty("user.name")+"/"+uri);
+                        uri = new URI(fs_default_name+uri);
+                    else uri = new URI(fs_default_name+"/user/"+System.getProperty("user.name")+"/"+uri);
                 else if (uri.toString().startsWith("/"))
                     uri = new URI("file:"+uri);
                 else uri = new URI("file:"+System.getProperty("user.dir")+"/"+uri);

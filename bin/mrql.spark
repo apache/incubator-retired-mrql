@@ -38,10 +38,9 @@ MRQL_JAR=`ls "$MRQL_HOME"/lib/mrql-spark-*.jar`
 
 export SPARK_HOME FS_DEFAULT_NAME SPARK_MASTER SPARK_WORKER_INSTANCES SPARK_WORKER_CORES SPARK_WORKER_MEMORY SPARK_MASTER_MEMORY
 
-SPARK_CLASSPATH="$CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$MRQL_JAR:$SPARK_JARS:$HADOOP_JARS"
 
 if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
-   $SPARK_HOME/bin/spark-submit --class org.apache.mrql.Main --jars $CUP_JAR,$JLINE_JAR,$GEN_JAR,$CORE_JAR $MRQL_JAR -spark $*
+   $SPARK_HOME/bin/spark-submit --class org.apache.mrql.Main --jars $CUP_JAR,$JLINE_JAR,$GEN_JAR,$CORE_JAR --driver-class-path $CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$MRQL_JAR $MRQL_JAR -spark $*
 else
-   $JAVA_HOME/bin/java -classpath $SPARK_CLASSPATH org.apache.mrql.Main -spark $*
+   $JAVA_HOME/bin/java -classpath $CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$MRQL_JAR:$SPARK_JARS:$HADOOP_JARS org.apache.mrql.Main -spark $*
 fi

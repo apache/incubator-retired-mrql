@@ -49,6 +49,8 @@ JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 HADOOP_VERSION=2.2.0
 # The Hadoop installation directory
 HADOOP_HOME=${HOME}/hadoop-${HADOOP_VERSION}
+# The Hadoop configuration directory (where core-site.xml is)
+HADOOP_CONFIG=${HADOOP_HOME}/etc/hadoop
 # The Hadoop job tracker (as defined in mapred-site.xml)
 MAPRED_JOB_TRACKER=localhost:9001
 # The HDFS namenode URI (as defined in core-site.xml)
@@ -57,12 +59,15 @@ FS_DEFAULT_NAME=hdfs://localhost:9000/
 
 # Optional: Hama configuration. Supports versions 0.6.2, 0.6.3, and 0.6.4
 HAMA_VERSION=0.6.4
-# The Hadoop installation directory
-#HAMA_HOME=${HOME}/hama-${HAMA_VERSION}
-HAMA_HOME=${HOME}/hama-${HAMA_VERSION}-yarn/dist/target/hama-0.6.4/hama-0.6.4/
+# The Hama installation directory
+HAMA_HOME=${HOME}/hama-${HAMA_VERSION}
+# The Hama configuration directory
+HAMA_CONFIG=${HAMA_HOME}/conf
 # The Hama configuration (as defined in hama-site.xml)
 BSP_MASTER_ADDRESS=localhost:40000
 HAMA_ZOOKEEPER_QUORUM=localhost
+# true, if you want Hama to split the input (one split per task)
+BSP_SPLIT_INPUT=
 
 
 # Optional: Spark configuration. Supports versions 1.0.0, 1.0.2, and 1.1.0

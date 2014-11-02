@@ -394,6 +394,8 @@ final public class BSPPlan extends Plan {
 
     /** set Hama's min split size and number of BSP tasks (doesn't work with Hama 0.6.0) */
     public static void setupSplits ( BSPJob job, DataSet ds ) throws IOException {
+        if (Config.local_mode || "".equals(System.getenv("BSP_SPLIT_INPUT")))
+            return;
         long[] sizes = new long[ds.source.size()];
         if (sizes.length > Config.nodes)
             throw new Error("Cannot distribute "+sizes.length+" files over "+Config.nodes+" BSP tasks");
@@ -411,6 +413,7 @@ final public class BSPPlan extends Plan {
             if (tasks > Config.nodes)
                 split_size = (long)Math.ceil((double)split_size*1.01);
         } while (tasks > Config.nodes);
+        job.setPartitioner(org.apache.hama.bsp.HashPartitioner.class);
         job.setNumBspTask(tasks);
         if (Config.trace)
             System.err.println("Using "+tasks+" BSP tasks (out of a max "+Config.nodes+")."

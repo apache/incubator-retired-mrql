@@ -442,13 +442,14 @@ public class Interpreter extends TypeInference {
             if (k < 0)
                 throw new Error("Negative list index: "+k+" (in "+print_query(x)+")");
             if (xv instanceof MR_dataset) {
-                List<MRData> res = ((MR_dataset)xv).dataset().take(k+1);
+                DataSet ds = ((MR_dataset)xv).dataset();
+                List<MRData> res = ds.take(k+1);
                 if (k >= res.size())
                     throw new Error("List index out of bounds: "+k+" (in "+print_query(x)+" of size "+res.size()+")");
                 return res.get(k);
             };
             Bag b = (Bag)xv;
-            if (k >= b.size())
+            if (b.materialized() && k >= b.size())
                 throw new Error("List index out of bounds: "+k+" (in "+print_query(x)+" of size "+b.size()+")");
             return b.get(k);
         case range(`x,`i,`j):
