@@ -64,7 +64,8 @@ final public class MapReduceEvaluator extends Evaluator {
         for ( Map.Entry<String,String> entry: old_conf )
             if (entry.getKey().startsWith("mrql.") && entry.getValue() != null)
                 conf.set(entry.getKey(),entry.getValue());
-        conf.set("mapred.input.dir.formats","");  // need to reset MultipleInputs for local mode
+        // old Configuration doesn't have unset
+        // conf.unset("mapred.input.dir.formats");  // need to reset MultipleInputs for local mode
         return conf;
     }
 
