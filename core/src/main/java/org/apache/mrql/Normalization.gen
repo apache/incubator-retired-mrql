@@ -332,6 +332,9 @@ public class Normalization extends Translator {
             return normalize(#<select(`(subst(v,d,u)),
                                       from(...bl,...(subst_list(v,d,al))),
                                       `(subst(v,d,c)))>);
+        case select(`u,from(...bl,bind(`v,call(plus,`X,`Y)),...al),where(`c)):
+            return normalize(#<call(plus,select(`u,from(...bl,bind(`v,`X),...al),where(`c)),
+                                    select(`u,from(...bl,bind(`v,`Y),...al),where(`c)))>);
         case select(`u,from(...bl),where(`c)):
             Trees es = has_existential(c);
             if (es.length() <= 1)

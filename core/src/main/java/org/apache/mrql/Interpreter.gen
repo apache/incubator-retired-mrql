@@ -132,6 +132,12 @@ public class Interpreter extends TypeInference {
             return #<callM(coerce,`coerce_method,`((float)(((MR_double)x).get())),`(MRContainer.DOUBLE))>;
         else if (x instanceof MR_bool)
             return (((MR_bool)x).get()) ? #<true> : #<false>;
+        else if (x instanceof MR_dataset) {
+            Trees vs = #[ ];
+            for ( MRData v: ((MR_dataset)x).dataset().take(Integer.MAX_VALUE))
+                vs = vs.append(reify(v));
+            return #<list(...vs)>;
+        };
         throw new Error("wrong MRData: "+x);
     }
 
