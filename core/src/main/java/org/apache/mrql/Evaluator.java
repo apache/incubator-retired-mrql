@@ -150,6 +150,11 @@ abstract public class Evaluator extends Interpreter {
 	out.close();
     }
 
+    /** evaluate plan in stream mode: evaluate each batch of data and apply the function f */
+    public void streaming ( Tree plan, Environment env, DataSetFunction f ) {
+        throw new Error("MRQL Streaming is not supported in this evaluation mode yet");
+    }
+
     /** for dumped data to a file, return the MRQL type of the data */
     public Tree get_type ( String file ) {
         try {

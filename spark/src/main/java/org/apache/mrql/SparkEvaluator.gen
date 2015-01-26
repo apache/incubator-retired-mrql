@@ -21,7 +21,6 @@ import org.apache.mrql.gen.*;
 import java_cup.runtime.Scanner;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.io.*;
@@ -42,16 +41,20 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function2;
+import org.apache.spark.api.java.function.Function3;
 import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
+import org.apache.spark.streaming.api.java.JavaStreamingContext;
+import org.apache.spark.streaming.Duration;
 
 
 /** Evaluates physical plans in Apache Spark mode */
-final public class SparkEvaluator extends Evaluator implements Serializable {
+public class SparkEvaluator extends Evaluator implements Serializable {
     public static JavaSparkContext spark_context;
+    public static JavaStreamingContext stream_context;
     final static Bag empty_bag = new Bag();
     // an HDFS tmp file used to hold the data source directory information in distributed mode
     final static String data_source_dir_name = "tmp/"+System.getenv("USER")+"_data_source_dir.txt";
@@ -76,6 +79,8 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
             Plan.conf = spark_context.hadoopConfiguration();
             FileSystem.setDefaultUri(Plan.conf,System.getenv("FS_DEFAULT_NAME"));
         };
+        if (Config.stream_window > 0 && (Config.local_mode || Config.hadoop_mode))
+            stream_context = new JavaStreamingContext(spark_context,new Duration(Config.stream_window));
         if (!Config.info) {
             for ( Enumeration en = LogManager.getCurrentLoggers(); en.hasMoreElements(); )
                 ((Logger)en.nextElement()).setLevel(Level.WARN);
@@ -116,6 +121,11 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
     /** return the FileInputFormat for data generator files */
     final public Class<? extends MRQLFileInputFormat> generatorInputFormat () {
         return SparkGeneratorInputFormat.class;
+    }
+
+    /** evaluate plan in stream mode: evaluate each batch of data and apply the function f */
+    final public void streaming ( Tree plan, Environment env, DataSetFunction f ) {
+        SparkStreaming.evaluate(plan,env,f);
     }
 
     /** used by the master to send parsing details (eg, record types) to workers */
@@ -446,7 +456,7 @@ final public class SparkEvaluator extends Evaluator implements Serializable {
             .flatMap(cmap_fnc(fnc,env));
     }
 
-    private static JavaRDD<MRData> containerData ( JavaPairRDD<MRContainer,MRContainer> rd ) {
+    static JavaRDD<MRData> containerData ( JavaPairRDD<MRContainer,MRContainer> rd ) {
         final Environment master_env = global_env;
         return rd.map(new Function<Tuple2<MRContainer,MRContainer>,MRData>() {
                 public MRData call ( Tuple2<MRContainer,MRContainer> value ) {

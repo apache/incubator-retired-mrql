@@ -207,6 +207,18 @@ final public class TopLevel extends Interpreter {
             }
     }
 
+    /** true, if e is a strem-processing expression */
+    public final static boolean stream_expression ( Tree e ) {
+        match e {
+        case call(stream,...): return true;
+        case `f(...as):
+            for ( Tree a: as )
+                if (stream_expression(a))
+                    return true;
+        };
+        return false;
+    }
+
     /** define a new named type (typedef) */
     private final static void typedef ( String name, Tree type ) {
         type_names.insert(name,normalize_type(type));
@@ -267,6 +279,46 @@ final public class TopLevel extends Interpreter {
             long t = System.currentTimeMillis();
             if (distributed_assign(v.toString(),e) != null && !Config.quiet_execution)
                 System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
+        case dump(`s,`e):  // dump stream output
+            if (!stream_expression(e))
+                fail;
+            reset();
+            Tree plan = translate_expression(e);
+            if (plan == null)
+                return;
+            Evaluator.evaluator.initialize_query();
+            final Tree qt = query_type;
+            final String file = s.stringValue();
+            Evaluator.evaluator.streaming(plan,null,new DataSetFunction(){
+                    long i = 0;
+                    public void eval ( final DataSet ds ) {
+                        try {
+                            Evaluator.evaluator.dump(file+"/f"+(i++),qt,new MR_dataset(ds));
+                        } catch (Exception ex) {
+                            throw new Error("Cannot dump the streaming result to the directory "+file);
+                        };
+                    }
+                });
+        case dump_text(`s,`e):  // dump stream output
+            if (!stream_expression(e))
+                fail;
+            reset();
+            Tree plan = translate_expression(e);
+            if (plan == null)
+                return;
+            Evaluator.evaluator.initialize_query();
+            final Tree qt = query_type;
+            final String file = s.stringValue();
+            Evaluator.evaluator.streaming(plan,null,new DataSetFunction(){
+                    long i = 0;
+                    public void eval ( final DataSet ds ) {
+                        try {
+                            Evaluator.evaluator.dump_text(file+"/f"+(i++),qt,new MR_dataset(ds));
+                        } catch (Exception ex) {
+                            throw new Error("Cannot dump the streaming result to the directory "+file);
+                        }
+                    }
+                });
         case dump(`s,`e):
             long t = System.currentTimeMillis();
             dump(s.stringValue(),e);

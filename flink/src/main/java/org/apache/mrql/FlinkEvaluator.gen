@@ -37,12 +37,14 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.io.LocalCollectionOutputFormat;
 import org.apache.flink.api.java.functions.*;
 import org.apache.flink.api.java.operators.*;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
 
 /** Evaluates physical plans in Apache Flink mode */
-final public class FlinkEvaluator extends Evaluator implements Serializable {
+public class FlinkEvaluator extends Evaluator implements Serializable {
     final static URL flink_jar = FlinkEvaluator.class.getProtectionDomain().getCodeSource().getLocation();
     public static ExecutionEnvironment flink_env;
+    public static StreamExecutionEnvironment stream_env;
     // an HDFS tmp file used to hold the data source directory information in distributed mode
     static String data_source_dir_name;
     static String master_host = "localhost";
@@ -91,7 +93,12 @@ final public class FlinkEvaluator extends Evaluator implements Serializable {
                                         Config.nodes,flink_jar.toURI().getPath(),Plan.conf.get("mrql.jar.path"));
                 else flink_env = ExecutionEnvironment.createRemoteEnvironment(master_host,master_port,
                                         Config.nodes,flink_jar.toURI().getPath());
-            } else flink_env.setDefaultLocalParallelism(Config.nodes);
+            } else {
+                flink_env.setDefaultLocalParallelism(Config.nodes);
+                if (Config.stream_window > 0)
+                    stream_env = StreamExecutionEnvironment.createLocalEnvironment(Config.nodes)
+                                          .setBufferTimeout(Config.stream_window);
+            }
         } catch (Exception ex) {
             throw new Error("Cannot initialize the Flink evaluator: "+ex);
         }
@@ -114,6 +121,11 @@ final public class FlinkEvaluator extends Evaluator implements Serializable {
     /** return the FileInputFormat for data generator files */
     final public Class<? extends MRQLFileInputFormat> generatorInputFormat () {
         return FlinkGeneratorInputFormat.class;
+    }
+
+    /** evaluate plan in stream mode: evaluate each batch of data and apply the function f */
+    final public void streaming ( Tree plan, Environment env, DataSetFunction f ) {
+        FlinkStreaming.evaluate(plan,env,f);
     }
 
     /** returns the absolute path relative to the directory that contains the MRQL executable */

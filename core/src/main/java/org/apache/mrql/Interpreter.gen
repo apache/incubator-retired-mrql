@@ -575,6 +575,14 @@ public class Interpreter extends TypeInference {
             if (!(t instanceof Tuple))
                 throw new Error("Expected a tuple in function application: "+t);
             return ((Lambda)fnc).lambda().eval(t);
+        case Stream(...):  // streaming
+            final Tree qt = query_type;
+            Evaluator.evaluator.streaming(e,env,new DataSetFunction(){
+                    public void eval ( final DataSet ds ) {
+                        System.out.println(print(new MR_dataset(ds),qt));
+                    }
+                });
+            return new Bag();
         case _:
             try {
                 if (Config.hadoop_mode)
@@ -858,6 +866,8 @@ public class Interpreter extends TypeInference {
                 System.out.println("Physical plan type: "+print_type(et));
             repeat_variables = #[];
             ne = Simplification.simplify_all(ne);
+            if (Streaming.is_streaming(ne))
+                ne = Streaming.streamify(ne);
             Tree plan = PlanGeneration.makePlan(ne);
             if (Config.bsp_mode) {
                 BSPTranslator.reset();

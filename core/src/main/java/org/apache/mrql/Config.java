@@ -84,6 +84,8 @@ final public class Config {
     public static boolean testing = false;
     // true to display INFO log messages
     public static boolean info = false;
+    // for streaming, stream_window > 0 is the stream window duration in milliseconds
+    public static int stream_window = 0;
 
     /** store the configuration parameters */
     public static void write ( Configuration conf ) {
@@ -114,6 +116,7 @@ final public class Config {
         conf.setBoolean("mrql.quiet.execution",quiet_execution);
         conf.setBoolean("mrql.testing",testing);
         conf.setBoolean("mrql.info",info);
+        conf.setInt("mrql.stream.window",stream_window);
     }
 
     /** load the configuration parameters */
@@ -145,6 +148,7 @@ final public class Config {
         quiet_execution = conf.getBoolean("mrql.quiet.execution",quiet_execution);
         testing = conf.getBoolean("mrql.testing",testing);
         info = conf.getBoolean("mrql.info",info);
+        stream_window = conf.getInt("mrql.stream.window",stream_window);
     }
 
     public static ArrayList<String> extra_args = new ArrayList<String>();
@@ -257,6 +261,11 @@ final public class Config {
                 System.out.print("\nAggregations:");
                 Translator.print_aggregates();
                 System.out.println();
+                i++;
+            } else if (args[i].equals("-stream")) {
+                if (++i >= args.length)
+                    throw new Error("Expected a stream window duration");
+                stream_window = Integer.parseInt(args[i]);
                 i++;
             } else if (args[i].charAt(0) == '-')
                 throw new Error("Unknown MRQL parameter: "+args[i]);

@@ -384,6 +384,18 @@ final public class PlanGeneration extends AlgebraicOptimization {
            for ( Tree a: args )
                el = el.append(makePlan(a));
            return #<ParsedSource(`parser,`(makePlan(file)),...el)>;
+       case call(stream,binary,`file,`tp):
+               return #<BinaryStream(`file,`tp)>;
+       case call(stream,gen,`f,`len,`ulen):
+           return #<SequenceStream(`(makePlan(f)),`(makePlan(len)),
+                                   `(makePlan(ulen)))>;
+       case call(stream,`parser,`file,...args):
+           Trees el = #[];
+           for ( Tree a: args )
+               el = el.append(makePlan(a));
+           return #<ParsedStream(`parser,`(makePlan(file)),...el)>;
+       case stream(lambda(`v,`b),`u):
+           return #<Stream(lambda(`v,`(makePlan(b))),`(makePlan(u)))>;
        case type(`x): return e;
        case gen(`min,`max,`size):
            return #<Generator(`(makePlan(min)),`(makePlan(max)),`(makePlan(size)))>;

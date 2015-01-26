@@ -70,11 +70,12 @@ HAMA_ZOOKEEPER_QUORUM=localhost
 BSP_SPLIT_INPUT=
 
 
-# Optional: Spark configuration. Supports versions 1.0.0, 1.0.2, and 1.1.0
+# Optional: Spark configuration. Supports versions 1.0.0, 1.0.2, 1.1.0, 1.1.1, and 1.2.0
 # (Spark versions 0.8.1, 0.9.0, and 0.9.1 are supported by MRQL 0.9.0)
 # You may use the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
+# For distributed mode, give write permission to /tmp: hadoop fs -chmod -R 777 /tmp
 # Tested in local, standalone deploy, and Yarn modes
-SPARK_HOME=${HOME}/spark-1.1.0-bin-hadoop2.3
+SPARK_HOME=${HOME}/spark-1.2.0-bin-hadoop2.3
 # URI of the Spark master node:
 #   to run Spark on Standalone Mode, set it to spark://`hostname`:7077
 #   to run Spark on a YARN cluster, set it to "yarn-client"
@@ -90,9 +91,9 @@ SPARK_WORKER_MEMORY=1G
 SPARK_MASTER_MEMORY=512M
 
 
-# Optional: Flink configuration. Supports versions 0.6-incubating, 0.6.1-incubating, and 0.7.0-incubating
+# Optional: Flink configuration. Supports versions 0.6-incubating, 0.6.1-incubating, 0.7.0-incubating, and 0.8.0
 # Note: for yarn, set yarn.nodemanager.vmem-check-enabled to false in yarn-site.xml
-FLINK_VERSION=yarn-0.7.0-incubating
+FLINK_VERSION=yarn-0.8.0
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
 #   (use this for a Flink snapshot):

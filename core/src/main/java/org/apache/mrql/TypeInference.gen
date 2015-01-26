@@ -615,6 +615,19 @@ public class TypeInference extends Translator {
             } catch (Exception x) {
                 type_error(e,"Unrecognized parser type: "+parser);
             }
+        case call(stream,binary,`f):
+            if (Config.stream_window == 0)
+                type_error(e,"Not in stream processing mode");
+            Tree tp = type_inference(#<call(source,binary,`f)>);
+            ((Node)e).children = ((Node)e).children.append(tp);       // destructive
+            return tp;
+        case call(stream,...r):
+            if (Config.stream_window == 0)
+                type_error(e,"Not in stream processing mode");
+            return type_inference(#<call(source,...r)>);
+        case stream(lambda(`v,`b),`u):
+            bind_pattern_type(v,type_inference2(u));
+            return type_inference2(b);
         case typed(null,`tp):
             return tp;
         case typed(`f(...),`tp):

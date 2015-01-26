@@ -49,6 +49,11 @@
       <version>${spark.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-streaming_${scala.version}</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.mrql</groupId>
       <artifactId>mrql-core</artifactId>
       <version>${project.version}</version>
