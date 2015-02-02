@@ -18,18 +18,19 @@
 
 ***************************************************************************
 
-Apache MRQL 0.9.2-incubating
+Apache MRQL 0.9.4-incubating
 ============================
 
 Apache MRQL (pronounced miracle) is a query processing and optimization
 system for large-scale, distributed data analysis. MRQL (the MapReduce
 Query Language) is an SQL-like query language for large-scale data
 analysis on a cluster of computers. The MRQL query processing system
-can evaluate MRQL queries in three modes:
+can evaluate MRQL queries in four modes:
 
 * in Map-Reduce mode using Apache Hadoop,
-* in BSP mode (Bulk Synchronous Parallel mode) using Apache Hama, and
-* in Spark mode using Apache Spark.
+* in BSP mode (Bulk Synchronous Parallel mode) using Apache Hama,
+* in Spark mode using Apache Spark,
+* in Flink mode using Apache Flink.
 
 The MRQL query language is powerful enough to express most common data
 analysis tasks over many forms of raw in-situ data, such as XML and
@@ -64,7 +65,7 @@ Installation instructions and a quick tutorial:
 To build MRQL using maven, use 'mvn clean install'. To validate the
 installation use 'mvn -DskipTests=false clean install', which runs the
 queries in 'tests/queries' in memory, local Hadoop mode, local Hama
-mode, and local Spark mode.
+mode, local Spark mode, and local Flink mode.
 
 Useful mailing lists
 ====================

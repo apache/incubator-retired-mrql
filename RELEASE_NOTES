@@ -16,6 +16,45 @@
  limitations under the License.
 ***************************************************************************
 
+Release Notes - Apache MRQL 0.9.4-incubating
+--------------------------------------------
+
+New Features
+
+[MRQL-45] Add support for Apache Flink
+[MRQL-49] Add Flink support info on the project web site
+[MRQL-63] Add support for MRQL streaming in spark streaming mode
+
+Bugs
+
+[MRQL-41] Post-release improvements
+[MRQL-42] Fix bug in XML projections
+[MRQL-44] Fix the map-reduce join for a complex reducer on map-reduce mode
+[MRQL-46] MRQL does not build with Java 8
+[MRQL-47] Fix various bugs for the Flink evaluation mode
+[MRQL-48] Fix global variable bindings in Spark and Flink modes
+[MRQL-50] Fix result dumping to a text file in Flink mode
+[MRQL-51] Support for Spark 1.1.0
+[MRQL-52] Fix Flink evaluation mode to pass all Junit tests
+[MRQL-53] Fix processing of directories of text files in MapReduce mode
+[MRQL-58] Fix config file and shell run scripts to support multiple HDFS users
+[MRQL-60] Fix building dependencies for hadoop 1.x
+[MRQL-61] Fix bug on select over union queries
+[MRQL-62] Fix Map-Reduce mode on MultipleInput sources
+
+Improvements
+
+[MRQL-43] Add support for tracing
+[MRQL-54] Adjust the split size of a map-reduce input file based on the number of requested nodes
+[MRQL-55] Add support for Hadoop Sequence input format in flink mode
+[MRQL-56] Improve total aggregations and repetitions with shared results in Flink mode
+[MRQL-57] Make floating-point literals to be double instead of float
+
+Tasks
+
+[MRQL-64] Prepare for 0.9.4 release
+
+
 Release Notes - Apache MRQL 0.9.2-incubating
 --------------------------------------------
 
@@ -31,6 +70,7 @@ Bugs
 [MRQL-31] Broken hyperlink in website
 [MRQL-33] Fix various bugs in iteration queries
 [MRQL-36] Fix evaluation errors during Junit testing
+[MRQL-40] Fix 0.9.2-RC1 and prepare for release
 
 Improvements
 
