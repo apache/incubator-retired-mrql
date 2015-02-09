@@ -30,7 +30,7 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 
 
 /**
- *   A map-reduce job that captures a join with group-by. Similar to matrix multiplication.<br/>
+ *   A map-reduce job that captures a join with group-by. Similar to matrix multiplication.<br>
  *   It captures queries of the form:
  * <pre>
  *      select r((kx,ky),sum(z))
@@ -38,29 +38,29 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
  *       where jx(x) = jy(y)
  *       group by (kx,ky): (gx(x),gy(y));
  * </pre>
- *   where:<br/>
- *      jx: left join key function from a to k<br/>
- *      jy: right join key function from b to k<br/>
- *      gx: group-by key function from a to k1<br/>
- *      gy: group-by key function from b to k2<br/>
+ *   where:<br>
+ *      jx: left join key function from a to k<br>
+ *      jy: right join key function from b to k<br>
+ *      gx: group-by key function from a to k1<br>
+ *      gy: group-by key function from b to k2<br>
  *      sum: a summation from {(a,b)} to c based on the accumulator
- *           acc from (c,(a,b)) to c with a left zero of type c<br/>
- *      r: reducer from ((k1,k2),c) to d<br/>
- *      X: left input of type {a}<br/>
- *      Y: right input of type {b}<br/>
- *      It returns a value of type {d}<br/>
- * <br/>
+ *           acc from (c,(a,b)) to c with a left zero of type c<br>
+ *      r: reducer from ((k1,k2),c) to d<br>
+ *      X: left input of type {a}<br>
+ *      Y: right input of type {b}<br>
+ *      It returns a value of type {d}<br>
+ * <br>
  *   Example: matrix multiplication:
  * <pre>
  *      select ( s(z), i, j )
  *        from (x,i,k) in X, (y,k,j) in Y, z = (x,y)
  *       group by (i,j);
  * </pre>
- *   where the summation s is based on the accumulator acc(c,(x,y))=c+x*y and zero=0<br/>
+ *   where the summation s is based on the accumulator acc(c,(x,y))=c+x*y and zero=0<br>
  *   It uses m*n partitions, so that n/m=|X|/|Y| and a hash table of size |X|/n*|Y|/m can fit in memory M.
  *   That is, n = |X|/sqrt(M), m = |Y|/sqrt(M).
  *   Each partition generates |X|/n*|Y|/m data. It replicates X n times and Y m times.
- *   Uses a hash-table H of size |X|/n*|Y|/m.<br/>
+ *   Uses a hash-table H of size |X|/n*|Y|/m.<br>
  *   MapReduce pseudo-code:
  * <pre>
  *   mapX ( x )
@@ -71,10 +71,10 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
  *     for i = 0,m-1
  *        emit ( ((hash(gy(y)) % n)*m+i, jy(y), 2), (2,y) )
  * </pre>
- *   mapper output key: (partition,joinkey,tag),  value: (tag,data) <br/>
- *   Partitioner: over partition                                    <br/>
- *   GroupingComparator: over partition and joinkey                 <br/>
- *   SortComparator: major partition, minor joinkey, sub-minor tag  <br/>
+ *   mapper output key: (partition,joinkey,tag),  value: (tag,data) <br>
+ *   Partitioner: over partition                                    <br>
+ *   GroupingComparator: over partition and joinkey                 <br>
+ *   SortComparator: major partition, minor joinkey, sub-minor tag  <br>
  * <pre>
  *   reduce ( (p,_,_), s )
  *     if p != current_partition

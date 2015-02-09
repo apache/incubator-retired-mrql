@@ -51,8 +51,6 @@ final public class FlinkParsedInputFormat extends FlinkMRQLFileInputFormat {
             restore_data_sources(data_sources);
             String path = split.getPath().toString();
             try {
-                URI uri = new URI(path);
-                path = uri.getScheme()+":"+uri.getPath(); // ignore host
                 ParsedDataSource ds = (ParsedDataSource)DataSource.get(path,Plan.conf);
                 parser = (FlinkParser)ds.parser.newInstance();
                 parser.initialize(ds.args);

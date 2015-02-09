@@ -41,6 +41,7 @@ Bugs
 [MRQL-60] Fix building dependencies for hadoop 1.x
 [MRQL-61] Fix bug on select over union queries
 [MRQL-62] Fix Map-Reduce mode on MultipleInput sources
+[MRQL-67]: Fix maven build errors for JDK 1.8
 
 Improvements
 

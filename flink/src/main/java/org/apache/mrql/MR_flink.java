@@ -23,7 +23,7 @@ import java.io.DataOutput;
 import org.apache.flink.api.java.DataSet;
 
 
-/** a wrapper of a DataSet<FData> as an MRData */
+/** a wrapper of a DataSet&lt;FData&gt; as an MRData */
 final public class MR_flink extends MRData {
     public DataSet<FData> flink;
 

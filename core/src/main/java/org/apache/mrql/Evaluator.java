@@ -127,6 +127,11 @@ abstract public class Evaluator extends Interpreter {
     public void dump_text ( String file, Tree type, MRData data ) throws Exception {
 	int ps = Config.max_bag_size_print;
 	Config.max_bag_size_print = -1;
+        if (!Config.hadoop_mode) {
+            File parent = new File(file).getParentFile();
+            if (parent != null && !parent.exists())
+                parent.mkdirs();
+        };
 	final PrintStream out = (Config.hadoop_mode)
 	                         ? Plan.print_stream(file)
 	                         : new PrintStream(file);

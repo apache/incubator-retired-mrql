@@ -126,7 +126,7 @@ final public class Main {
             else System.out.println("Hadoop MapReduce mode)");
         } else if (Config.bsp_mode)
             System.out.println("in-memory BSP mode)");
-        else System.out.println("in-memory MapReduce mode)");
+        else System.out.println("in-memory Java mode)");
         if (Config.interactive) {
             System.out.println("Type quit to exit");
             ConsoleReader reader = new ConsoleReader();

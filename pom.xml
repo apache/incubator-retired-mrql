@@ -20,7 +20,7 @@
 
   <groupId>org.apache.mrql</groupId>
   <artifactId>mrql-parent</artifactId>
-  <version>0.9.6-incubating-SNAPSHOT</version>
+  <version>0.9.4-incubating-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache MRQL parent POM</name>
   <description>Apache MRQL is a query processing and optimization system for large-scale, distributed data analysis, built on top of Apache Hadoop, Hama, Spark, and Flink</description>
@@ -42,17 +42,6 @@
     <version>13</version>
     <relativePath />
   </parent>
-
-  <repositories>
-    <!-- Needed for flink snapshots -->
-    <repository>
-      <id>apache.snapshots</id>
-      <name>Apache Development Snapshot Repository</name>
-      <url>https://repository.apache.org/content/repositories/snapshots/</url>
-      <releases><enabled>false</enabled></releases>
-      <snapshots><enabled>true</enabled></snapshots>
-    </repository>
-  </repositories>
 
   <properties>
     <hadoop.version>1.2.1</hadoop.version>
@@ -218,9 +207,8 @@
     <profile>
       <id>hadoop1</id>
       <activation>
-        <activeByDefault>true</activeByDefault>
         <property>
-          <name>hadoop1</name>
+          <name>!yarn</name>
         </property>
       </activation>
       <dependencies>

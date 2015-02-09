@@ -23,10 +23,10 @@
 # To rebuild Apache MRQL from sources:
 #
 # build MRQL on Hadoop 1.x:
-# mvn -Dhadoop.version=1.0.3 install
+# mvn -Dhadoop.version=1.0.3 clean install
 #
 # build MRQL on Hadoop 2.x (yarn):
-# mvn -Pyarn -Dyarn.version=2.2.0 -Dhadoop.version=1.2.1 install
+# mvn -Dyarn -Dyarn.version=2.2.0 -Dhadoop.version=1.2.1 clean install
 #
 #--------------------------------------------------------------------------------
 #

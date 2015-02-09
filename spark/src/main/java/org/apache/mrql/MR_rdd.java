@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.spark.api.java.JavaRDD;
 
 
-/** a wrapper of a JavaRDD<MRData> (stored in HDFS) as an MRData */
+/** a wrapper of a JavaRDD&lt;MRData&gt; (stored in HDFS) as an MRData */
 final public class MR_rdd extends MRData {
     public JavaRDD<MRData> rdd;
 

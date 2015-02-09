@@ -763,6 +763,10 @@ final public class MapReduceAlgebra {
      *  The type is dumped to a separate file.type
      */
     public static void dump ( String file, Tree type, MRData value ) throws IOException {
+        File f = new File(file);
+        File parent = f.getParentFile();
+        if (parent != null && !parent.exists())
+            parent.mkdirs();
         PrintStream ftp = new PrintStream(file+".type");
         ftp.print("1@"+type.toString()+"\n");
         ftp.close();
