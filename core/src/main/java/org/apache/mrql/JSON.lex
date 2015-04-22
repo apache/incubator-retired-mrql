@@ -44,6 +44,10 @@ import java_cup.runtime.Symbol;
     return new Symbol(s,o);
   }
 
+  public String format ( String s ) {
+    return s.replaceAll("\\\\t", "\t").replaceAll("\\\\n", "\n").replaceAll("\\\\\"", "\"");
+  }
+
 %}
 
 INT = [+-]?[0-9]+
@@ -51,7 +55,7 @@ DOUBLE = [+-]?[0-9]+([\.][0-9]+)?([eE][+-]?[0-9]+)?
 
 %%
 
-\"[^\"]*\"	        { return symbol(jsym.STRING,yytext().substring(1,yytext().length()-1)); }
+\"("\\\""|[^\"])*\"     { return symbol(jsym.STRING,format(yytext().substring(1,yytext().length()-1))); }
 {INT}		        { return symbol(jsym.INTEGER,new Long(yytext())); }
 {DOUBLE}         	{ return symbol(jsym.DOUBLE,new Double(yytext())); }
 true                    { return symbol(jsym.TRUE); }
