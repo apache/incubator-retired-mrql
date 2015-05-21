@@ -389,6 +389,13 @@ final public class PlanGeneration extends AlgebraicOptimization {
        case call(stream,gen,`f,`len,`ulen):
            return #<SequenceStream(`(makePlan(f)),`(makePlan(len)),
                                    `(makePlan(ulen)))>;
+       case call(stream,`parser,`host,`port,...args):
+           if (!port.is_long())
+               fail;
+           Trees el = #[];
+           for ( Tree a: args )
+               el = el.append(makePlan(a));
+           return #<SocketStream(`parser,`(makePlan(host)),`port,...el)>;
        case call(stream,`parser,`file,...args):
            Trees el = #[];
            for ( Tree a: args )

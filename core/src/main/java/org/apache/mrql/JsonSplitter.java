@@ -21,6 +21,7 @@ import org.apache.mrql.gen.*;
 import java_cup.runtime.Symbol;
 import java.util.Iterator;
 import java.io.*;
+import java.net.Socket;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.io.DataOutputBuffer;
 
@@ -59,6 +60,19 @@ final public class JsonSplitter implements Iterator<DataOutputBuffer> {
             in = new FileInputStream(file);
         } catch ( Exception e ) {
             throw new Error("Cannot open the file: "+file);
+        };
+        this.tags = tags;
+        this.buffer = buffer;
+        scanner = new JSONLex(in);
+    }
+
+    JsonSplitter ( String[] tags, String host, int port, DataOutputBuffer buffer ) {
+        in_memory = true;
+        try {
+            Socket s = new Socket(host,port);
+            in = s.getInputStream();
+        } catch ( Exception e ) {
+            throw new Error("Cannot open the socket: "+host+":"+port);
         };
         this.tags = tags;
         this.buffer = buffer;

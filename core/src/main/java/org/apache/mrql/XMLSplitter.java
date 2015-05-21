@@ -22,6 +22,7 @@ import java.util.Iterator;
 import javax.xml.parsers.SAXParserFactory;
 import org.xml.sax.*;
 import java.io.*;
+import java.net.Socket;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 
@@ -62,6 +63,19 @@ final public class XMLSplitter implements Iterator<DataOutputBuffer> {
                                     100000);
         } catch ( Exception e ) {
             throw new Error("Cannot open the file: "+file);
+        };
+        this.tags = tags;
+        this.buffer = buffer;
+    }
+
+    XMLSplitter ( String[] tags, String host, int port, DataOutputBuffer buffer ) {
+        in_memory = true;
+        try {
+            Socket s = new Socket(host,port);
+            in = new BufferedReader(new InputStreamReader(s.getInputStream()),
+                                    10000);
+        } catch ( Exception e ) {
+            throw new Error("Cannot open the socket: "+host+":"+port);
         };
         this.tags = tags;
         this.buffer = buffer;

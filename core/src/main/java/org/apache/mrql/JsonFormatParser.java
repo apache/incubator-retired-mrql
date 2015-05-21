@@ -68,6 +68,14 @@ public class JsonFormatParser implements Parser {
         }
     }
 
+    public void open ( String host, int port ) {
+        try {
+            splitter = new JsonSplitter(tags,host,port,new DataOutputBuffer());
+        } catch (Exception e) {
+            throw new Error(e);
+        }
+    }
+
     public Tree type () { return new VariableLeaf("JSON"); }
 
     public String slice () {

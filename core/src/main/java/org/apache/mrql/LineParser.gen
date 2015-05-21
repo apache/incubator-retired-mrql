@@ -19,6 +19,7 @@ package org.apache.mrql;
 
 import org.apache.mrql.gen.*;
 import java.io.*;
+import java.net.Socket;
 import java.util.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
@@ -142,6 +143,17 @@ public class LineParser implements Parser {
                                              10000);
         } catch ( Exception e ) {
             throw new Error("Cannot open the file: "+file);
+        }
+    }
+
+    public void open ( String host, int port ) {
+        in_memory = true;
+        try {
+            Socket s = new Socket(host,port);
+            buffered_in = new BufferedReader(new InputStreamReader(s.getInputStream()),
+                                             10000);
+        } catch ( Exception e ) {
+            throw new Error("Cannot open the socket: "+host+":"+port);
         }
     }
 

@@ -83,6 +83,14 @@ public class XMLParser implements Parser {
         }
     }
 
+    public void open ( String host, int port ) {
+        try {
+            splitter = new XMLSplitter(tags,host,port,new DataOutputBuffer());
+        } catch (Exception e) {
+            throw new Error(e);
+        }
+    }
+
     public Tree type () { return new VariableLeaf("XML"); }
 
     public String slice () {

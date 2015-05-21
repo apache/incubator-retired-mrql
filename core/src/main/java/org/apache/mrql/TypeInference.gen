@@ -621,6 +621,25 @@ public class TypeInference extends Translator {
             Tree tp = type_inference(#<call(source,binary,`f)>);
             ((Node)e).children = ((Node)e).children.append(tp);       // destructive
             return tp;
+        case call(stream,`parser,`f,...args):
+            if (Config.stream_window == 0)
+                type_error(e,"Not in stream processing mode");
+            if (!parser.is_variable())
+                type_error(e,"The parser must be a constant name: "+print_query(parser));
+            if (unify(type_inference(f),#<string>) == null)
+                type_error(e,"The source file must be a string: "+print_query(f));
+            if (unify(type_inference(args.head()),#<int>) != null)
+                args = args.tail();
+            try {
+                Class<? extends Parser> pc = DataSource.parserDirectory.get(parser.toString());
+                if (pc == null)
+                    type_error(e,"Unrecognized parser: "+parser);
+                Parser p = pc.newInstance();
+                p.initialize(args);
+                return #<Bag(`(p.type()))>;
+            } catch (Exception x) {
+                type_error(e,"Unrecognized parser type: "+parser);
+            }
         case call(stream,...r):
             if (Config.stream_window == 0)
                 type_error(e,"Not in stream processing mode");
