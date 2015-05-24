@@ -70,7 +70,7 @@ HAMA_ZOOKEEPER_QUORUM=localhost
 BSP_SPLIT_INPUT=
 
 
-# Optional: Spark configuration. Supports versions 1.0.0, 1.0.2, 1.1.0, 1.1.1, and 1.2.0
+# Optional: Spark configuration. Supports versions 1.0.0, 1.0.2, 1.1.0, 1.1.1, 1.2.0, 1.3.0, and 1.3.1
 # (Spark versions 0.8.1, 0.9.0, and 0.9.1 are supported by MRQL 0.9.0)
 # You may use the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
 # For distributed mode, give write permission to /tmp: hadoop fs -chmod -R 777 /tmp
@@ -80,24 +80,23 @@ SPARK_HOME=${HOME}/spark-1.2.0-bin-hadoop2.3
 #   to run Spark on Standalone Mode, set it to spark://`hostname`:7077
 #   to run Spark on a YARN cluster, set it to "yarn-client"
 SPARK_MASTER=yarn-client
-# For a Yarn cluster set it to the number of workers to start on,
-#   for local/standalone set it to 1
-SPARK_WORKER_INSTANCES=1
-# Number of cores for the workers
-SPARK_WORKER_CORES=2
-# Memory per Worker (e.g. 1000M, 2G)
-SPARK_WORKER_MEMORY=1G
 # Memory for Master (e.g. 1000M, 2G)
 SPARK_MASTER_MEMORY=512M
+# For Spark 1.3.*, use _EXECUTOR_ instead of _WORKER_ (deprecated)
+# The default number of cores. For a Yarn cluster, set it to the number of available containers minus 1.
+#   For local/standalone mode, set it to 2. It can be changed with the MRQL parameter -nodes.
+SPARK_WORKER_INSTANCES=2
+# Number of cores for each worker. For Yarn, it is the number of cores per container.
+SPARK_WORKER_CORES=1
+# Memory per Worker (e.g. 1000M, 2G)
+SPARK_WORKER_MEMORY=1G
 
 
-# Optional: Flink configuration. Supports versions 0.6-incubating, 0.6.1-incubating, 0.7.0-incubating, and 0.8.0
+# Optional: Flink configuration. Supports versions 0.6-incubating, 0.6.1-incubating, 0.7.0-incubating, 0.8.0, and 0.8.1
 # Note: for yarn, set yarn.nodemanager.vmem-check-enabled to false in yarn-site.xml
 FLINK_VERSION=yarn-0.8.0
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
-#   (use this for a Flink snapshot):
-#FLINK_HOME=${HOME}/flink-${FLINK_VERSION}/flink-dist/target/flink-${FLINK_VERSION}-bin/flink-${FLINK_VERSION}
 # Hadoop HDFS: needed for Sequence files in Flink mode
 HDFS_JAR=${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs-${HADOOP_VERSION}.jar
 # Flink JobManager (it is derived automatically on a yarn cluster)
