@@ -35,6 +35,7 @@ import org.apache.flink.api.java.*;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.io.LocalCollectionOutputFormat;
+import org.apache.flink.api.java.io.DiscardingOutputFormat;
 import org.apache.flink.api.java.functions.*;
 import org.apache.flink.api.java.operators.*;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -190,7 +191,8 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
     private static MRData aggregate ( DataSet<FData> data_set, MRData zero, Tree acc_fnc, Tree merge_fnc, Tree type ) {
         DataSet<FData> d = data_set.flatMap(new FlinkDataSource.reduce_mapper(zero,acc_fnc.toString(),
                                                                               merge_fnc.toString()));
-        d.print();  // needs a datasink (prints the aggregation value)
+        //d.print();  // needs a datasink (prints the aggregation value)
+        d.output(new DiscardingOutputFormat());
         try {
             // due to a Flink bug, we cannot return a custom object (FData) from an accumulator
             String value = FlinkEvaluator.flink_env.execute("MRQL aggregator").getAccumulatorResult("reducer");

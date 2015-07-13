@@ -28,7 +28,8 @@ import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.io.FileInputFormat;
 import org.apache.flink.util.Collector;
 import org.apache.flink.streaming.api.datastream.*;
-import org.apache.flink.streaming.api.function.source.SourceFunction;
+import org.apache.flink.streaming.api.functions.source.SourceFunction;
+import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext;
 import org.apache.flink.core.fs.FileInputSplit;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
@@ -47,12 +48,14 @@ public class FlinkStreaming extends FlinkEvaluator {
 	final private String directory;
         final private long time_window;
         final private FileInputFormat<FData> input_format;
+        private boolean is_running;
 
 	public MRDataFileSourceFunction ( String directory, long time_window,
                                           FileInputFormat<FData> input_format ) {
             this.directory = directory;
             this.time_window = time_window;
             this.input_format = input_format;
+            this.is_running = false;
 	}
 
         /** return the files within the directory that have been created within the last time window */
@@ -85,10 +88,10 @@ public class FlinkStreaming extends FlinkEvaluator {
         }
 
 	@Override
-	public void invoke ( Collector<FData> collector ) throws IOException {
+	public void run ( SourceContext<FData> context ) throws Exception {
             long tick = System.currentTimeMillis();
             file_modification_times = new HashMap<String,Long>();
-            while (true) {
+            while (is_running) {
                 for ( String path: new_files() ) {
                     input_format.setFilePath(path);
                     FileInputSplit[] splits = input_format.createInputSplits(1);
@@ -97,7 +100,7 @@ public class FlinkStreaming extends FlinkEvaluator {
                         while (!input_format.reachedEnd()) {
                             FData fd = input_format.nextRecord(container);
                             if (fd != null)
-                                collector.collect(fd);
+                                context.collect(fd);
                         }
                     };
                     input_format.close();
@@ -112,6 +115,11 @@ public class FlinkStreaming extends FlinkEvaluator {
                     return;
                 }
             }
+	}
+
+	@Override
+	public void cancel() {
+	  is_running = false;
 	}
     }
 

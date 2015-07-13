@@ -87,6 +87,20 @@ final public class FlinkDataSource extends DataSource implements Serializable {
                                                                ((Reducer)other).accumulated_value.data())));
         }
 
+        @Override
+        public Accumulator<FData, String> clone() {
+            Reducer reducer = new Reducer();
+
+            reducer.zero = new FData(this.zero.data);
+            reducer.accumulated_value = new FData(accumulated_value.data);
+            reducer.acc = this.acc;
+            reducer.merge = this.merge;
+            reducer.acc_fnc = this.acc_fnc;
+            reducer.merge_fnc = this.merge_fnc;
+
+            return reducer;
+        }
+
         public void write ( DataOutputView out ) throws IOException {
             accumulated_value.write(out);
             zero.write(out);
