@@ -198,6 +198,9 @@ public abstract class QueryTest extends TestCase {
         boolean even = true;
         do {
             String line = reader.readLine();
+            // ignore Flink tracing output
+            while (line != null && line.contains(" switched to "))
+                line = reader.readLine();
             if (line == null)
                 return s;
             for ( int i = 0; i < line.length(); i++ )
@@ -221,13 +224,13 @@ public abstract class QueryTest extends TestCase {
             MRData v2 = MRQL.query(line2);
             Config.hadoop_mode = hm;
             if (!equal_value(v1,v2)) {
-                System.err .println("*** "+file1+" (query "+i+"):\nFound: "+v1+"\nExpected: "+v2);
+                System.err.println("*** "+file1+" (query "+i+"):\nFound: "+v1+"\nExpected: "+v2);
                 return i;
             };
-            line1 = reader1.readLine();
-            line2 = reader2.readLine();
+            line1 = read_lines(reader1);
+            line2 = read_lines(reader2);
             i++;
-        } while (line1 != null && line2 != null);
+        } while (line1 != "" && line2 != "");
         return 0;
     }
 

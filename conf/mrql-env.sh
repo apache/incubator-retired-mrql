@@ -34,7 +34,9 @@
 
 
 # Required: The Java installation directory
-JAVA_HOME=/root/jdk
+if [[ !(-f ${JAVA_HOME}) ]]; then
+   export JAVA_HOME=/usr/lib/jvm/java-8-oracle
+fi
 
 # Required: The CUP parser library
 # You can download it from http://www2.cs.tum.edu/projects/cup/
@@ -46,7 +48,7 @@ JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 
 
 # Required: Hadoop configuration. Supports versions 1.x and 2.x (YARN)
-HADOOP_VERSION=2.2.0
+HADOOP_VERSION=2.6.0
 # The Hadoop installation directory
 HADOOP_HOME=${HOME}/hadoop-${HADOOP_VERSION}
 # The Hadoop configuration directory (where core-site.xml is)
@@ -92,9 +94,10 @@ SPARK_WORKER_CORES=1
 SPARK_WORKER_MEMORY=1G
 
 
-# Optional: Flink configuration. Supports versions 0.6-incubating, 0.6.1-incubating, 0.7.0-incubating, 0.8.0, and 0.8.1
+# Optional: Flink configuration. Supports version 0.9.0 only
+# (Flink versions 0.6-incubating, 0.6.1-incubating, 0.7.0-incubating, 0.8.0, and 0.8.1 are supported by MRQL 0.9.2)
 # Note: for yarn, set yarn.nodemanager.vmem-check-enabled to false in yarn-site.xml
-FLINK_VERSION=yarn-0.8.0
+FLINK_VERSION=0.9.0
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
 # Hadoop HDFS: needed for Sequence files in Flink mode
@@ -109,7 +112,7 @@ fi
 
 HAMA_JAR=${HAMA_HOME}/hama-core-${HAMA_VERSION}.jar
 FLINK_JARS=.
-for I in ${FLINK_HOME}/lib/*.jar; do
+for I in ${FLINK_HOME}/lib/flink-dist*.jar; do
     FLINK_JARS=${FLINK_JARS}:$I
 done
 
