@@ -21,7 +21,6 @@
 #--------------------------------------------------------------------------------
 #
 # run Apache MRQL in Apache Flink mode
-#  (need to run $FLINK_HOME/bin/yarn-session.sh on a separate window first)
 #
 #--------------------------------------------------------------------------------
 
@@ -35,7 +34,7 @@ MRQL_JAR=`ls "$MRQL_HOME"/lib/mrql-flink-*.jar`
 FULL_JAR="/tmp/${USER}_mrql_flink.jar"
 CLASS_DIR="/tmp/${USER}_mrql_classes"
 
-export FLINK_HOME FLINK_JARS FLINK_MASTER FS_DEFAULT_NAME
+export FLINK_HOME FLINK_JARS FS_DEFAULT_NAME
 
 if [[ ($MRQL_JAR -nt $FULL_JAR) ]]; then
    rm -rf $CLASS_DIR
@@ -46,24 +45,41 @@ if [[ ($MRQL_JAR -nt $FULL_JAR) ]]; then
    $JAVA_HOME/bin/jar xf $GEN_JAR
    $JAVA_HOME/bin/jar xf $CORE_JAR
    $JAVA_HOME/bin/jar xf $MRQL_JAR
-   $JAVA_HOME/bin/jar xf $HDFS_JAR
    cd ..
    $JAVA_HOME/bin/jar cf $FULL_JAR -C $CLASS_DIR .
    popd > /dev/null
 fi
 
 if [ "$1" == "-dist" ]; then
-    if ([ -a $FLINK_HOME/conf/.yarn-jobmanager ]); then
-	export FLINK_MASTER=`cat $FLINK_HOME/conf/.yarn-jobmanager`
-    elif ([ -a $FLINK_HOME/conf/.yarn-properties ]); then
-	. $FLINK_HOME/conf/.yarn-properties
-	export FLINK_MASTER=$jobManager
-    else
-	export FLINK_MASTER=
-    fi
     args=" -flink $*"
     args=${args// /\!}
-    $FLINK_HOME/bin/flink run -c org.apache.mrql.Main $FULL_JAR args $args | grep -v " switched to "
+    if ([ -a $FLINK_HOME/conf/.yarn-properties ]); then
+	. $FLINK_HOME/conf/.yarn-properties
+	host=`echo $jobManager | cut -d : -f 1`
+	port=`echo $jobManager | cut -d : -f 2`
+    fi
+    if ! type nc > /dev/null; then
+	jobManager=
+    elif [ "$host" == "" ] || [ "$port" == "" ] || [ "`nc -z $host $port`" == "" ]; then
+	# there is no Flink cluster running (host:port is closed)
+	jobManager=
+    fi
+    export FLINK_MASTER=$jobManager
+    if [ "$jobManager" == "" ]; then
+	# there is no Flink cluster running on YARN, so run this as a single job on YARN
+	yn=$FLINK_SLOTS
+	ARGS=($*)
+	for (( i = 0; i < $#; i++ )); do
+            if [ "${ARGS[i]}" = "-nodes" ]; then
+		yn=$(( ${ARGS[i+1]} / $FLINK_SLOTS ))
+            fi
+	done
+	$FLINK_HOME/bin/flink run -m yarn-cluster -yn $yn -ys $FLINK_SLOTS -ytm $FLINK_TASK_MANAGER_MEMORY -c org.apache.mrql.Main $FULL_JAR args $args | grep -v " switched to "
+    else
+	# a long-running Flink cluster has already been started on YARN
+        #  (using $FLINK_HOME/bin/yarn-session.sh on a separate window)
+	$FLINK_HOME/bin/flink run -c org.apache.mrql.Main $FULL_JAR args $args | grep -v " switched to "
+    fi
 else 
-    $JAVA_HOME/bin/java -classpath "$FULL_JAR:$FLINK_JARS" org.apache.mrql.Main -flink $*  | grep -v " switched to "
+    $JAVA_HOME/bin/java -classpath "$FULL_JAR:$FLINK_JARS" org.apache.mrql.Main -flink $* | grep -v " switched to "
 fi

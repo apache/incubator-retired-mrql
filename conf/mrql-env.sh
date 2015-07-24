@@ -94,18 +94,15 @@ SPARK_WORKER_CORES=1
 SPARK_WORKER_MEMORY=1G
 
 
-# Optional: Flink configuration. Supports version 0.9.0 only
-# (Flink versions 0.6-incubating, 0.6.1-incubating, 0.7.0-incubating, 0.8.0, and 0.8.1 are supported by MRQL 0.9.2)
+# Optional: Flink configuration. Supports version 0.6-incubating
 # Note: for yarn, set yarn.nodemanager.vmem-check-enabled to false in yarn-site.xml
 FLINK_VERSION=0.9.0
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
-# Hadoop HDFS: needed for Sequence files in Flink mode
-HDFS_JAR=${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs-${HADOOP_VERSION}.jar
-# Flink JobManager (it is derived automatically on a yarn cluster)
-if [ "$FLINK_MASTER" = "" ]; then
-    FLINK_MASTER=`hostname`:6123
-fi
+# number of slots per TaskManager (typically, the number of CPUs per machine)
+FLINK_SLOTS=4
+# memory per TaskManager
+FLINK_TASK_MANAGER_MEMORY=2048
 
 
 # Claspaths

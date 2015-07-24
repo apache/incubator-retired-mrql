@@ -20,6 +20,7 @@ package org.apache.mrql;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Arrays;
 import java.io.*;
 import java.net.URI;
 import java.net.URL;
@@ -39,6 +40,7 @@ import org.apache.flink.api.java.io.DiscardingOutputFormat;
 import org.apache.flink.api.java.functions.*;
 import org.apache.flink.api.java.operators.*;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.client.program.ContextEnvironment;
 
 
 /** Evaluates physical plans in Apache Flink mode */
@@ -48,7 +50,7 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
     public static StreamExecutionEnvironment stream_env;
     // an HDFS tmp file used to hold the data source directory information in distributed mode
     static String data_source_dir_name;
-    static String master_host = "localhost";
+    static String master_host = "";
     static int master_port = 6123;
     static String fs_default_name;
 
@@ -70,11 +72,13 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
             String master_node = System.getenv("FLINK_MASTER");
             if (master_node == null)
                 throw new Error("Need to run the Flink application master first: $FLINK_HOME/bin/yarn-session.sh");
-            String[] m = master_node.split(":");
-            if (m.length != 2)
-                throw new Error("Need both host name and port number for the Flink application master: "+master_node);
-            master_host = m[0];
-            master_port = Integer.parseInt(m[1]);
+            if (!master_node.equals("")) {
+		String[] m = master_node.split(":");
+		if (m.length != 2)
+		    throw new Error("Need both host name and port number for the Flink application master: "+master_node);
+		master_host = m[0];
+		master_port = Integer.parseInt(m[1]);
+	    };
             fs_default_name = System.getenv("FS_DEFAULT_NAME");
             data_source_dir_name = absolute_path("tmp/data_source_dir.txt");
 	    Plan.conf.set("fs.default.name",fs_default_name);
@@ -88,18 +92,26 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
     final public void initialize_query () {
         try {
             if (!Config.local_mode) {
-                Plan.distribute_compiled_arguments(Plan.conf);
-                if (Config.compile_functional_arguments)
-                    flink_env = ExecutionEnvironment.createRemoteEnvironment(master_host,master_port,
-                                        Config.nodes,flink_jar.toURI().getPath(),Plan.conf.get("mrql.jar.path"));
+		if (Config.compile_functional_arguments) {
+		    Plan.distribute_compiled_arguments(Plan.conf);
+		    if (master_host.equals("")) {
+			ContextEnvironment ce = (ContextEnvironment)ExecutionEnvironment.getExecutionEnvironment();
+			List<File> jars = Arrays.asList(new File(flink_jar.toURI().getPath()),
+							new File(Plan.conf.get("mrql.jar.path")));
+			flink_env = new ContextEnvironment(ce.getClient(),jars,FlinkEvaluator.class.getClassLoader(),true);
+			flink_env.setParallelism(Config.nodes);
+		    } else flink_env = ExecutionEnvironment.createRemoteEnvironment(master_host,master_port,
+					     Config.nodes,flink_jar.toURI().getPath(),Plan.conf.get("mrql.jar.path"));
+		} else if (master_host.equals(""))
+		    flink_env = ExecutionEnvironment.getExecutionEnvironment();
                 else flink_env = ExecutionEnvironment.createRemoteEnvironment(master_host,master_port,
-                                        Config.nodes,flink_jar.toURI().getPath());
-            } else {
-                flink_env.setDefaultLocalParallelism(Config.nodes);
+					     Config.nodes,flink_jar.toURI().getPath());
+	    } else {
+		flink_env.setDefaultLocalParallelism(Config.nodes);
                 if (Config.stream_window > 0)
                     stream_env = StreamExecutionEnvironment.createLocalEnvironment(Config.nodes)
-                                          .setBufferTimeout(Config.stream_window);
-            }
+			               .setBufferTimeout(Config.stream_window);
+            };
         } catch (Exception ex) {
             throw new Error("Cannot initialize the Flink evaluator: "+ex);
         }
