@@ -21,6 +21,7 @@
 #--------------------------------------------------------------------------------
 #
 # run Apache MRQL in Apache Flink mode
+#  (need to run $FLINK_HOME/bin/yarn-session.sh on a separate window first)
 #
 #--------------------------------------------------------------------------------
 
@@ -54,14 +55,15 @@ fi
 if [ "$1" == "-dist" ]; then
     if ([ -a $FLINK_HOME/conf/.yarn-jobmanager ]); then
 	export FLINK_MASTER=`cat $FLINK_HOME/conf/.yarn-jobmanager`
-    fi
-    if ([ -a $FLINK_HOME/conf/.yarn-properties ]); then
+    elif ([ -a $FLINK_HOME/conf/.yarn-properties ]); then
 	. $FLINK_HOME/conf/.yarn-properties
 	export FLINK_MASTER=$jobManager
+    else
+	export FLINK_MASTER=
     fi
     args=" -flink $*"
     args=${args// /\!}
-    $FLINK_HOME/bin/flink run $FULL_JAR -c org.apache.mrql.Main -v args $args
+    $FLINK_HOME/bin/flink run -c org.apache.mrql.Main $FULL_JAR args $args | grep -v " switched to "
 else 
-    $JAVA_HOME/bin/java -classpath "$FULL_JAR:$FLINK_JARS" org.apache.mrql.Main -flink $*
+    $JAVA_HOME/bin/java -classpath "$FULL_JAR:$FLINK_JARS" org.apache.mrql.Main -flink $*  | grep -v " switched to "
 fi
