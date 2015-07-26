@@ -60,7 +60,7 @@ if [ "$1" == "-dist" ]; then
     fi
     if ! type nc > /dev/null; then
 	jobManager=
-    elif [ "$host" == "" ] || [ "$port" == "" ] || [ "`nc -z $host $port`" == "" ]; then
+    elif [ "$host" == "" ] || [ "$port" == "" ] || [ "`nc -z -w5 $host $port; echo $?`" == "1" ]; then
 	# there is no Flink cluster running (host:port is closed)
 	jobManager=
     fi
@@ -71,15 +71,15 @@ if [ "$1" == "-dist" ]; then
 	ARGS=($*)
 	for (( i = 0; i < $#; i++ )); do
             if [ "${ARGS[i]}" = "-nodes" ]; then
-		yn=$(( ${ARGS[i+1]} / $FLINK_SLOTS ))
+		yn=$(( (${ARGS[i+1]} + $FLINK_SLOTS -1) / $FLINK_SLOTS ))
             fi
 	done
-	$FLINK_HOME/bin/flink run -m yarn-cluster -yn $yn -ys $FLINK_SLOTS -ytm $FLINK_TASK_MANAGER_MEMORY -c org.apache.mrql.Main $FULL_JAR args $args | grep -v " switched to "
+	$FLINK_HOME/bin/flink run -m yarn-cluster -yn $yn -ys $FLINK_SLOTS -ytm $FLINK_TASK_MANAGER_MEMORY -c org.apache.mrql.Main $FULL_JAR args $args
     else
 	# a long-running Flink cluster has already been started on YARN
         #  (using $FLINK_HOME/bin/yarn-session.sh on a separate window)
-	$FLINK_HOME/bin/flink run -c org.apache.mrql.Main $FULL_JAR args $args | grep -v " switched to "
+	$FLINK_HOME/bin/flink run -c org.apache.mrql.Main $FULL_JAR args $args
     fi
 else 
-    $JAVA_HOME/bin/java -classpath "$FULL_JAR:$FLINK_JARS" org.apache.mrql.Main -flink $* | grep -v " switched to "
+    $JAVA_HOME/bin/java -classpath "$FULL_JAR:$FLINK_JARS" org.apache.mrql.Main -flink $*
 fi

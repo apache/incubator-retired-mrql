@@ -112,6 +112,8 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
                     stream_env = StreamExecutionEnvironment.createLocalEnvironment(Config.nodes)
 			               .setBufferTimeout(Config.stream_window);
             };
+            if (!Config.info)
+                flink_env.getConfig().disableSysoutLogging();
         } catch (Exception ex) {
             throw new Error("Cannot initialize the Flink evaluator: "+ex);
         }

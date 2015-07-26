@@ -43,7 +43,7 @@ if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
    for (( i = 0; i < $#; i++ )); do
         if [ "${ARGS[i]}" = "-nodes" ]; then
            # calculate the number of Yarn containers from the number of requested nodes
-           export SPARK_WORKER_INSTANCES=$(( ${ARGS[i+1]} / $SPARK_WORKER_CORES ))
+           export SPARK_WORKER_INSTANCES=$(( (${ARGS[i+1]} + $SPARK_WORKER_CORES - 1) / $SPARK_WORKER_CORES ))
         fi
    done
    $SPARK_HOME/bin/spark-submit --class org.apache.mrql.Main --jars $CUP_JAR,$JLINE_JAR,$GEN_JAR,$CORE_JAR --driver-class-path $CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$MRQL_JAR $MRQL_JAR -spark $*
