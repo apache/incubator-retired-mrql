@@ -156,7 +156,7 @@ abstract public class Evaluator extends Interpreter {
     }
 
     /** evaluate plan in stream mode: evaluate each batch of data and apply the function f */
-    public void streaming ( Tree plan, Environment env, DataSetFunction f ) {
+    public void streaming ( Tree plan, Environment env, Function f ) {
         throw new Error("MRQL Streaming is not supported in this evaluation mode yet");
     }
 

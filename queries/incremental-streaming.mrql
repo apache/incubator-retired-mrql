@@ -17,6 +17,9 @@
  */
 
 
-select (k,avg(p.Y))
-from p in stream(line,"localhost",9999,"|",type( <X:long,Y:long > ))
-group by k: p.X;
+incr select (k,avg(q.Y))
+       from p in stream(binary,"tmp/points.bin"),
+            q in stream(binary,"tmp/points.bin")
+      where p.Y=q.Y
+      group by k: p.X;
+

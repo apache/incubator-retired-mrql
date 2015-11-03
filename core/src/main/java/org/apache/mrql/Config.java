@@ -63,7 +63,7 @@ final public class Config {
     // max number of incoming messages before a sub-sync()
     public static int bsp_msg_size = Integer.MAX_VALUE;
     // number of elements per mapper to process the range min...max
-    public static long range_split_size = 100000;
+    public static long range_split_size = -1;
     // max number of streams to merge simultaneously
     public static int max_merged_streams = 100;
     // the directory for temporary files and spilled bags
@@ -86,6 +86,9 @@ final public class Config {
     public static boolean info = false;
     // for streaming, stream_window > 0 is the stream window duration in milliseconds
     public static int stream_window = 0;
+    public static int stream_tries = 100;
+    // if true and stream_window > 0, then incremental streaming
+    public static boolean incremental = false;
 
     /** store the configuration parameters */
     public static void write ( Configuration conf ) {
@@ -117,6 +120,7 @@ final public class Config {
         conf.setBoolean("mrql.testing",testing);
         conf.setBoolean("mrql.info",info);
         conf.setInt("mrql.stream.window",stream_window);
+        conf.setBoolean("mrql.incremental",incremental);
     }
 
     /** load the configuration parameters */
@@ -149,6 +153,7 @@ final public class Config {
         testing = conf.getBoolean("mrql.testing",testing);
         info = conf.getBoolean("mrql.info",info);
         stream_window = conf.getInt("mrql.stream.window",stream_window);
+        incremental = conf.getBoolean("mrql.incremental",incremental);
     }
 
     public static ArrayList<String> extra_args = new ArrayList<String>();
@@ -266,6 +271,11 @@ final public class Config {
                 if (++i >= args.length)
                     throw new Error("Expected a stream window duration");
                 stream_window = Integer.parseInt(args[i]);
+                i++;
+            } else if (args[i].equals("-stream_tries")) {
+                if (++i >= args.length)
+                    throw new Error("Expected a stream window tries");
+                stream_tries = Integer.parseInt(args[i]);
                 i++;
             } else if (args[i].charAt(0) == '-')
                 throw new Error("Unknown MRQL parameter: "+args[i]);

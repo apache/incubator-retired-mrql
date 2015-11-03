@@ -36,6 +36,7 @@ public class SparkStreaming extends SparkEvaluator {
     private final static scala.reflect.ClassTag<MRData> classtag = scala.reflect.ClassTag$.MODULE$.apply(MRData.class);
     private static ArrayList<JavaInputDStream<MRData>> streams;
     private static ArrayList<String> stream_names;
+    private static int tries = 0;
 
     private static JavaInputDStream<MRData> stream_source ( Tree source, Environment env ) {
         match source {
@@ -63,45 +64,76 @@ public class SparkStreaming extends SparkEvaluator {
         throw new Error("Unknown stream source: "+print_query(source));
     }
 
-    private static void stream_processing ( final Tree plan, final Environment env, final DataSetFunction f ) {
-        final Evaluator ef = Evaluator.evaluator;
+    private static Tree get_streams ( Tree plan, Environment env ) {
         match plan {
         case Stream(lambda(`v,`b),`source):
             streams.add(stream_source(source,env));
             stream_names.add(v.toString());
-            stream_processing(b,env,f);
-        case _:
-            ArrayList<DStream<?>> rdds = new ArrayList<DStream<?>>();
-            for ( JavaDStream<MRData> jd: streams )
-                rdds.add(jd.dstream());
-            final ArrayList<String> vars = stream_names;
-            final AbstractFunction2<Seq<RDD<?>>,Time,RDD<MRData>> fnc =
-                new AbstractFunction2<Seq<RDD<?>>,Time,RDD<MRData>>() {
-                public RDD<MRData> apply ( Seq<RDD<?>> rdds, Time tm ) {
-                    Environment new_env = env;
-                    int i = 0;
-                    for ( RDD<?> rdd: JavaConversions.seqAsJavaList(rdds) ) {
-                        try {
-                            if (rdd.count() == 0)
-                                rdd = SparkEvaluator.spark_context.emptyRDD().rdd();
-                        } catch (Exception ex) {
-                            return SparkEvaluator.spark_context.sc().emptyRDD(classtag);
-                        };
-                        new_env = new Environment(vars.get(i++),new MR_rdd(new JavaRDD(rdd,classtag)),new_env);
+            return get_streams(b,env);
+        };
+        return plan;
+    }
+
+    private static void stream_processing ( final Tree plan, final Environment env, final Function f ) {
+        final Evaluator ef = Evaluator.evaluator;
+        if (streams.size() == 0)
+            throw new Error("No input streams in query");
+        ArrayList<DStream<?>> rdds = new ArrayList<DStream<?>>();
+        for ( JavaDStream<MRData> jd: streams )
+            rdds.add(jd.dstream());
+        final ArrayList<String> vars = stream_names;
+        final AbstractFunction2<Seq<RDD<?>>,Time,RDD<MRData>> fnc =
+            new AbstractFunction2<Seq<RDD<?>>,Time,RDD<MRData>>() {
+            public RDD<MRData> apply ( Seq<RDD<?>> rdds, Time tm ) {
+                long t = System.currentTimeMillis();
+                Environment new_env = env;
+                int i = 0;
+                for ( RDD<?> rdd: JavaConversions.seqAsJavaList(rdds) ) {
+                    try {
+                        if (rdd.count() == 0)
+                            rdd = SparkEvaluator.spark_context.emptyRDD().rdd();
+                    } catch (Exception ex) {
+                        return SparkEvaluator.spark_context.sc().emptyRDD(classtag);
                     };
-                    f.eval(ef.eval(plan,new_env,"-"));
-                    return SparkEvaluator.spark_context.sc().emptyRDD(classtag);
-                }
-            };
-            new TransformedDStream<MRData>(JavaConversions.asScalaBuffer(rdds).toSeq(),fnc,classtag).register();
-        }
+                    new_env = new Environment(vars.get(i++),new MR_rdd(new JavaRDD(rdd,classtag)),new_env);
+                };
+                match plan {
+                case lambda(tuple(...vs),tuple(...as)):
+                    int k = 0;
+                    for ( Tree v: vs )
+                        new_env.replace(v.toString(),ef.evalE(as.nth(k++),new_env));
+                    f.eval(null);
+                case lambda(`v,`b):
+                    new_env.replace(v.toString(),ef.evalE(b,new_env));
+                    f.eval(null);
+                case _: // non-incremental streaming
+                    f.eval(ef.evalE(plan,new_env));
+                };
+                if (!Config.quiet_execution)
+                    System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
+		if (++tries >= Config.stream_tries) {  // for performance experiments only
+		    tries = 0;
+		    SparkEvaluator.stream_context.stop(true,true);
+		    System.exit(0);
+		};
+                return SparkEvaluator.spark_context.sc().emptyRDD(classtag);
+            }
+        };
+        new TransformedDStream<MRData>(JavaConversions.asScalaBuffer(rdds).toSeq(),fnc,classtag).register();
     }
 
     /** evaluate plan in stream mode: evaluate each batch of data and apply the function f */
-    final public static void evaluate ( Tree plan, Environment env, DataSetFunction f ) {
+    final public static void evaluate ( Tree plan, Environment env, Function f ) {
         streams = new ArrayList<JavaInputDStream<MRData>>();
         stream_names = new ArrayList<String>();
-        stream_processing(plan,env,f);
+        match plan {
+        case lambda(`p,`b):
+            b = get_streams(b,env);
+            stream_processing(#<lambda(`p,`b)>,env,f);
+        case _:  // non-incremental streaming
+            plan = get_streams(plan,env);
+            stream_processing(plan,env,f);
+        };
         stream_context.start();
         stream_context.awaitTermination();
     }

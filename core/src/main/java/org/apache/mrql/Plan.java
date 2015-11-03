@@ -163,9 +163,7 @@ public class Plan {
         if (min > max)
             throw new Error("Wrong range: "+min+"..."+max);
         if (split_length < 1)
-            if (Config.bsp_mode)
-                split_length = (max-min)/Config.nodes+1;
-            else split_length = Config.range_split_size;
+            split_length = (max-min)/Config.nodes+1;
         DataSet ds = new DataSet(0,0);
         long i = min;
         while (i+split_length <= max) {

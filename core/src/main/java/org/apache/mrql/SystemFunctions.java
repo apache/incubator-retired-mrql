@@ -380,6 +380,47 @@ final public class SystemFunctions {
         return new MR_double(sum/count);
     }
 
+    /** used in avg */
+    public static MRData avg_aggr ( Bag s ) {
+        double sum = 0.0;
+        long count = 0;
+        MRData e = null;
+        for ( MRData value: s ) {
+            Tuple t = (Tuple)value;
+            e = t.first();
+            if (t.first() instanceof MR_double)
+                sum += ((MR_double)t.first()).get();
+            else if (t.first() instanceof MR_int)
+                sum += ((MR_int)t.first()).get();
+            else if (t.first() instanceof MR_long)
+                sum += ((MR_long)t.first()).get();
+            else if (t.first() instanceof MR_float)
+                sum += ((MR_float)t.first()).get();
+            if (t.second() instanceof MR_long)
+                count += ((MR_long)t.second()).get();
+            else if (t.second() instanceof MR_int)
+                count += ((MR_int)t.second()).get();
+        };
+        if (e instanceof MR_double)
+            e = new MR_double(sum);
+        else if (e instanceof MR_int)
+            e = new MR_int((int)sum);
+        else if (e instanceof MR_long)
+            e = new MR_long((long)sum);
+        else if (e instanceof MR_float)
+            e = new MR_float((float)sum);
+        return new Tuple(e,new MR_long(count));
+    }
+
+    /** return the join key from a matching pair in the join reducer */
+    public static MRData join_key ( Bag xs, Bag ys ) {
+        for ( MRData x: xs )
+            return ((Tuple)x).get(0);
+        for ( MRData y: ys )
+            return ((Tuple)y).get(0);
+        return null;
+    }
+
     public static MR_string text ( Union node ) {
         if (node.tag() == 1)
             return (MR_string)(node.value());

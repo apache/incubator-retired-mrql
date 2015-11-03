@@ -34,7 +34,7 @@ parser code {:
         sym.SOME, sym.ALL, sym.GTR, sym.SEP, sym.STORE, sym.DUMP, sym.TYPE, sym.DATA, sym.REPEAT,
         sym.STEP, sym.LIMIT, sym.LET, sym.ATSYM, sym.EXCLAMATION,
         sym.Variable, sym.Integer, sym.Double, sym.String, sym.Decimal,
-        sym.START_TEMPLATE, sym.END_TEMPLATE, sym.TEXT, sym.TRACE
+        sym.START_TEMPLATE, sym.END_TEMPLATE, sym.TEXT, sym.TRACE, sym.INCR
     };
 
     static String[] token_names = {
@@ -49,7 +49,7 @@ parser code {:
         "some", "all", ">", "|", "store", "dump", "type", "data", "repeat",
         "step", "limit", "let", "@", "!",
         "Variable", "Integer", "Double", "String", "Decimal",
-        "[|", "|]", "Text", "trace"
+        "[|", "|]", "Text", "trace", "incr"
     };
 
     public static String print ( Symbol s ) {
@@ -98,7 +98,7 @@ terminal IF, THEN, ELSE, SELECT, FROM, HAVING, LB, RB, LP, RP, LSB, RSB, LDOT, S
          UNION, INTERSECT, EXCEPT, EXISTS, IN, COMMA, DOT, COLON, ASSIGN, SEMI, WHERE,
          ORDER, GROUP, BY, ASCENDING, DESCENDING, UMINUS, FUNCTION, DISTINCT, BSLASH,
          SOME, ALL, GTR, SEP, STORE, TYPE, DATA, CASE, ATSYM, XPATH, REPEAT, STEP, LIMIT,
-         LET, IMPORT, PARSER, AGGREGATION, INCLUDE, EXCLAMATION, MACRO, DUMP, TRACE;
+         LET, IMPORT, PARSER, AGGREGATION, INCLUDE, EXCLAMATION, MACRO, DUMP, TRACE, INCR;
 
 terminal String         Variable;
 terminal Long           Integer;
@@ -142,6 +142,7 @@ item            ::= expr:e                              {: RESULT = #<expression
                 |   STORE var:v ASSIGN expr:e           {: RESULT = #<store(`v,`e)>; :}
                 |   STORE String:s FROM expr:e          {: RESULT = #<dump(`(new StringLeaf(s)),`e)>; :}
                 |   DUMP String:s FROM expr:e           {: RESULT = #<dump_text(`(new StringLeaf(s)),`e)>; :}
+                |   INCR expr:e                         {: RESULT = #<incr(`e)>; :}
                 |   TYPE var:v EQ type:t                {: RESULT = #<typedef(`v,`t)>; :}
                 |   DATA var:v EQ data_binds:nl         {: RESULT = #<datadef(`v,union(...nl))>; :}
                 |   FUNCTION var:f LP

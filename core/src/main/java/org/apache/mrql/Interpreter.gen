@@ -326,7 +326,14 @@ public class Interpreter extends TypeInference {
                         new_distributed_binding(nm,s);
                         return evalE(body,new Environment(nm,s,env));
                     }; };
-            return MapReduceAlgebra.repeat(loop_fnc,(Bag)evalE(s,env),((MR_int)evalE(n,env)).get());
+            MRData init = evalE(s,env);
+            if (init instanceof MR_dataset) {
+                Bag vs = new Bag();
+                for ( MRData dv: ((MR_dataset)init).dataset().take(Integer.MAX_VALUE))
+                    vs.add(dv);
+                init = vs;
+            };
+            return MapReduceAlgebra.repeat(loop_fnc,(Bag)init,((MR_int)evalE(n,env)).get());
         case closure(lambda(`v,`b),`s,`n):
             final String nm = v.toString();
             final Tree body = b;
@@ -406,6 +413,9 @@ public class Interpreter extends TypeInference {
                 b.materialize();
                 return b;
             } catch (Exception ex) { throw new Error(ex); }
+        case DataSetCollect(`s):
+            DataSet ds = Evaluator.evaluator.eval(s,env,"-");
+            return new Bag(ds.take(Integer.MAX_VALUE));
         case dataset_size(`x):
             return new MR_long(Plan.size(Evaluator.evaluator.eval(x,env,"-")) / (1024*1024));
         case synchronize(`peer,`b):
@@ -577,9 +587,10 @@ public class Interpreter extends TypeInference {
             return ((Lambda)fnc).lambda().eval(t);
         case Stream(...):  // streaming
             final Tree qt = query_type;
-            Evaluator.evaluator.streaming(e,env,new DataSetFunction(){
-                    public void eval ( final DataSet ds ) {
-                        System.out.println(print(new MR_dataset(ds),qt));
+            Evaluator.evaluator.streaming(e,env,new Function(){
+                    public MRData eval ( final MRData data ) {
+                        System.out.println(print(data,qt));
+                        return data;
                     }
                 });
             return new Bag();
@@ -857,6 +868,8 @@ public class Interpreter extends TypeInference {
             Tree pt = type_inference(ne);
             if (Config.trace)
                 System.out.println("Algebraic type: "+print_type(pt));
+            if (Config.stream_window > 0 && Config.incremental)
+                ne = Streaming.generate_incremental_code(ne);
             ne = AlgebraicOptimization.translate_all(ne);
             if (Config.trace)
                 System.out.println("Translated expression:\n"+ne.pretty(0));
@@ -866,7 +879,7 @@ public class Interpreter extends TypeInference {
                 System.out.println("Physical plan type: "+print_type(et));
             repeat_variables = #[];
             ne = Simplification.simplify_all(ne);
-            if (Streaming.is_streaming(ne))
+            if (Streaming.is_streaming(ne) && !Config.incremental)
                 ne = Streaming.streamify(ne);
             Tree plan = PlanGeneration.makePlan(ne);
             if (Config.bsp_mode) {

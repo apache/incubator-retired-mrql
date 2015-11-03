@@ -33,6 +33,22 @@ final public class Environment implements Serializable {
         this.next = next;
     }
 
+    public void replace ( String n, MRData v ) {
+        for ( Environment e = this; e != null; e = e.next )
+            if (e.name.equals(n)) {
+                e.value = v;
+                return;
+            };
+        throw new Error("Cannot find the name "+n+" in the environment "+this);
+    }
+
+    public String toString () {
+        String s = "[";
+        for ( Environment e = this; e != null; e = e.next )
+            s += " " + e.name + ": " + e.value;
+        return s+" ]";
+    }
+
     private void writeObject(ObjectOutputStream out) throws IOException {
         out.defaultWriteObject();
     }

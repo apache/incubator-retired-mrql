@@ -22,6 +22,7 @@ import java.io.*;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Enumeration;
+import java.util.Map;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.*;
@@ -79,13 +80,10 @@ final public class MapReduceOperation extends MapReducePlan {
         }
 
         private static void flush_table ( Context context ) throws IOException, InterruptedException {
-            Enumeration<MRData> en = hashTable.keys();
-            while (en.hasMoreElements()) {
-                MRData key = en.nextElement();
-                ckey.set(key);
-                MRData value = hashTable.get(key);
-                cvalue.set(value);
-                if (value != null)
+            for ( Map.Entry<MRData,MRData> me: hashTable.entrySet() ) {
+                ckey.set(me.getKey());
+                cvalue.set(me.getValue());
+                if (me.getValue() != null)
                     context.write(ckey,cvalue);
             };
             index = 0;

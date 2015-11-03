@@ -184,7 +184,7 @@ public class Translator extends Printer {
         = #[mapReduce,mapReduce2,cmap,join,groupBy,orderBy,aggregate,map,filter,repeat,closure];
 
     static Trees plan_names = plans_with_distributed_lambdas.append(algebraic_operators)
-                                   .append(#[Repeat,Closure,Generator,Let,If]);
+        .append(#[Repeat,Closure,Generator,Let,If,Stream]);
 
     /** generates new variable names */
     public static Tree new_var () {

@@ -222,6 +222,25 @@ final public class PlanGeneration extends AlgebraicOptimization {
         return res;
     }
 
+    private static Tree get_nested_query ( Tree var, Tree e ) {
+        match e {
+        case MapReduce(lambda(`v,`b),`r,`s,...):
+            if (!repeat_variables.member(s))
+                fail;
+            if (!free_variables(b,#[`var,`v]).is_empty())
+                fail;
+            return e;
+        case `f(...r):
+            for ( Tree a: r )
+                match get_nested_query(var,a) {
+                case none: ;
+                case `c:
+                    return c;
+                }
+        };
+        return #<none>;
+    }
+
     /** compile an algebraic form to a algebraic plan
      * @param e the algebraic form
      * @return the algebraic plan
@@ -230,7 +249,7 @@ final public class PlanGeneration extends AlgebraicOptimization {
        match e {
        // combine groupBy with Join into a groupByJoin (generalized matrix multiplication)
        case mapReduce(lambda(`vm,bag(`bm)),lambda(`vr,bag(`br)),`s,`o):
-           if (!bm.equals(vm))
+           if (!bm.equals(vm)  || !is_dataset_expr(s))
                fail;
            match s {
            case mapReduce2(lambda(`mvx,bag(tuple(`jx,`mx))),
@@ -289,6 +308,24 @@ final public class PlanGeneration extends AlgebraicOptimization {
                                     `(makePlan(Y)),`o)>;
            };
            fail
+       case mapReduce(lambda(`vm,`bm),`nr,`s,`o):
+           if (!is_dataset_expr(s))
+               fail;
+           Tree pm = makePlan(bm);
+           match get_nested_query(vm,pm) {
+           case MapReduce(`km,`kr,`ks,`ko):
+               Tree nv = new_var();
+               pm = subst(#<MapReduce(`km,`kr,`ks,`ko)>,
+                          #<mapReduce(`km,`kr,`nv,`ko)>,
+                          pm);             // must be done in memory
+               TypeInference.global_type_env.insert(nv.toString(),TypeInference.type_inference(ks));
+               return #<let(`nv,DataSetCollect(`ks),
+                            MapReduce(lambda(`vm,`pm),
+                                      `(makePlan(nr)),
+                                      `(makePlan(s)),
+                                      `o))>;
+           };
+           fail
        // extract the mapReduce combiner
        case mapReduce(lambda(`vm,`bm),lambda(`vr,`br),`s,`o):
            if (!Config.use_combiner || !is_dataset_expr(s))
@@ -336,7 +373,7 @@ final public class PlanGeneration extends AlgebraicOptimization {
                                   `(makePlan(s)),`o)>;
            else fail
        case mapReduce2(`mx,`my,`r,`x,`y,`o):
-           if (is_dataset_expr(x) && is_dataset_expr(y) && streamed_MapReduce2_reducer(r))
+               if (is_dataset_expr(x) && is_dataset_expr(y) && streamed_MapReduce2_reducer(r))
                return #<MapReduce2(`(makePlan(mx)),
                                    `(makePlan(my)),
                                    `(makePlan(r)),
@@ -429,8 +466,10 @@ final public class PlanGeneration extends AlgebraicOptimization {
            repeat_variables = repeat_variables.cons(v);
            return #<Closure(lambda(`v,`(makePlan(b))),`(makePlan(s)),`(Integer.MAX_VALUE))>;
        case loop(lambda(tuple(...vs),`b),tuple(...s),`n):
-           if (!is_dataset_expr(s.nth(0)))
-               fail;
+           int i = 0;
+           for ( Tree v: vs )
+               if (!is_dataset_expr(s.nth(i)))
+                   fail;
            repeat_variables = repeat_variables.append(vs);
            return #<Loop(lambda(tuple(...vs),`(makePlan(b))),`(makePlan(#<tuple(...s)>)),`(makePlan(n)))>;
        case record(...bl):

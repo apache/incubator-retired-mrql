@@ -171,6 +171,7 @@ DOUBLE = [0-9]+([\.][0-9]+)?([eE][+-]?[0-9]+)?
 <YYINITIAL> "all"		{ return symbol(sym.ALL); }
 <YYINITIAL> "store"		{ return symbol(sym.STORE); }
 <YYINITIAL> "dump"		{ return symbol(sym.DUMP); }
+<YYINITIAL> "incr"		{ return symbol(sym.INCR); }
 <YYINITIAL> "type"		{ return symbol(sym.TYPE); }
 <YYINITIAL> "data"		{ return symbol(sym.DATA); }
 <YYINITIAL> "case"		{ return symbol(sym.CASE); }

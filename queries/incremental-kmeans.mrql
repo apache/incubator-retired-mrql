@@ -16,25 +16,18 @@
  * limitations under the License.
  */
 
-// Kronecker graph generator parameters:
-a = 0.30;
-b = 0.25;
-c = 0.25;
-d = 1-(a+b+c);
+type point = < X: double, Y: double >;
 
-function randomEdge ( imin: int, imax: int, jmin: int, jmax: int ): (int,int) {
-   if (imin = imax and jmin = jmax)
-   then (imin,jmin)
-   else let n = random(1000)
-        in if (n as float <= 1000*a)
-           then randomEdge(imin,(imin+imax)/2,jmin,(jmin+jmax)/2)
-           else if (n as float <= 1000*(a+b))
-                then randomEdge((imin+imax)/2,imax,jmin,(jmin+jmax)/2)
-                else if (n as float <= 1000*(a+b+c))
-                     then randomEdge(imin,(imin+imax)/2,(jmin+jmax)/2,jmax)
-                     else randomEdge((imin+imax)/2,imax,(jmin+jmax)/2,jmax)
+function distance ( x: point, y: point ): double {
+   sqrt(pow(x.X-y.X,2)+pow(x.Y-y.Y,2))
 };
 
-store "tmp/graph.bin"
- from select distinct randomEdge(0,toInt(args[0]),0,toInt(args[0]))
-        from i in 1...(toLong(args[1]));
+incr repeat centroids = { < X: 3.0 as double, Y: 3.0 as double >,
+                          < X: 3.0, Y: 7.0 >,
+                          < X: 7.0, Y: 3.0 >,
+                          < X: 7.0, Y: 7.0 > }
+  step select ( < X: avg(s.X), Y: avg(s.Y) >, true )
+         from s in stream(binary,"tmp/points.bin")
+        group by k: (select c from c in centroids
+                      order by distance(c,s))[0]
+  limit 5;

@@ -103,6 +103,19 @@ final public class MapReduceAlgebra {
             });
     }
 
+    /** general reduction using an accumulator function and a zero element
+     * @param acc a function from (a,b) to b
+     * @param zero a value of type b
+     * @param s the input of type {a}
+     * @return a value of type b
+     */
+    public static MRData fold ( final Function acc, final MRData zero, final Bag s ) {
+        MRData result = zero;
+        for ( MRData value: s )
+            result = acc.eval(new Tuple(value,result));
+        return result;
+    }
+
     /** strict group-by
      * @param s the input of type {(a,b)}
      * @return a value of type {(a,{b})}

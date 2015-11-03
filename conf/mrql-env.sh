@@ -77,7 +77,7 @@ BSP_SPLIT_INPUT=
 # You may use the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
 # For distributed mode, give write permission to /tmp: hadoop fs -chmod -R 777 /tmp
 # Tested in local, standalone deploy, and Yarn modes
-SPARK_HOME=${HOME}/spark-1.2.0-bin-hadoop2.3
+SPARK_HOME=${HOME}/spark-1.3.0-bin-hadoop2.4
 # URI of the Spark master node:
 #   to run Spark on Standalone Mode, set it to spark://`hostname`:7077
 #   to run Spark on a YARN cluster, set it to "yarn-client"
@@ -96,7 +96,7 @@ SPARK_WORKER_MEMORY=1G
 
 # Optional: Flink configuration. Supports version 0.6-incubating
 # Note: for yarn, set yarn.nodemanager.vmem-check-enabled to false in yarn-site.xml
-FLINK_VERSION=0.9.0
+FLINK_VERSION=0.9.1
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
 # number of slots per TaskManager (typically, the number of CPUs per machine)

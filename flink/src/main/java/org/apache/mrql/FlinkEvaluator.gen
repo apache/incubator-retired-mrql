@@ -139,7 +139,7 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
     }
 
     /** evaluate plan in stream mode: evaluate each batch of data and apply the function f */
-    final public void streaming ( Tree plan, Environment env, DataSetFunction f ) {
+    final public void streaming ( Tree plan, Environment env, Function f ) {
         FlinkStreaming.evaluate(plan,env,f);
     }
 

@@ -564,9 +564,18 @@ public class TypeInference extends Translator {
                 };
             return maxt;
         case lambda(`v,`b):
-            if(!v.is_variable())
-                fail;
-            if (type_env.lookup(v.toString()) == null)
+            if (!v.is_variable()) {
+                Tree nv = new_var();
+                type_env.insert(nv.toString(),type_inference(v));
+                st.begin_scope();
+                if (!Normalization.bind_pattern(v,nv).is_empty())
+                    error("Lambda patterns must be irrefutable: "+print_query(e));
+                for ( String nm: st )
+                    if (st.is_local(nm))
+                        b = Simplification.subst(#<`nm>,st.lookup(nm),b);
+                st.end_scope();
+                return type_inference(#<lambda(`nv,`b)>);
+            } else if (type_env.lookup(v.toString()) == null)
                 type_env.insert(v.toString(),#<any>);
             return #<arrow(`(type_env.lookup(v.toString())),`(type_inference(b)))>;
         case function(tuple(...params),`outp,`body):
@@ -622,6 +631,8 @@ public class TypeInference extends Translator {
             ((Node)e).children = ((Node)e).children.append(tp);       // destructive
             return tp;
         case call(stream,`parser,`f,...args):
+            if (parser.equals(#<binary>))
+                fail;
             if (Config.stream_window == 0)
                 type_error(e,"Not in stream processing mode");
             if (!parser.is_variable())
@@ -644,7 +655,14 @@ public class TypeInference extends Translator {
             if (Config.stream_window == 0)
                 type_error(e,"Not in stream processing mode");
             return type_inference(#<call(source,...r)>);
+        case BinaryStream(`path,`tp):
+            return tp;
+        case ParsedStream(`parser,...r):
+            return type_inference(#<call(stream,`parser,...r)>);
         case stream(lambda(`v,`b),`u):
+            bind_pattern_type(v,type_inference2(u));
+            return type_inference2(b);
+        case Stream(lambda(`v,`b),`u):
             bind_pattern_type(v,type_inference2(u));
             return type_inference2(b);
         case typed(null,`tp):
@@ -902,6 +920,25 @@ public class TypeInference extends Translator {
                             : #<bag(tuple(`k,list(`v)))>;
             };
             type_error(e,"Wrong groupBy: "+print_query(e)+" of type "+print_type(tp));
+        case coGroup(`x,`y):
+            Tree xtp = type_inference2(x);
+            Tree ytp = type_inference2(y);
+            match xtp {
+            case `T(tuple(`kx,`a)):
+                if (!is_collection(T))
+                    type_error(e,"Wrong coGroup left operand: "+print_query(x));
+                match xtp {
+                case `S(tuple(`ky,`b)):
+                    if (!is_collection(T))
+                        type_error(e,"Wrong coGroup right operand: "+print_query(y));
+                    if (unify(kx,ky) == null)
+                        type_error(e,"incompatible keys in coGroup: "+print_query(e));
+                    return (is_persistent_collection(T) && is_persistent_collection(S))
+                        ? #<Bag(tuple(`kx,tuple(`T(`a),`S(`b))))>
+                        : #<bag(tuple(`kx,tuple(`T(`a),`S(`b))))>;
+                }
+            };
+            type_error(e,"Wrong coGroup: "+print_query(e));
         case orderBy(`u):
             Tree tp = type_inference2(u);
             match tp {
@@ -1253,6 +1290,18 @@ public class TypeInference extends Translator {
             fail
         case call(avg,`s):
             return type_inference(#<call(div,typed(call(sum,`s),double),call(count,`s))>);
+        case call(join_key,`s1,`s2):
+            match type_inference2(s1) {
+            case `T1(tuple(`tp1,_)):
+                match type_inference2(s2) {
+                case `T2(tuple(`tp2,_)):
+                    if (is_collection(T1) && is_collection(T2) && unify(tp1,tp2) != null)
+                        return tp1;
+                }
+            };
+            type_error(e,"Expected two collections with the same key in join key: "+e);
+        case reduce(`m,`s):
+            return type_inference2(#<call(`m,`s)>);
         case trace(`msg,`t,`x):
             if (unify(type_inference2(msg),#<string>) == null)
                 type_error(e,"Expected a string in the trace message");

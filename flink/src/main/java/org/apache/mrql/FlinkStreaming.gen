@@ -143,7 +143,7 @@ public class FlinkStreaming extends FlinkEvaluator {
     }
 
     private static void stream_processing ( final Tree plan, final Environment env,
-                                            final DataSetFunction f, final DataStream<FData> stream ) {
+                                            final Function f, final DataStream<FData> stream ) {
         final Evaluator ef = Evaluator.evaluator;
         match plan {
         case Stream(lambda(`v,`b),`source):
@@ -163,7 +163,7 @@ public class FlinkStreaming extends FlinkEvaluator {
     }
 
     /** evaluate plan in stream mode: evaluate each batch of data and apply the function f */
-    final public static void evaluate ( Tree plan, final Environment env, final DataSetFunction f ) {
+    final public static void evaluate ( Tree plan, final Environment env, final Function f ) {
         try {
             if (true)  // needs more work
                 throw new Error("MRQL Streaming is not supported in this evaluation mode yet");

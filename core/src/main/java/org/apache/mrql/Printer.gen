@@ -360,6 +360,16 @@ public class Printer {
             else fail
         case ParsedSource(`parser,`file,...args):
             return "Source ("+parser+"): "+file;
+        case BinaryStream(`k,`file,_):
+            return "Stream (binary): "+file;
+        case BinaryStream(`file,_):
+            return "Stream (binary): "+file;
+        case ParsedStream(`m,`parser,`file,...args):
+            if (m instanceof LongLeaf)
+                return "Stream ("+parser+"): "+file;
+            else fail
+        case ParsedStream(`parser,`file,...args):
+            return "Stream ("+parser+"): "+file;
         case Generator(...):
             return "Generator";
         case Merge(`x,`y):

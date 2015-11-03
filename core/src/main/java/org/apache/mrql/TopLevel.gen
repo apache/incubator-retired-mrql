@@ -289,14 +289,15 @@ final public class TopLevel extends Interpreter {
             Evaluator.evaluator.initialize_query();
             final Tree qt = query_type;
             final String file = s.stringValue();
-            Evaluator.evaluator.streaming(plan,null,new DataSetFunction(){
+            Evaluator.evaluator.streaming(plan,null,new Function(){
                     long i = 0;
-                    public void eval ( final DataSet ds ) {
+                    public MRData eval ( final MRData data ) {
                         try {
-                            Evaluator.evaluator.dump(file+"/f"+(i++),qt,new MR_dataset(ds));
+                            Evaluator.evaluator.dump(file+"/f"+(i++),qt,data);
+                            return data;
                         } catch (Exception ex) {
                             throw new Error("Cannot dump the streaming result to the directory "+file);
-                        };
+                        }
                     }
                 });
         case dump_text(`s,`e):  // dump stream output
@@ -309,16 +310,57 @@ final public class TopLevel extends Interpreter {
             Evaluator.evaluator.initialize_query();
             final Tree qt = query_type;
             final String file = s.stringValue();
-            Evaluator.evaluator.streaming(plan,null,new DataSetFunction(){
+            Evaluator.evaluator.streaming(plan,null,new Function(){
                     long i = 0;
-                    public void eval ( final DataSet ds ) {
+                    public MRData eval ( final MRData data ) {
                         try {
-                            Evaluator.evaluator.dump_text(file+"/f"+(i++),qt,new MR_dataset(ds));
+                            Evaluator.evaluator.dump_text(file+"/f"+(i++),qt,data);
+                            return data;
                         } catch (Exception ex) {
                             throw new Error("Cannot dump the streaming result to the directory "+file);
                         }
                     }
                 });
+        case incr(`e):  // incremental stream processing
+            Config.incremental = true;
+            reset();
+            Tree plan = translate_expression(e);
+            Config.incremental = false;
+            if (plan == null)
+                return;
+            Evaluator.evaluator.initialize_query();
+            match plan {
+            case tuple(`zero,lambda(tuple(`state1,`state2),`merge),lambda(_,`answer)):
+                final Tree qt = make_persistent_type(query_type);
+                Tuple z = (Tuple)evalE(zero,null);
+                final Environment env = 
+                    new Environment(state1.toString(),z.get(0),
+                                    new Environment(state2.toString(),z.get(1),null));
+                final Tree ans = answer;
+                merge = Streaming.streamify(merge);
+                Evaluator.evaluator.streaming(#<lambda(tuple(`state1,`state2),`merge)>,env,
+                   new Function(){
+                        public MRData eval ( final MRData state ) {
+                            MRData a = Evaluator.evaluator.evalE(ans,env);
+                            System.out.println(print(a,qt));
+                            return state;
+                        }
+                    });
+            case tuple(`zero,lambda(`state,`merge),lambda(_,`answer)):
+                final Tree qt = make_persistent_type(query_type);
+                MRData z = evalE(zero,null);
+                final Environment env = new Environment(state.toString(),z,null);
+                final Tree ans = answer;
+                merge = Streaming.streamify(merge);
+                Evaluator.evaluator.streaming(#<lambda(`state,`merge)>,env,
+                   new Function(){
+                        public MRData eval ( final MRData state ) {
+                            MRData a = Evaluator.evaluator.evalE(ans,env);
+                            System.out.println(print(a,qt));
+                            return state;
+                        }
+                    });
+            };
         case dump(`s,`e):
             long t = System.currentTimeMillis();
             dump(s.stringValue(),e);

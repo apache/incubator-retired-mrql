@@ -310,13 +310,10 @@ final public class GroupByJoinPlan extends MapReducePlan {
 
         protected static void flush_table ( Context context ) throws IOException, InterruptedException {
             Tuple pair = new Tuple(2);
-            Enumeration<MRData> en = hashTable.keys();
-            while (en.hasMoreElements()) {
-                MRData key = en.nextElement();
-                MRData value = hashTable.get(key);
-                ckey.set(key);
-                pair.set(0,key);
-                pair.set(1,value);
+           for ( Map.Entry<MRData,MRData> me: hashTable.entrySet() ) {
+                ckey.set(me.getKey());
+                pair.set(0,me.getKey());
+                pair.set(1,me.getValue());
                 write(ckey,reduce_fnc.eval(pair),context);
             };
             hashTable.clear();

@@ -89,6 +89,9 @@ final public class Materialization extends Translator {
             return new_domain(vars,s,d);
         case orderBy(`s):
             return new_domain(vars,s,d);
+        case mapReduce(lambda(`mv,`m),lambda(`v,`b),`s,`o):
+            return materialize(#[`v],b,materialize(#[`mv],m,
+                                                   new_domain(vars,s,d)));
         case mapReduce2(lambda(`v1,`b1),lambda(`v2,`b2),lambda(`v,`b),`x,`y,`o):
             return materialize(#[`v],b,materialize(#[`v1],b1,materialize(#[`v2],b2,
                                          new_domain(vars,x,new_domain(vars,y,d)))));
