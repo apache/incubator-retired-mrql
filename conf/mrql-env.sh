@@ -94,9 +94,8 @@ SPARK_WORKER_CORES=1
 SPARK_WORKER_MEMORY=1G
 
 
-# Optional: Flink configuration. Supports version 0.6-incubating
-# Note: for yarn, set yarn.nodemanager.vmem-check-enabled to false in yarn-site.xml
-FLINK_VERSION=0.9.1
+# Optional: Flink configuration. Supports version 0.10.0
+FLINK_VERSION=0.10.0
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
 # number of slots per TaskManager (typically, the number of CPUs per machine)
@@ -109,7 +108,7 @@ FLINK_TASK_MANAGER_MEMORY=2048
 
 HAMA_JAR=${HAMA_HOME}/hama-core-${HAMA_VERSION}.jar
 FLINK_JARS=.
-for I in ${FLINK_HOME}/lib/flink-dist*.jar; do
+for I in ${FLINK_HOME}/lib/*.jar; do
     FLINK_JARS=${FLINK_JARS}:$I
 done
 
@@ -124,7 +123,7 @@ fi
 
 if [[ -f ${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar ]]; then
    # hadoop 2.x (YARN)
-   HADOOP_JARS=${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/hadoop-annotations-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/log4j-1.2.17.jar:${HADOOP_HOME}/share/hadoop/common/lib/commons-cli-1.2.jar
+   HADOOP_JARS=${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/hadoop-annotations-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/log4j-1.2.17.jar:${HADOOP_HOME}/share/hadoop/common/lib/commons-cli-1.2.jar:${HADOOP_HOME}/share/hadoop/common/lib/commons-logging-1.1.3.jar:${HADOOP_HOME}/share/hadoop/common/lib/guava-11.0.2.jar:${HADOOP_HOME}/share/hadoop/common/lib/commons-collections-3.2.1.jar
 else if [[ -f ${HADOOP_HOME}/hadoop-core-${HADOOP_VERSION}.jar ]]; then
    # hadoop 1.x or 0.20.x
    HADOOP_JARS=${HADOOP_HOME}/hadoop-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/lib/commons-logging-1.1.1.jar:${HADOOP_HOME}/lib/log4j-1.2.15.jar:${HADOOP_HOME}/lib/commons-cli-1.2.jar

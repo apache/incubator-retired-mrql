@@ -52,6 +52,11 @@ final public class FData implements CopyableValue<FData>, Comparable<FData> {
     }
 
     @Override
+    public FData copy () {
+        return new FData(data);
+    }
+
+    @Override
     public void copy ( DataInputView source, DataOutputView target ) throws IOException {
         data = MRContainer.read(source);
         data.write(target);

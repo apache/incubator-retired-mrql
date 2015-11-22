@@ -96,9 +96,9 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
 		    Plan.distribute_compiled_arguments(Plan.conf);
 		    if (master_host.equals("")) {
 			ContextEnvironment ce = (ContextEnvironment)ExecutionEnvironment.getExecutionEnvironment();
-			List<File> jars = Arrays.asList(new File(flink_jar.toURI().getPath()),
-							new File(Plan.conf.get("mrql.jar.path")));
-			flink_env = new ContextEnvironment(ce.getClient(),jars,FlinkEvaluator.class.getClassLoader(),true);
+			List<URL> jars = Arrays.asList(flink_jar,new URL("file://"+Plan.conf.get("mrql.jar.path")));
+			flink_env = new ContextEnvironment(ce.getClient(),jars,new ArrayList<URL>(),
+                                                           FlinkEvaluator.class.getClassLoader(),true);
 			flink_env.setParallelism(Config.nodes);
 		    } else flink_env = ExecutionEnvironment.createRemoteEnvironment(master_host,master_port,
 					     Config.nodes,flink_jar.toURI().getPath(),Plan.conf.get("mrql.jar.path"));

@@ -48,5 +48,5 @@ if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
    done
    $SPARK_HOME/bin/spark-submit --class org.apache.mrql.Main --jars $CUP_JAR,$JLINE_JAR,$GEN_JAR,$CORE_JAR --driver-class-path $CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$MRQL_JAR $MRQL_JAR -spark $*
 else
-   $JAVA_HOME/bin/java -classpath $CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$MRQL_JAR:$SPARK_JARS:$HADOOP_JARS org.apache.mrql.Main -spark $*
+   $JAVA_HOME/bin/java -classpath $CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$MRQL_JAR:$SPARK_JARS org.apache.mrql.Main -spark $*
 fi
