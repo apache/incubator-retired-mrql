@@ -84,18 +84,17 @@ SPARK_HOME=${HOME}/spark-1.3.0-bin-hadoop2.4
 SPARK_MASTER=yarn-client
 # Memory for Master (e.g. 1000M, 2G)
 SPARK_MASTER_MEMORY=512M
-# For Spark 1.3.*, use _EXECUTOR_ instead of _WORKER_ (deprecated)
 # The default number of cores. For a Yarn cluster, set it to the number of available containers minus 1.
 #   For local/standalone mode, set it to 2. It can be changed with the MRQL parameter -nodes.
-SPARK_WORKER_INSTANCES=2
+SPARK_EXECUTOR_INSTANCES=2
 # Number of cores for each worker. For Yarn, it is the number of cores per container.
-SPARK_WORKER_CORES=1
+SPARK_EXECUTOR_CORES=1
 # Memory per Worker (e.g. 1000M, 2G)
-SPARK_WORKER_MEMORY=1G
+SPARK_EXECUTOR_MEMORY=1G
 
 
-# Optional: Flink configuration. Supports version 0.10.0
-FLINK_VERSION=0.10.0
+# Optional: Flink configuration. Supports version 0.10.1
+FLINK_VERSION=0.10.1
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
 # number of slots per TaskManager (typically, the number of CPUs per machine)

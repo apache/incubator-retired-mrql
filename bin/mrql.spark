@@ -36,14 +36,14 @@ GEN_JAR=`ls "$MRQL_HOME"/lib/mrql-gen-*.jar`
 CORE_JAR=`ls "$MRQL_HOME"/lib/mrql-core-*.jar`
 MRQL_JAR=`ls "$MRQL_HOME"/lib/mrql-spark-*.jar`
 
-export SPARK_HOME FS_DEFAULT_NAME SPARK_MASTER SPARK_WORKER_INSTANCES SPARK_WORKER_CORES SPARK_WORKER_MEMORY SPARK_MASTER_MEMORY
+export SPARK_HOME FS_DEFAULT_NAME SPARK_MASTER SPARK_EXECUTOR_INSTANCES SPARK_EXECUTOR_CORES SPARK_EXECUTOR_MEMORY SPARK_MASTER_MEMORY
 
 if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
    ARGS=($*)
    for (( i = 0; i < $#; i++ )); do
         if [ "${ARGS[i]}" = "-nodes" ]; then
            # calculate the number of Yarn containers from the number of requested nodes
-           export SPARK_WORKER_INSTANCES=$(( (${ARGS[i+1]} + $SPARK_WORKER_CORES - 1) / $SPARK_WORKER_CORES ))
+           export SPARK_EXECUTOR_INSTANCES=$(( (${ARGS[i+1]} + $SPARK_EXECUTOR_CORES - 1) / $SPARK_EXECUTOR_CORES ))
         fi
    done
    $SPARK_HOME/bin/spark-submit --class org.apache.mrql.Main --jars $CUP_JAR,$JLINE_JAR,$GEN_JAR,$CORE_JAR --driver-class-path $CUP_JAR:$JLINE_JAR:$GEN_JAR:$CORE_JAR:$MRQL_JAR $MRQL_JAR -spark $*
