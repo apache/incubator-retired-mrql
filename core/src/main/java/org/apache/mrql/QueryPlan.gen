@@ -813,7 +813,9 @@ private final static class SingleQueryPlan {
 
     /** plan cost */
     static double cost ( int i, int j ) {
-        return size[i]*size[j]*selectivity[i][j];
+        if (predicate[i][j].equals(#<true>) && depends[i].isEmpty() && depends[j].isEmpty())
+            return 1.0E30;  // make cross products the last option
+        else return size[i]*size[j]*selectivity[i][j];
     }
 
     public static Tree best_plan ( Tree e ) {

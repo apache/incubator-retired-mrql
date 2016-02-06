@@ -284,10 +284,7 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                 for ( int i = 0; i < vs.length(); i ++ )
                     s[i] = new MR_rdd(eval(bs.nth(i),nenv).cache());
             };
-            Tuple t = new Tuple(vs.length());
-            for ( int i = 0; i < vs.length(); i++ )
-                t.set(i,bag(s[i].rdd()));
-            return t;
+            return new Tuple(s);
         };
         throw new Error("Wrong Loop format");
     }
@@ -357,6 +354,17 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                     } while (true);
                 }
             });
+    }
+
+    /** Coerce a persistent collection to a Bag */
+    public Bag toBag ( MRData data ) {
+        try {
+            if (data instanceof MR_rdd)
+                return bag(((MR_rdd)data).rdd());
+            return (Bag)data;
+        } catch (Exception ex) {
+            throw new Error("Cannot coerce "+data+" to a Bag: "+ex);
+        }
     }
 
     private static JavaRDD<MRData> materialize ( JavaRDD<MRData> rdd ) {
@@ -817,6 +825,19 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                 if (x instanceof MR_dataset)
                     return ((RDDDataSource)((MR_dataset)x).dataset().source.get(0)).rdd;
                 throw new Error("Expected an RDD dataset: "+x);
+            case nth(`u,`n):
+                MRData x = ((Tuple)evalE(u,env)).get((int)n.longValue());
+                if (x instanceof MR_dataset)
+                    return ((RDDDataSource)((MR_dataset)x).dataset().source.get(0)).rdd;
+                else if (x instanceof MR_rdd)
+                    return ((MR_rdd)x).rdd();
+                else if (x instanceof Bag) {
+                    ArrayList<MRData> l = new ArrayList<MRData>();
+                    for ( MRData a: (Bag)x )
+                        l.add(a);
+                    return spark_context.parallelize(l);
+                };
+                throw new Error("Evaluation error in: "+print_query(e));
             case `v:
                 if (!v.is_variable())
                     fail;

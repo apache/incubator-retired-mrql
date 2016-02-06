@@ -67,6 +67,9 @@ abstract public class Evaluator extends Interpreter {
     /** return the FileInputFormat for data generator files */
     abstract public Class<? extends MRQLFileInputFormat> generatorInputFormat ();
 
+    /** Coerce a persistent collection to a Bag */
+    abstract public Bag toBag ( MRData data );
+
     /** The Aggregate physical operator
      * @param acc_fnc  the accumulator function from (T,T) to T
      * @param zero  the zero element of type T

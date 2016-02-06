@@ -213,7 +213,7 @@ public class Printer {
                     if (Config.max_bag_size_print > 0 && vals.size() >= Config.max_bag_size_print)
                         return s+", ... }";
                     else return s+" }";
-                } else return print(x,#<bag(`tp)>);
+                } else return print(Evaluator.evaluator.toBag(x),#<bag(`tp)>);
             case List(`tp):
                 if (x instanceof MR_dataset) {
                     DataSet ds = ((MR_dataset)x).dataset();
@@ -227,7 +227,7 @@ public class Printer {
                     if (Config.max_bag_size_print > 0 && vals.size() >= Config.max_bag_size_print)
                         return s+", ... ]";
                     else return s+" ]";
-                } else return print(x,#<list(`tp)>);
+                } else return print(Evaluator.evaluator.toBag(x),#<list(`tp)>);
             case bag(`tp):
                 Bag b = (Bag)x;
                 Iterator<MRData> bi = b.iterator();

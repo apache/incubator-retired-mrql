@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-// Matrix factorization using macros.
+// Matrix factorization using Gradient Descent.
 // Build the matrices first using the build_matrix.mrql query
 
 Mmatrix = source(binary,"tmp/Xmatrix.bin");
@@ -36,25 +36,35 @@ macro multiply ( X, Y ) {
    group by (i,j)
 };
 
-// cell-wise multiplication:
-macro Cmult ( X, Y ) {
+// multiplication by a number:
+macro mult ( a, X ) {
+  select ( a*x, i, j )
+    from (x,i,j) in X
+};
+
+// cell-wise addition:
+macro Cadd ( X, Y ) {
   select ( x*y, i, j )
     from (x,i,j) in X, (y,i,j) in Y
 };
 
-// cell-wise division:
-macro Cdiv ( X, Y ) {
-  select ( x/y, i, j )
+// cell-wise subtraction:
+macro Csub ( X, Y ) {
+  select ( x-y, i, j )
     from (x,i,j) in X, (y,i,j) in Y
 };
 
-// Gaussian non-negative matrix factorization (from SystemML paper)
-macro factorize ( V, Hinit, Winit ) {
-  repeat (H,W) = (Hinit,Winit)
-    step ( Cmult(H,Cdiv(multiply(transpose(W),V),multiply(transpose(W),multiply(W,H)))),
-           Cmult(W,Cdiv(multiply(V,transpose(H)),multiply(W,multiply(H,transpose(H))))) )
+a = 0.002;
+b = 0.02;
+
+// Matrix Factorization using Gradient Descent
+macro factorize ( R, Pinit, Qinit ) {
+  repeat (E,P,Q) = (R,Pinit,Qinit)
+    step ( Csub(R,multiply(P,transpose(Q))),
+           Cadd(P,mult(a,Csub(mult(2,multiply(E,transpose(Q))),mult(b,P)))),
+           Cadd(Q,mult(a,Csub(mult(2,multiply(E,transpose(P))),mult(b,Q)))) )
    limit 4
 };
 
-let (X1,X2) = factorize(Mmatrix,Hmatrix,Wmatrix)
+let (E,X1,X2) = factorize(Mmatrix,Hmatrix,Wmatrix)
  in multiply(X1,transpose(X2));

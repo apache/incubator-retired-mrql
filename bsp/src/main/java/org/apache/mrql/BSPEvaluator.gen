@@ -115,6 +115,17 @@ final public class BSPEvaluator extends Evaluator {
         return BSPGeneratorInputFormat.class;
     }
 
+    /** Coerce a persistent collection to a Bag */
+    public Bag toBag ( MRData data ) {
+        try {
+            if (data instanceof MR_dataset)
+                return Plan.collect(((MR_dataset)data).dataset());
+        } catch (Exception ex) {
+            throw new Error("Cannot coerce "+data+" to a Bag");
+        };
+        return (Bag)data;
+    }
+
     /** The Aggregate physical operator
      * @param acc_fnc  the accumulator function from (T,T) to T
      * @param zero  the zero element of type T
@@ -237,6 +248,11 @@ final public class BSPEvaluator extends Evaluator {
                 if (!(t instanceof Tuple))
                     throw new Error("Expected a tuple in function application: "+t);
                 return ((MR_dataset)((Lambda)fnc).lambda().eval(t)).dataset();
+           case nth(`u,`n):
+                MRData x = ((Tuple)evalE(u,env)).get((int)n.longValue());
+                if (x instanceof MR_dataset)
+                    return ((MR_dataset)x).dataset();
+                throw new Error("Evaluation error in: "+print_query(e));
             case `v:
                 if (!v.is_variable())
                     fail;

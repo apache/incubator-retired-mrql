@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.io.*;
 import java.net.URI;
 import java.net.URL;
@@ -252,6 +253,26 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
         return flink_env.fromCollection(a);
     }
 
+    /** Coerce a persistent collection to a Bag */
+    public Bag toBag ( MRData data ) {
+        try {
+            if (data instanceof MR_flink) {
+                final Iterator<FData> i = ((MR_flink)data).flink().collect().iterator();
+                return new Bag(new BagIterator() {
+                        public MRData next () {
+                            return i.next().data();
+                        }
+                        public boolean hasNext () {
+                            return i.hasNext();
+                        }
+                    });
+            };
+            return (Bag)data;
+        } catch (Exception ex) {
+            throw new Error("Cannot coerce "+data+" to a Bag: "+ex);
+        }
+    }
+
     /** The Aggregate physical operator
      * @param merge  the accumulator function from (T,T) to T
      * @param zero  the zero element of type T
@@ -332,7 +353,6 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
         case Loop(lambda(tuple(...vs),tuple(...bs)),tuple(...ss),`num):
             final int limit = ((MR_int)evalE(num,env)).get();
             MR_flink[] s = new MR_flink[vs.length()];
-            String[] path = new String[vs.length()];
             for ( int i = 0; i < vs.length(); i++ )
                 s[i] = new MR_flink(eval(ss.nth(i),env));
             for ( int n = 0; n < limit; n++ ) {
@@ -342,16 +362,7 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
                 for ( int i = 0; i < vs.length(); i ++ )
                     s[i] = new MR_flink(eval(bs.nth(i),nenv));
             };
-            for ( int i = 0; i < vs.length(); i++ ) {
-                path[i] = absolute_path(Plan.new_path(Plan.conf));
-                s[i].flink().write(new FlinkOutputFormat(),path[i]);
-            };
-            flink_env.execute("MRQL loop");
-            final FlinkBinaryInputFormat bif = new FlinkBinaryInputFormat();
-            Tuple t = new Tuple(vs.length());
-            for ( int i = 0; i < vs.length(); i++ )
-                t.set(i,bif.materialize(new org.apache.hadoop.fs.Path(path[i])));
-            return t;
+            return new Tuple(s);
         };
         throw new Error("Wrong Loop format: "+e);
     }
@@ -851,6 +862,11 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
                 if (((MR_bool)evalE(c,env)).get())
                     return eval(x,env);
                 else return eval(y,env);
+           case nth(`u,`n):
+                MRData x = ((Tuple)evalE(u,env)).get((int)n.longValue());
+                if (x instanceof MR_flink)
+                    return ((MR_flink)x).flink();
+                throw new Error("Evaluation error in: "+print_query(e));
             case `v:
                 if (!v.is_variable())
                     fail;
