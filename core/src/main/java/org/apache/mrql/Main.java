@@ -99,8 +99,8 @@ final public class Main {
         Config.hadoop_mode = Config.local_mode || Config.distributed_mode;
         if (!Config.info) {
             for ( Enumeration en = LogManager.getCurrentLoggers(); en.hasMoreElements(); )
-                ((Logger)en.nextElement()).setLevel(Level.WARN);
-            LogManager.getRootLogger().setLevel(Level.WARN);
+                ((Logger)en.nextElement()).setLevel(Level.ERROR);
+            LogManager.getRootLogger().setLevel(Level.ERROR);
         };
         Evaluator.evaluator.init(conf);
         new TopLevel();
