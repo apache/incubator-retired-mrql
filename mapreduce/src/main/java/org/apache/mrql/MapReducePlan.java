@@ -56,13 +56,14 @@ public class MapReducePlan extends Plan {
             total_size += size;
         long split_size = Math.max(total_size/Config.nodes,1024L);
         int tasks = 0;
+        int c = 0;
         do {  // adjust split_size
             tasks = 0;
             for ( long size: sizes )
                 tasks += (int)Math.ceil(size/(double)split_size);
             if (tasks > Config.nodes)
                 split_size = (long)Math.ceil((double)split_size*1.01);
-        } while (tasks > Config.nodes);
+        } while (c++ < 20 && tasks > Config.nodes);
         conf.setLong("mapred.min.split.size",split_size);
         conf.setLong("mapred.max.split.size",split_size);
     }
