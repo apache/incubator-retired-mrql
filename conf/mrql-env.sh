@@ -22,11 +22,11 @@
 #
 # To rebuild Apache MRQL from sources:
 #
-# build MRQL on Hadoop 1.x:
-# mvn -Dhadoop.version=1.0.3 clean install
-#
 # build MRQL on Hadoop 2.x (yarn):
-# mvn -Dyarn -Dyarn.version=2.2.0 -Dhadoop.version=1.2.1 clean install
+# mvn -Dyarn.version=2.2.0 clean install
+#
+# build MRQL on Hadoop 1.x:
+# mvn -Dhadoop1 -Dhadoop.version=1.0.3 clean install
 #
 #--------------------------------------------------------------------------------
 #
@@ -48,7 +48,7 @@ JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 
 
 # Required: Hadoop configuration. Supports versions 1.x and 2.x (YARN)
-HADOOP_VERSION=2.6.0
+HADOOP_VERSION=2.7.1
 # The Hadoop installation directory
 HADOOP_HOME=${HOME}/hadoop-${HADOOP_VERSION}
 # The Hadoop configuration directory (where core-site.xml is)
@@ -59,8 +59,8 @@ MAPRED_JOB_TRACKER=localhost:9001
 FS_DEFAULT_NAME=hdfs://localhost:9000/
 
 
-# Optional: Hama configuration. Supports versions 0.6.2, 0.6.3, and 0.6.4
-HAMA_VERSION=0.6.4
+# Optional: Hama configuration. Supports versions 0.6.2, 0.6.3, 0.6.4, and 0.7.0
+HAMA_VERSION=0.7.0
 # The Hama installation directory
 HAMA_HOME=${HOME}/hama-${HAMA_VERSION}
 # The Hama configuration directory
@@ -72,12 +72,12 @@ HAMA_ZOOKEEPER_QUORUM=localhost
 BSP_SPLIT_INPUT=
 
 
-# Optional: Spark configuration. Supports versions 1.0.0, 1.0.2, 1.1.0, 1.1.1, 1.2.0, 1.3.0, and 1.3.1
+# Optional: Spark configuration. Supports versions 1.0.0, 1.0.2, 1.1.0, 1.1.1, 1.2.0, 1.3.0, 1.3.1, and 1.6.0
 # (Spark versions 0.8.1, 0.9.0, and 0.9.1 are supported by MRQL 0.9.0)
 # You may use the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
 # For distributed mode, give write permission to /tmp: hadoop fs -chmod -R 777 /tmp
 # Tested in local, standalone deploy, and Yarn modes
-SPARK_HOME=${HOME}/spark-1.3.0-bin-hadoop2.4
+SPARK_HOME=${HOME}/spark-1.6.0-bin-hadoop2.6
 # URI of the Spark master node:
 #   to run Spark on Standalone Mode, set it to spark://`hostname`:7077
 #   to run Spark on a YARN cluster, set it to "yarn-client"
@@ -93,8 +93,8 @@ SPARK_EXECUTOR_CORES=1
 SPARK_EXECUTOR_MEMORY=1G
 
 
-# Optional: Flink configuration. Supports version 0.10.1
-FLINK_VERSION=0.10.1
+# Optional: Flink configuration. Supports versions 0.10.1 and 0.10.2
+FLINK_VERSION=0.10.2
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
 # number of slots per TaskManager (typically, the number of CPUs per machine)

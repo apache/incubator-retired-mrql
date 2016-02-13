@@ -35,12 +35,10 @@ final public class MapReduceEvaluator extends Evaluator {
             if (Config.local_mode) {
                 conf.set("mapred.job.tracker","local");
                 conf.set("mapreduce.framework.name","local");
-                conf.set("fs.default.name","file:///");
-                //conf.set("fs.defaultFS","file:///"); // doesn't work for hadoop 1.*
+                conf.set("fs.defaultFS","file:///"); // doesn't work for hadoop 1.*
             } else {
                 conf.set("mapred.job.tracker",System.getenv("MAPRED_JOB_TRACKER"));
-                conf.set("fs.default.name",System.getenv("FS_DEFAULT_NAME"));
-                //conf.set("fs.defaultFS",System.getenv("FS_DEFAULT_NAME")); // doesn't work for hadoop 1.*
+                conf.set("fs.defaultFS",System.getenv("FS_DEFAULT_NAME")); // doesn't work for hadoop 1.*
             }
     }
 

@@ -36,12 +36,12 @@ final public class BSPEvaluator extends Evaluator {
                 conf.set("bsp.master.address","local");
                 conf.set("hama.zookeeper.quorum","localhost");
                 conf.setInt("bsp.local.tasks.maximum",Config.nodes);
-                conf.set("fs.default.name","file:///");
+                conf.set("fs.defaultFS","file:///");
             } else {
                 conf.set("bsp.master.address",System.getenv("BSP_MASTER_ADDRESS"));
                 conf.set("hama.zookeeper.quorum",System.getenv("HAMA_ZOOKEEPER_QUORUM"));
                 conf.setInt("bsp.local.tasks.maximum",Config.nodes);
-                conf.set("fs.default.name",System.getenv("FS_DEFAULT_NAME"));
+                conf.set("fs.defaultFS",System.getenv("FS_DEFAULT_NAME"));
             }
     }
 

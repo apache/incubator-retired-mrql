@@ -68,7 +68,7 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
             // curently, the compiler doesn't work in local mode
             Config.compile_functional_arguments = false;
             fs_default_name = "file:///";
-	    Plan.conf.set("fs.default.name",fs_default_name);
+	    Plan.conf.set("fs.defaultFS",fs_default_name);
         } else if (Config.distributed_mode) {
             String master_node = System.getenv("FLINK_MASTER");
             if (master_node == null)
@@ -82,7 +82,7 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
 	    };
             fs_default_name = System.getenv("FS_DEFAULT_NAME");
             data_source_dir_name = absolute_path("tmp/data_source_dir.txt");
-	    Plan.conf.set("fs.default.name",fs_default_name);
+	    Plan.conf.set("fs.defaultFS",fs_default_name);
         }
     }
 

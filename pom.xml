@@ -45,11 +45,11 @@
 
   <properties>
     <hadoop.version>1.2.1</hadoop.version>
-    <yarn.version>2.6.0</yarn.version>
-    <hama.version>0.6.4</hama.version>
-    <spark.version>1.3.1</spark.version>
+    <yarn.version>2.7.1</yarn.version>
+    <hama.version>0.7.0</hama.version>
+    <spark.version>1.6.0</spark.version>
     <scala.version>2.10</scala.version>
-    <flink.version>0.10.1</flink.version>
+    <flink.version>0.10.2</flink.version>
     <skipTests>true</skipTests>
   </properties>
 
@@ -78,6 +78,12 @@
       <groupId>jline</groupId>
       <artifactId>jline</artifactId>
       <version>1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -210,7 +216,7 @@
       <id>hadoop1</id>
       <activation>
         <property>
-          <name>!yarn</name>
+          <name>hadoop1</name>
         </property>
       </activation>
       <dependencies>
@@ -230,7 +236,7 @@
       <id>yarn</id>
       <activation>
         <property>
-          <name>yarn</name>
+          <name>!hadoop1</name>
         </property>
       </activation>
       <dependencies>
