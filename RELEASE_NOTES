@@ -16,6 +16,40 @@
  limitations under the License.
 ***************************************************************************
 
+Release Notes - Apache MRQL 0.9.6-incubating
+--------------------------------------------
+
+New Features
+
+[MRQL-72] Add support for stream input on TCP sockets
+[MRQL-79] Add support for incremental query processing
+
+Bugs
+
+[MRQL-67] Fix maven build errors for JDK 1.8
+[MRQL-69] Allow escaped quotes in JSON strings
+[MRQL-73] Set the max number of tasks in Spark mode
+[MRQL-76] Change the mrql.flink shell script to work with Flink 0.9.0
+[MRQL-78] Turn off Flink log INFO messages
+[MRQL-81] Fix the coercion of persistent collections to in-memory bags
+[MRQL-82] Fix the split size calculation in map-reduce mode
+
+Improvements
+
+[MRQL-70] Update Flink version to 0.8.1
+[MRQL-74] Update Flink version to 0.9.0
+[MRQL-75] Add support for Hama v0.7 on Yarn
+[MRQL-77] Support single Flink jobs on YARN
+[MRQL-80] Support Flink 0.10
+[MRQL-84] Improve performance of Incremental MRQL
+
+Tasks
+
+[MRQL-68] GitHub integration for MRQL
+[MRQL-71] Add google analytics tracking and bring the MRQL web site up-to-date
+[MRQL-85] Prepare for the 0.9.6 release
+
+
 Release Notes - Apache MRQL 0.9.4-incubating
 --------------------------------------------
 
