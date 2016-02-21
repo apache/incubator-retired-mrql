@@ -854,6 +854,14 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
                 IterativeDataSet<FData> startOfIteration = eval(s,env).iterate(max_num);
                 DataSet<FData> toBeFedBack = eval(b,new Environment(v.toString(),new MR_flink(startOfIteration),env));
                 return startOfIteration.closeWith(toBeFedBack);
+            case let(`v,DataSetCollect(`s),`body):
+                MRData x = evalE(s,env);
+                if (x instanceof MR_dataset)
+                    x = new Bag(((MR_dataset)x).dataset().take(Integer.MAX_VALUE));
+                else if (x instanceof Bag)
+                    ((Bag)x).materialize();
+                new_distributed_binding(v.toString(),x);
+                return eval(body,new Environment(v.toString(),x,env));
             case let(`v,`u,`body):
                 return eval(body,new Environment(v.toString(),evalE(u,null),env));
             case Let(`v,`u,`body):

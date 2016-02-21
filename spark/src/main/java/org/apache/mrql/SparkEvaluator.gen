@@ -284,7 +284,10 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                 for ( int i = 0; i < vs.length(); i ++ )
                     s[i] = new MR_rdd(eval(bs.nth(i),nenv).cache());
             };
-            return new Tuple(s);
+            Tuple t = new Tuple(vs.length());
+            for ( int i = 0; i < vs.length(); i++ )
+                t.set(i,bag(s[i].rdd()));
+            return t;
         };
         throw new Error("Wrong Loop format");
     }
@@ -458,7 +461,7 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                         }
                     });
         };
-        return s.groupBy(get_first,Config.nodes)
+        return s.groupBy(get_first)
             .map(new Function<Tuple2<MRData,Iterable<MRData>>,MRData> () {
                     public MRData call ( Tuple2<MRData,Iterable<MRData>> value ) {
                         final Iterator<MRData> i = value._2.iterator();
@@ -599,7 +602,7 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                                 return joinIterator(((Bag)fy.eval(value)).iterator());
                             }
                         });
-		return xs.cogroup(ys,Config.nodes)
+		return xs.cogroup(ys)
                     .flatMap(new FlatMapFunction<Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>>,MRData>() {
                             public Iterable<MRData> call ( Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>> value ) {
                                 set_global_env(master_env);
@@ -751,13 +754,13 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                 int max_num = ((MR_int)evalE(n,env)).get();
                 JavaRDD<MRData> rd;
                 JavaRDD<MRData> res = eval(s,env);
-                res = materialize(res);
+                //res = materialize(res);
                 int i = 0;
                 boolean cont = true;
                 do {
                     rd = eval(b,new Environment(v.toString(),new MR_rdd(res),env)).cache();
                     res = rd.map(get_first);
-                    res = materialize(res);
+                    //res = materialize(res);
 		    long size = res.count();
                     Integer true_results
                         = rd.aggregate(new Integer(0),
@@ -805,6 +808,14 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                     else rd = rd.union(containerData(spark_context.hadoopFile(d.path,SparkGeneratorInputFormat.class,
                                                                               MRContainer.class,MRContainer.class,1)));
                 return rd;
+            case let(`v,DataSetCollect(`s),`body):
+                MRData x = evalE(s,env);
+                if (x instanceof MR_dataset)
+                    x = new Bag(((MR_dataset)x).dataset().take(Integer.MAX_VALUE));
+                else if (x instanceof Bag)
+                    ((Bag)x).materialize();
+                new_distributed_binding(v.toString(),x);
+                return eval(body,new Environment(v.toString(),x,env));
             case let(`v,`u,`body):
                 MRData val = evalE(u,env);
                 Interpreter.new_global_binding(v.toString(),val);
@@ -825,19 +836,6 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                 if (x instanceof MR_dataset)
                     return ((RDDDataSource)((MR_dataset)x).dataset().source.get(0)).rdd;
                 throw new Error("Expected an RDD dataset: "+x);
-            case nth(`u,`n):
-                MRData x = ((Tuple)evalE(u,env)).get((int)n.longValue());
-                if (x instanceof MR_dataset)
-                    return ((RDDDataSource)((MR_dataset)x).dataset().source.get(0)).rdd;
-                else if (x instanceof MR_rdd)
-                    return ((MR_rdd)x).rdd();
-                else if (x instanceof Bag) {
-                    ArrayList<MRData> l = new ArrayList<MRData>();
-                    for ( MRData a: (Bag)x )
-                        l.add(a);
-                    return spark_context.parallelize(l);
-                };
-                throw new Error("Evaluation error in: "+print_query(e));
             case `v:
                 if (!v.is_variable())
                     fail;

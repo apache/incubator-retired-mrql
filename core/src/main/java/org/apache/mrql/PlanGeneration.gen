@@ -230,6 +230,12 @@ final public class PlanGeneration extends AlgebraicOptimization {
             if (!free_variables(b,#[`var,`v]).is_empty())
                 fail;
             return e;
+        case mapReduce(lambda(`v,`b),`r,`s,...):
+            if (!repeat_variables.member(s))
+                fail;
+            if (!free_variables(b,#[`var,`v]).is_empty())
+                fail;
+            return e;
         case `f(...r):
             for ( Tree a: r )
                 match get_nested_query(var,a) {
@@ -309,7 +315,7 @@ final public class PlanGeneration extends AlgebraicOptimization {
            };
            fail
        case mapReduce(lambda(`vm,`bm),`nr,`s,`o):
-           if (!is_dataset_expr(s))
+           if (!is_dataset_expr(s) || Config.bsp_mode)
                fail;
            Tree pm = makePlan(bm);
            match get_nested_query(vm,pm) {
@@ -324,12 +330,22 @@ final public class PlanGeneration extends AlgebraicOptimization {
                                       `(makePlan(nr)),
                                       `(makePlan(s)),
                                       `o))>;
+           case mapReduce(`km,`kr,`ks,`ko):
+               Tree nv = new_var();
+               pm = subst(ks,nv,pm);
+               TypeInference.global_type_env.insert(nv.toString(),TypeInference.type_inference(ks));
+               return #<let(`nv,DataSetCollect(`ks),
+                            MapReduce(lambda(`vm,`pm),
+                                      `(makePlan(nr)),
+                                      `(makePlan(s)),
+                                      `o))>;
            };
            fail
        // extract the mapReduce combiner
        case mapReduce(lambda(`vm,`bm),lambda(`vr,`br),`s,`o):
            if (!Config.use_combiner || !is_dataset_expr(s))
                fail;
+           TypeInference.type_inference(e);
            Aggregates.clear();
            Tree nv = new_var();
            match TypeInference.type_inference(bm) {
@@ -472,6 +488,9 @@ final public class PlanGeneration extends AlgebraicOptimization {
                    fail;
            repeat_variables = repeat_variables.append(vs);
            return #<Loop(lambda(tuple(...vs),`(makePlan(b))),`(makePlan(#<tuple(...s)>)),`(makePlan(n)))>;
+       case incr(`z,lambda(tuple(`s,`v),`m),`a):
+           repeat_variables = repeat_variables.append(v);
+           return #<incr(`(makePlan(z)),lambda(tuple(`s,`v),`(makePlan(m))),`(makePlan(a)))>;
        case record(...bl):
            Trees el = #[];
            for ( Tree b: bl )
@@ -731,7 +750,9 @@ final public class PlanGeneration extends AlgebraicOptimization {
         case MapReduce2(`mx,`my,`r,`x,`y,`o):
             return physical_plan(#<MapAggregateReduce2(`mx,`my,`r,null,null,`x,`y,`o)>);
         case MapAggregateReduce2(`mx,`my,lambda(`v,`b),`acc,`zero,`x,`y,false):
-            if (!Config.flink_mode)
+            // dissable mapjoins in Flink and Spark mode, because to select between a mapjoin
+            //    and a coGroup at run-time, it needs to know the input sizes
+            if (!Config.flink_mode  && !Config.spark_mode)
                 fail;
             return #<MapAggregateReduce2(`mx,`my,lambda(`v,`b),`acc,`zero,
                                          `(physical_plan(x)),
@@ -814,7 +835,7 @@ final public class PlanGeneration extends AlgebraicOptimization {
         case CrossProduct(`mx,`my,`r,`x,`y):
             return physical_plan(#<CrossAggregateProduct(`mx,`my,`r,null,null,`x,`y)>);
         case CrossAggregateProduct(`mx,`my,lambda(`v,`b),`acc,`zero,`x,`y):
-            if (Config.flink_mode)
+            if (Config.flink_mode || Config.spark_mode)
                 fail;
             Tree X = new_var();
             Tree Y = new_var();

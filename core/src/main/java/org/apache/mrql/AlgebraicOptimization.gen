@@ -93,7 +93,7 @@ public class AlgebraicOptimization extends Simplification {
             return translate(#<crossProduct(`mx,`my,lambda(`v,cmap(`m,`b)),`X,`Y)>);
         case cmap(`r,`groupBy1(cmap(`m,`groupBy2(`s)))):
             if (! #[groupBy,orderBy].member(#<`groupBy1>)
-                && ! #[groupBy,orderBy].member(#<`groupBy2>))
+                || ! #[groupBy,orderBy].member(#<`groupBy2>))
                 fail;
             return #<mapReduce(`(identity()),
                                `(translate(r)),

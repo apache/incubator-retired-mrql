@@ -115,7 +115,7 @@ public class SparkFileInputStream extends JavaInputDStream<MRData> {
                     rdd = hadoopFile(file);
                 else rdd = rdd.union(hadoopFile(file));
             if (rdd == null)
-                return scala.None$.MODULE$.apply(null);
+                rdd = SparkEvaluator.spark_context.emptyRDD();
             return new Some<RDD<MRData>>(rdd.rdd());
         }
     }

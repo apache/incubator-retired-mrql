@@ -21,6 +21,7 @@ import org.apache.mrql.gen.*;
 
 /** Generates code for streaming queries */
 final public class Streaming extends AlgebraicOptimization {
+    private static int istate = 0; 
     // set it to true to debug the monoid inference
     private static boolean inference_tracing = false;
     // set it to true to debug the split function
@@ -122,9 +123,7 @@ final public class Streaming extends AlgebraicOptimization {
                 return #<none>;
             else if (mx.equals(#<fixed>) && my.equals(#<fixed>))
                 return #<fixed>;
-            else if (my.equals(#<fixed>))
-                return #<groupBy(product(`mx,`my))>;
-            else return #<groupBy(product(fixed,`my))>;
+            else return #<groupBy(product(`mx,`my))>;
         case cmap(lambda(`v,bag(`w)),`x):
             if (!w.equals(v))
                 fail;
@@ -160,12 +159,15 @@ final public class Streaming extends AlgebraicOptimization {
                     return #<`gb2(`m2)>;
                 case union:
                     return #<union>;
-                case fixed: return #<fixed>;
+                case fixed:
+                    return #<fixed>;
                 }
             case fixed:
                 match inference(b,new Environment(v.toString(),#<fixed>,env)) {
-                case union: return #<union>;
-                case fixed: return #<fixed>;
+                case union:
+                    return #<union>;
+                case fixed:
+                    return #<fixed>;
                 case `gb(`m):
                     if (! #[groupBy,orderBy].member(#<`gb>) )
                         fail;
@@ -239,31 +241,25 @@ final public class Streaming extends AlgebraicOptimization {
             case product(...ms):
                 return ms.nth(n);
             };
-            fail
+            return #<none>;
         case project(`u,`a):
             match inference(u,env) {
             case fixed:
                 return #<fixed>;
             };
-            fail
+            return #<none>;
+        case if(`p,`e1,`e2):
+            return inference(e1,env);
         case bag(`u):
             match inference(u,env) {
             case fixed:
                 return #<fixed>;
             };
-            fail
+            return #<none>;
         case call(stream,...):
             return #<union>;
         case call(source,...):
             return #<fixed>;
-        case call(`f,`s):
-            for ( Tree monoid: monoids )
-                match monoid {
-                case `aggr(`mtp,`plus,`zero,`unit):
-                    if (aggr.equals(f.toString()))
-                        return #<monoid(`plus,`zero,`unit)>;
-                };
-            fail
         case call(`f,...s):
             Trees ms = #[ ];
             for ( Tree x: s )
@@ -278,8 +274,10 @@ final public class Streaming extends AlgebraicOptimization {
                 fixed &= mm.equals(#<fixed>);
             if (fixed)
                 return #<fixed>;
-            fail
+            return #<none>;
         case bind(_,`u):
+            return inference(u,env);
+        case typed(`u,_):
             return inference(u,env);
         case _:
             if (e.is_string() || e.is_long() || e.is_double())
@@ -287,7 +285,9 @@ final public class Streaming extends AlgebraicOptimization {
             else if (e.is_variable())
                 if (repeat_var(e))
                     return find(e.toString(),repeat_environment);
-                else return find(e.toString(),env);
+                else if (member(e.toString(),env))
+                    return find(e.toString(),env);
+                else return #<fixed>;
         };
         return #<none>;
     }
@@ -296,7 +296,7 @@ final public class Streaming extends AlgebraicOptimization {
         return inference(e,null);
     }
 
-    private static Tree cmap1 ( Tree f, Tree e ) {
+    private static Tree smap1 ( Tree f, Tree e ) {
         Tree nv = new_var();
         Tree b = new_var();
         return #<cmap(lambda(`nv,cmap(lambda(`b,bag(tuple(nth(`nv,0),`b))),
@@ -304,19 +304,41 @@ final public class Streaming extends AlgebraicOptimization {
                       `e)>;
     }
 
-    private static Tree cmap2 ( Tree f, Tree e ) {
+    private static Tree smap2 ( Tree f, Tree e ) {
         Tree nv = new_var();
         Tree nw = new_var();
-        return #<cmap(lambda(`nv,cmap(lambda(`nw,bag(tuple(tuple(nth(`nw,0),nth(`nv,0)),nth(`nw,1)))),
+        return #<cmap(lambda(`nv,cmap(lambda(`nw,bag(tuple(nth(`nw,0),
+                                                           tuple(nth(`nv,0),nth(`nw,1))))),
                                       apply(`f,tuple(nth(nth(`nv,0),0),nth(`nv,1))))),
                       `e)>;
     }
 
-    private static Tree cmap3 ( Tree f, Tree e ) {
+    private static Tree smap3 ( Tree f, Tree e ) {
         Tree nv = new_var();
         Tree nw = new_var();
-        return #<cmap(lambda(`nv,cmap(lambda(`nw,bag(tuple(tuple(nth(`nw,0),tuple()),nth(`nw,1)))),
+        return #<cmap(lambda(`nv,cmap(lambda(`nw,bag(tuple(nth(`nw,0),
+                                                           tuple(tuple(),nth(`nw,1))))),
                                       apply(`f,`nv))),
+                      `e)>;
+    }
+
+    private static Tree swap ( Tree e ) {
+        Tree nv = new_var();
+        return #<cmap(lambda(`nv,bag(tuple(tuple(nth(`nv,0),nth(nth(`nv,1),0)),
+                                           nth(nth(`nv,1),1)))),
+                      `e)>;
+    }
+
+    private static Tree mix ( Tree e ) {
+        Tree nv = new_var();
+        Tree x = new_var();
+        Tree y = new_var();
+        Tree b = #<bag(tuple(tuple(nth(`nv,0),
+                                   tuple(nth(`x,0),nth(`y,0))),
+                             tuple(nth(`x,1),nth(`y,1))))>;
+        return #<cmap(lambda(`nv,cmap(lambda(`x,cmap(lambda(`y,`b),
+                                                     groupBy(nth(nth(`nv,1),1)))),
+                                      groupBy(nth(nth(`nv,1),0)))),
                       `e)>;
     }
 
@@ -326,25 +348,20 @@ final public class Streaming extends AlgebraicOptimization {
      */
     public static Tree inject_q ( Tree e ) {
         match e {
-        case tuple(...as):
-            Trees bs = #[ ];
-            for ( Tree a: as )
-                bs = bs.append(inject_q(a));
-            return #<tuple(...bs)>;
         case reduce(`m,cmap(`f,call(stream,...s))):
-            return e;
+            return #<bag(tuple(tuple(),`e))>;
         case reduce(`m,cmap(`f,`v)):
             if (!repeat_var(v))
                 fail;
-            return e;
+            return #<bag(tuple(tuple(),`e))>;
         case reduce(`m,cmap(`f,`u)):
-            return #<reduce(groupBy(`m),`(cmap1(f,inject_e(u))))>;
+            return #<reduce(groupBy(`m),`(smap1(f,inject_e(u))))>;
         case reduce(`m,call(stream,...s)):
-            return e;
+            return #<bag(tuple(tuple(),`e))>;
         case reduce(`m,`v):
             if (!repeat_var(v))
                 fail;
-            return e;
+            return #<bag(tuple(tuple(),`e))>;
         case cmap(`f,call(stream,...s)):
             Tree a = new_var();
             Tree b = new_var();
@@ -360,14 +377,18 @@ final public class Streaming extends AlgebraicOptimization {
                                          apply(`f,`a))),
                           `v)>;
         case cmap(`f,`u):
-            return cmap1(f,inject_e(u));
-        case `f(...as):
-            Trees bs = #[ ];
-            for ( Tree a: as )
-                bs = bs.append(inject_q(a));
-            return #<`f(...bs)>;
+            return smap1(f,inject_e(u));
         };
-        return e;
+        // otherwise, it's a constant
+        return #<bag(tuple(tuple(),`e))>;
+    }
+
+    private static boolean stream_source ( Tree e ) {
+        match e {
+        case call(stream,...):
+            return true;
+        };
+        return repeat_var(e);
     }
 
     /** inject lineage (all groupBy/join keys) to a groupBy/join term e
@@ -377,10 +398,46 @@ final public class Streaming extends AlgebraicOptimization {
     static Tree inject_e ( Tree e ) {
         match e {
         case `gb(`c):
-            if (! #[groupBy,orderBy].member(#<`gb>) ) fail;
-            return #<`gb(`(inject_c(c)))>;
+            if (! #[groupBy,orderBy].member(#<`gb>) )
+                fail;
+            return #<`gb(`(swap(inject_c(c))))>;
         case coGroup(`c1,`c2):
-            return #<coGroup(`(inject_c(c1)),`(inject_c(c2)))>;
+            match c1 {
+            case cmap(_,`u):
+                if (!stream_source(u))
+                    fail;
+                match c2 {
+                case cmap(_,`s):
+                    if (!stream_source(s))
+                        fail;
+                    Tree nv = new_var();
+                    return #<cmap(lambda(`nv,bag(tuple(tuple(nth(`nv,0),tuple(tuple(),tuple())),
+                                                       nth(`nv,1)))),
+                                  coGroup(`c1,`c2))>;
+                };
+                Tree nv = new_var();
+                Tree y = new_var();
+                return #<cmap(lambda(`nv,cmap(lambda(`y,bag(tuple(tuple(nth(`nv,0),
+                                                                        tuple(tuple(),nth(`y,0))),
+                                                                  tuple(nth(nth(`nv,1),0),
+                                                                        nth(`y,1))))),
+                                              groupBy(nth(nth(`nv,1),1)))),
+                              coGroup(`c1,`(inject_c(c2))))>;
+            };
+            match c2 {
+            case cmap(_,`u):
+                if (!stream_source(u))
+                    fail;
+                Tree nv = new_var();
+                Tree x = new_var();
+                return #<cmap(lambda(`nv,cmap(lambda(`x,bag(tuple(tuple(nth(`nv,0),
+                                                                        tuple(nth(`x,0),tuple())),
+                                                                  tuple(nth(`x,1),
+                                                                        nth(nth(`nv,1),1))))),
+                                              groupBy(nth(nth(`nv,1),0)))),
+                              coGroup(`(inject_c(c1)),`c2))>;
+            };
+            return mix(#<coGroup(`(inject_c(c1)),`(inject_c(c2)))>);
         };
         return inject_c(e);
     }
@@ -392,99 +449,21 @@ final public class Streaming extends AlgebraicOptimization {
     static Tree inject_c ( Tree e ) {
         match e {
         case cmap(`f,call(stream,...s)):
-            return cmap3(f,#<call(stream,...s)>);
+            return smap3(f,#<call(stream,...s)>);
         case cmap(`f,`v):
             if (!repeat_var(v))
                 fail;
-            return cmap3(f,v);
+            return smap3(f,v);
         case cmap(`f,`u):
-            return cmap2(f,inject_e(u));
+            return smap2(f,inject_e(u));
         case call(stream,...s):
-            return cmap3(#<lambda(x,bag(x))>,#<call(stream,...s)>);
+            return smap3(#<lambda(x,bag(x))>,#<call(stream,...s)>);
         case `v:
             if (!repeat_var(v))
                 fail;
-            return cmap3(#<lambda(x,bag(x))>,v);
+            return smap3(#<lambda(x,bag(x))>,v);
         };
         return e;
-    }
-
-    /** Return the answer function of a query e
-     * @param e a query
-     * @param var the input of the answer function
-     * @param merge the monoid associated with the input
-     * @return the answer function
-     */
-    static Tree answer ( Tree e, Tree var, Tree merge ) {
-        match e {
-        case tuple(...as):
-            match merge {
-            case product(...ms):
-                Trees bs = #[ ];
-                int i = 0;
-                for ( Tree a: as )
-                    bs = bs.append(answer(a,#<nth(`var,`i)>,ms.nth(i++)));
-                return #<tuple(...bs)>;
-            }
-        case record(...as):
-            match merge {
-            case record(...ms):
-                Trees bs = #[ ];
-                int i = 0;
-                for ( Tree a: as )
-                    match a {
-                    case bind(`v,`u):
-                        match ms.nth(i++) {
-                        case bind(_,`m):
-                            bs = bs.append(#<bind(`v,`(answer(u,#<project(`var,`v)>,m)))>);
-                        }
-                    }
-                return #<record(...bs)>;
-            }
-        case reduce(`m,cmap(`f,`u)):
-            match merge {
-            case `gb(_):
-                if (! #[groupBy,orderBy].member(#<`gb>) )
-                    fail;
-                Tree nv = new_var();
-                return #<reduce(`m,cmap(lambda(`nv,bag(nth(`nv,1))),`var))>;
-            case _:  // total aggregation
-                return var;
-            }
-        case reduce(`m,call(stream,...s)):
-            return var;
-        case reduce(`m,`v):
-            if (!repeat_var(v))
-                fail;
-            return var;
-        case cmap(`f,call(stream,...s)):
-            Tree nv = new_var();
-            return #<cmap(lambda(`nv,bag(nth(`nv,1))),`var)>;
-        case cmap(`f,`v):
-            if (!repeat_var(v))
-                fail;
-            Tree nv = new_var();
-            return #<cmap(lambda(`nv,bag(nth(`nv,1))),`var)>;
-        case cmap(`f,`u):
-            match merge {
-            case `gb(`m):
-                if (! #[groupBy,orderBy].member(#<`gb>) )
-                    fail;
-                Tree nv = new_var();
-                match TypeInference.type_inference(var) {
-                case `T(tuple(tuple(_,tuple()),_)):
-                    // only one key => don't group-by
-                    return #<cmap(lambda(`nv,bag(nth(`nv,1))),`var)>;
-                };
-                Tree nw = new_var();
-                Tree nn = new_var();
-                return #<cmap(lambda(`nv,cmap(lambda(`nn,bag(reduce(`m,`nn))),
-                                              nth(`nv,1))),
-                              `gb(cmap(lambda(`nw,bag(tuple(nth(nth(`nw,0),0),nth(`nw,1)))),
-                                       `var)))>;
-            }
-        };
-        return var;
     }
 
     /** find all homomorphic terms in the algebraic term e
@@ -493,7 +472,7 @@ final public class Streaming extends AlgebraicOptimization {
      * @return a list of homomorphic terms
      */
     static Trees find_homomorphisms ( Tree e, Environment env ) {
-        if (! #[none].member(inference(e,env)))
+        if (! #[none,fixed].member(inference(e,env)))
             return #[ `e ];
         match e {
         case cmap(lambda(`v,bag(`b)),`x):
@@ -520,97 +499,85 @@ final public class Streaming extends AlgebraicOptimization {
             for ( Tree d: ds )
                 match d {
                 case bind(`n,`a):
-                    bs = bs.append(find_homomorphisms(a,env));
+                    bs = union(bs,find_homomorphisms(a,env));
                 };
             return bs;
         case call(`f,...as):
             Trees bs = #[ ];
             for ( Tree a: as )
-                bs = bs.append(find_homomorphisms(a,env));
+                bs = union(bs,find_homomorphisms(a,env));
+            return bs;
+        case nth(`u,`n):
+            Trees bs = #[ ];
+            for ( Tree x: find_homomorphisms(u,env) )
+                bs = union(bs,#[nth(`x,`n)]);
+            return bs;
+        case project(`u,`a):
+            Trees bs = #[ ];
+            for ( Tree x: find_homomorphisms(u,env) )
+                bs = union(bs,#[project(`x,`a)]);
             return bs;
         case `f(...as):
             Trees bs = #[ ];
             for ( Tree a: as )
-                bs = bs.append(find_homomorphisms(a,env));
+                bs = union(bs,find_homomorphisms(a,env));
             return bs;
         };
         return #[ ];
     }
 
-    /** Split a cMap term e into a homomorhism and an answer function
-     * @param e a cMap term
+    /** Split the term e into a homomorhism and an answer function
+     * @param e an algebraic term
      * @param var the input variable of the answer function
-     * @param cmap_var the cmap variable
      * @param env binds variables to monoids
      * @return a pair (answer,homomorphism)
      */
-    static Tree split ( Tree e, Tree var, Tree cmap_var, Environment env ) {
+    static Tree split ( Tree e, Tree var, Environment env ) {
         if (split_tracing) {
             tab_count += 3;
-            System.out.println(Interpreter.tabs(tab_count)+var+" "+cmap_var+"\n"+e.pretty(0));
+            System.out.println(Interpreter.tabs(tab_count)+var+"\n"
+                               +Interpreter.tabs(tab_count)+e.pretty(tab_count));
 
         };
-        Tree res = split_trace(e,var,cmap_var,env);
+        Tree res = split_trace(e,var,env);
         if (split_tracing) {
-            System.out.println(Interpreter.tabs(tab_count)+"-> "+res.pretty(0));
+            System.out.println(Interpreter.tabs(tab_count)+"-> "+res.pretty(tab_count+3));
             tab_count -= 3;
         };
         return res;
     }
 
-    private static Tree split_trace ( Tree e, Tree var, Tree cmap_var, Environment env ) {
+    /** Split the term e into a homomorhism and an answer function
+     * @param e an algebraic term
+     * @param var the input variable of the answer function
+     * @param env binds variables to monoids
+     * @return a pair (answer,homomorphism)
+     */
+    static Tree split_trace ( Tree e, Tree var, Environment env ) {
         match e {
-        case cmap(lambda(`v,bag(tuple(nth(`k,0),`b))),`u):
-            if (!cmap_var.equals(k))
-                fail;
-            match inference(u,env) {
-            case `gb(`m):
-                if (! #[groupBy,orderBy].member(#<`gb>) )
-                    fail;
-                Trees hs = find_homomorphisms(b,new Environment(v.toString(),#<product(fixed,`m)>,env));
-                if (hs.length() == 1 && hs.nth(0).equals(b))
-                    return #<pair(`var,`e)>;
-                Tree nv = new_var();
-                Tree ne = b;
-                int i = 0;
-                for ( Tree h: hs ) {
-                    ne = subst(h,#<nth(`nv,`i)>,ne);
-                    i++;
-                };
-                return #<pair(cmap(lambda(`nv,bag(`ne)),`var),
-                              cmap(lambda(`v,bag(tuple(nth(`k,0),tuple(...hs)))),`u))>;
-            case fixed:
-                Trees hs = find_homomorphisms(b,new Environment(v.toString(),#<fixed>,env));
-                if (hs.length() == 1 && hs.nth(0).equals(b))
-                    return #<pair(`var,`e)>;
-                Tree nv = new_var();
-                Tree ne = b;
-                int i = 0;
-                for ( Tree h: hs ) {
-                    ne = subst(h,#<nth(`nv,`i)>,ne);
-                    i++;
-                };
-                return #<pair(cmap(lambda(`nv,bag(`ne)),`var),
-                              cmap(lambda(`v,bag(tuple(nth(`k,0),tuple(...hs)))),`u))>;
-            }
         case cmap(lambda(`v,bag(tuple(`k,`b))),`u):
+            Environment nenv = env;
+            Tree nv = new_var();
             match inference(u,env) {
+            case union:
+                nv = #<nth(`nv,1)>;
+                nenv = new Environment(v.toString(),#<union>,nenv);
             case `gb(`m):
                 if (! #[groupBy,orderBy].member(#<`gb>) )
                     fail;
-                Trees hs = find_homomorphisms(b,new Environment(v.toString(),#<product(fixed,`m)>,env));
-                if (hs.length() == 1 && hs.nth(0).equals(b))
-                    return #<pair(`var,`e)>;
-                Tree nv = new_var();
-                Tree ne = b;
-                int i = 0;
-                for ( Tree h: hs ) {
-                    ne = subst(h,#<nth(`nv,`i)>,ne);
-                    i++;
-                };
-                return #<pair(cmap(lambda(`nv,bag(`ne)),`var),
-                              cmap(lambda(`v,bag(tuple(`k,tuple(...hs)))),`u))>;
-            }
+                nenv = new Environment(v.toString(),#<product(fixed,`m)>,nenv);
+            };
+            Trees hs = find_homomorphisms(b,nenv);
+            if (hs.length() == 1 && hs.nth(0).equals(b))
+                return #<pair(`var,`e)>;
+            Tree ne = b;
+            int i = 0;
+            for ( Tree h: hs ) {
+                ne = subst(h,#<nth(nth(`nv,1),`i)>,ne);
+                i++;
+            };
+            return #<pair(cmap(lambda(`nv,bag(tuple(nth(`nv,0),`ne))),`var),
+                          cmap(lambda(`v,bag(tuple(`k,tuple(...hs)))),`u))>;
         case cmap(lambda(`v,`b),`u):
             match inference(u,env) {
             case `gb(`m):
@@ -626,38 +593,54 @@ final public class Streaming extends AlgebraicOptimization {
                     Tree nv = new_var();
                     match split(b,nv,nenv) {
                     case pair(`a,`h):
-                        a = subst(nv,var,a);
-                        return #<pair(`a,cmap(lambda(`v,`h),`u))>;
+                        Tree nw = new_var();
+                        if (occurences(v,a) == 0) {
+                            a = subst(nv,var,a);
+                            return #<pair(`a,cmap(lambda(`v,`h),`u))>;
+                        };
+                        // The answer function needs v; need to piggyback v along with the state
+                        a = subst(nv,#<bag(tuple(nth(`nw,0),nth(nth(`nw,1),1)))>,
+                                  subst(v,#<nth(nth(`nw,1),0)>,a));
+                        return #<pair(cmap(lambda(`nw,`a),`var),
+                                      cmap(lambda(`v,cmap(lambda(`nv,bag(tuple(nth(`nv,0),
+                                                                               tuple(`v,nth(`nv,1))))),
+                                                          `h)),
+                                           `u))>;
                     }
                 }
-            case fixed:
+            case `m:
+                if (! #[union,fixed].member(m))
+                    fail;
                 Tree nv = new_var();
-                match split(b,nv,new Environment(v.toString(),#<fixed>,env)) {
+                match split(b,nv,new Environment(v.toString(),m,env)) {
                 case pair(`a,`h):
-                    a = subst(nv,var,a);
-                    a = subst(cmap_var,nv,a);
-                    return #<pair(`a,cmap(lambda(`v,`h),`u))>;
+                    Tree nw = new_var();
+                    if (occurences(v,a) == 0) {
+                        a = subst(nv,var,a);
+                        return #<pair(`a,cmap(lambda(`v,`h),`u))>;
+                    };
+                    // The answer function needs v; need to piggyback v along with the state
+                    a = subst(nv,#<bag(tuple(nth(`nw,0),nth(nth(`nw,1),1)))>,
+                              subst(v,#<nth(nth(`nw,1),0)>,a));
+                    return #<pair(cmap(lambda(`nw,`a),`var),
+                                  cmap(lambda(`v,cmap(lambda(`nv,bag(tuple(nth(`nv,0),
+                                                                           tuple(`v,nth(`nv,1))))),
+                                                      `h)),
+                                       `u))>;
                 }
             }
-        };
-        return #<fail>;
-    }
-
-    /** Split the term e into a homomorhism and an answer function
-     * @param e an algebraic term
-     * @param var the input variable of the answer function
-     * @param env binds variables to monoids
-     * @return a pair (answer,homomorphism)
-     */
-    static Tree split ( Tree e, Tree var, Environment env ) {
-        match e {
-        case cmap(lambda(`v,`b),`u):
-            match split(e,var,v,env) {
-            case fail:
-                return #<pair(cmap(lambda(`v,`b),`var),`u)>;
-            case `t:
-                return t;
-            }
+        case call(stream,...):
+            return #<pair(`var,`e)>;
+        case reduce(`m,`u):
+            match inference(u,env) {
+            case union:
+                return #<pair(`var,`e)>;
+            case _:
+                match split(u,var,env) {
+                case pair(`b,`h):
+                    return #<pair(reduce(`m,`b),`h)>;
+                }
+            };
         case tuple(...as):
             Trees bs = #[ ];
             Trees hs = #[ ];
@@ -682,8 +665,15 @@ final public class Streaming extends AlgebraicOptimization {
                     }
                 };
             return #<pair(record(...bs),record(...hs))>;
-        case reduce(`m,`u):
-            return #<pair(`var,`e)>;
+        case call(`f,...as):
+            if (! #[fixed].member(inference(e,env)))
+                fail;
+            return #<pair(`e,tuple())>;
+        case call(`f,`a):
+            match split(a,var,env) {
+            case pair(`b,`h):
+                return #<pair(call(`f,`b),`h)>;
+            };
         case call(`f,...as):
             Tree nv = new_var();
             Trees bs = #[ ];
@@ -696,6 +686,33 @@ final public class Streaming extends AlgebraicOptimization {
                     hs = hs.append(h);
                 };
             return #<pair(apply(lambda(`nv,call(`f,...bs)),`var),tuple(...hs))>;
+        case nth(`u,`n):
+            match split(u,var,env) {
+            case pair(`b,`h):
+                return #<pair(nth(`b,`n),`h)>;
+            };
+        case project(`u,`a):
+            match split(u,var,env) {
+            case pair(`b,`h):
+                return #<pair(project(`b,`a),`h)>;
+            };
+        case bag(tuple(`k,`u)):
+            Tree ne = #<nth(call(elem,`var),1)>;
+            match TypeInference.type_inference(u) {
+            case `S(_):
+                if (!is_persistent_collection(S))
+                    fail;
+                ne = #<nth(call(elem,Collect(`var)),1)>;
+            };
+            match split(u,ne,env) {
+            case pair(`b,`h):
+                return #<pair(`b,bag(tuple(`k,`h)))>;
+            };
+        case if(`p,`u,bag()):
+            match split(u,var,env) {
+            case pair(`b,`h):
+                return #<pair(`b,if(`p,`h,bag()))>;
+            };
         case `f(...as):
             Tree nv = new_var();
             Trees bs = #[ ];
@@ -709,13 +726,90 @@ final public class Streaming extends AlgebraicOptimization {
                 };
             return #<pair(apply(lambda(`nv,`f(...bs)),`var),tuple(...hs))>;
         };
-        return #<pair(`e,tuple())>;
+        return #<pair(`var,`e)>;
+    }
+
+    /** Return the monoid of a query e */
+    private static Tree get_monoid ( Tree e, Environment env ) {
+        match e {
+        case reduce(`m,`u):
+            return #<groupBy(`m)>;
+        case cmap(`f,call(stream,...s)):
+            return #<union>;
+        case cmap(`f,`v):
+            if (!repeat_var(v))
+                fail;
+            return #<union>;
+        case cmap(lambda(`v,`b),`u):
+            match inference(u,env) {
+            case groupBy(`m):
+                return get_monoid(b,new Environment(v.toString(),#<product(fixed,`m)>,env));
+            case `m:
+                return get_monoid(b,env);
+            }
+        case bag(tuple(`k,`v)):
+            Tree m = inference(v,env);
+            return #<groupBy(`m)>;
+        case if(`p,`e1,bag()):
+            return get_monoid(e1,env);
+        };
+        throw new Error("Unable to find the merge function for: "+e);
+        //return #<groupBy(fixed)>;
+    }
+
+    private static Tree convert_reduce_all ( Tree m, Tree e ) {
+        match m {
+        case fixed:
+            return #<call(elem,`e)>;
+        case union:
+            Tree v = new_var();
+            return #<cmap(lambda(`v,`v),`e)>;
+        case product(...ps):
+            int i = 0;
+            Trees as = #[ ];
+            for ( Tree p: ps ) {
+                Tree nv = new_var();
+                as = as.append(convert_reduce_all(p,#<cmap(lambda(`nv,bag(nth(`nv,`(i++)))),`e)>));
+            };
+            return #<tuple(...as)>;
+        case record(...bs):
+            Trees as = #[ ];
+            for ( Tree b: bs )
+                match b {
+                case bind(`n,`p):
+                    Tree nv = new_var();
+                    Tree nb = convert_reduce_all(p,#<cmap(lambda(`nv,bag(project(`nv,`n))),`e)>);
+                    as = as.append(#<bind(`n,`nb)>);
+                };
+            return #<record(...as)>;
+        case `gb(`gm):
+            if (! #[groupBy,orderBy].member(#<`gb>) )
+                fail;
+            Tree v = new_var();
+            Tree me = convert_reduce_all(gm,#<nth(`v,1)>);
+            return #<cmap(lambda(`v,bag(tuple(nth(`v,0),`me))),
+                          `gb(`e))>;
+        case _:
+            if (!m.is_variable())
+                fail;
+            for ( Tree monoid: monoids )
+                match monoid {
+                case `aggr(`mtp,`plus,`zero,`unit):
+                    if (#<`aggr>.equals(m)) {
+                        plus = Normalization.rename(plus);
+                        return #<aggregate(`plus,`zero,`e)>;
+                    }
+                };
+        };
+        return #<call(elem,`e)>;
     }
 
     /** Convert a reduce on the monoid m to an aggregation */
     private static Tree convert_reduce ( Tree m, Tree e ) {
         match m {
         case fixed:
+            return e;
+        case union:
             return e;
         case product(...ps):
             int i = 0;
@@ -732,15 +826,21 @@ final public class Streaming extends AlgebraicOptimization {
                 };
             return #<record(...as)>;
         case `gb(`gm):
-            if (! #[groupBy,orderBy].member(#<`gb>) ) fail;
+            if (! #[groupBy,orderBy].member(#<`gb>) )
+                fail;
             Tree v = new_var();
-            Tree me = convert_reduce(gm,#<nth(`v,1)>);
-            return #<cmap(lambda(`v,bag(tuple(nth(`v,0),`me))),`gb(`e))>;
-        };
-        match e {
-        // FIX: may have more cases
-        case cmap(...):
-            return #<call(`m,`e)>;
+            Tree me = convert_reduce_all(gm,#<nth(`v,1)>);
+            return #<cmap(lambda(`v,bag(tuple(nth(`v,0),`me))),
+                          `gb(`e))>;
+        case _:
+            if (!m.is_variable())
+                fail;
+            for ( Tree monoid: monoids )
+                match monoid {
+                case `aggr(`mtp,`plus,`zero,`unit):
+                    if (#<`aggr>.equals(m))
+                        return #<call(`aggr,`e)>;
+                };
         };
         return e;
     }
@@ -754,12 +854,14 @@ final public class Streaming extends AlgebraicOptimization {
             Tree vy = new_var();
             Tree cx = convert_to_algebra(x);
             Tree cy = convert_to_algebra(y);
+            Tree mx = new_var();
+            Tree my = new_var();
             return #<join(lambda(`vx,nth(`vx,0)),lambda(`vy,nth(`vy,0)),
                           lambda(`v,bag(tuple(call(join_key,nth(`v,0),nth(`v,1)),
                                               tuple(cmap(lambda(`vx,bag(nth(`vx,1))),nth(`v,0)),
                                                     cmap(lambda(`vy,bag(nth(`vy,1))),nth(`v,1)))))),
                           `cx, `cy)>;
-        case reduce(`aggr,`s):
+      case reduce(`aggr,`s):
             return convert_reduce(aggr,convert_to_algebra(s));
         case `f(...as):
             Trees bs = #[ ];
@@ -803,31 +905,72 @@ final public class Streaming extends AlgebraicOptimization {
         return e;
     }
 
+    /** true if there is only one instance value of type tp */
+    private static boolean unique_key ( Tree tp ) {
+        match tp {
+        case tuple():
+            return true;
+        case `T(`t):
+            if (!is_collection(T))
+                fail;
+            return unique_key(t);
+        case tuple(...as):
+            for ( Tree a: as )
+                if (!unique_key(a))
+                    return false;
+            return true;
+        case record(...as):
+            for ( Tree a: as )
+                match a {
+                case bind(_,`b):
+                    if (!unique_key(b))
+                        return false;
+                }
+            return true;
+        };
+        return false;
+    }
+
     /** Return the merge function (over X and Y) of the monoid m; type is used for key equality */
     private static Tree merge ( Tree m, Tree type, Tree X, Tree Y ) {
         match m {
         case `gb(`n):
-            // needs outer-join in function r
             if (! #[groupBy,orderBy].member(#<`gb>) )
                 fail;
-            Tree v = new_var();
-            Tree vx = new_var();
-            Tree vy = new_var();
-            Tree mx = new_var();
-            Tree my = new_var();
             match type {
             case `T(tuple(`keytp,`tp)):
+                if (unique_key(keytp)) {
+                    Tree vx = new_var();
+                    Tree vy = new_var();
+                    Tree v = merge(n,tp,#<nth(call(elem,`vx),1)>,#<nth(call(elem,`vy),1)>);
+                    if (is_persistent_collection(T)) {
+                        X = #<Collect(`X)>;
+                        Y = #<Collect(`Y)>;
+                    };
+                    return #<let(`vx,`X,
+                                 let(`vy,`Y,
+                                     if(call(exists,`vx),
+                                        if(call(exists,`vy),
+                                           bag(tuple(`keytp,`v)),
+                                           `vx),
+                                        `vy)))>;
+                };
+                // needs an outer-join in the reducer function
+                Tree v = new_var();
+                Tree vx = new_var();
+                Tree vy = new_var();
+                Tree mx = new_var();
+                Tree my = new_var();
+                Tree mb = merge(n,tp,#<nth(`vx,1)>,#<nth(`vy,1)>);
+                Tree b = #<cmap(lambda(`vx,cmap(lambda(`vy,bag(tuple(nth(`vx,0),`mb))),
+                                                `my)),
+                                `mx)>;
                 return #<join(lambda(`vx,`(key_equality(keytp,#<nth(`vx,0)>))),
                               lambda(`vy,`(key_equality(keytp,#<nth(`vy,0)>))),
                               lambda(`v,let(`mx,nth(`v,0),
                                             let(`my,nth(`v,1),
                                                 if(call(exists,`mx),
-                                                   if(call(exists,`my),
-                                                      cmap(lambda(`vx,cmap(lambda(`vy,bag(tuple(nth(`vx,0),
-                                                                              `(merge(n,tp,#<nth(`vx,1)>,#<nth(`vy,1)>))))),
-                                                                           `my)),
-                                                           `mx),
-                                                      `mx),
+                                                   if(call(exists,`my),`b,`mx),
                                                    `my)))),
                               `X, `Y)>;
             };
@@ -862,7 +1005,7 @@ final public class Streaming extends AlgebraicOptimization {
             for ( Tree monoid: monoids )
                 match monoid {
                 case `aggr(`mtp,`plus,`zero,`unit):
-                    if (aggr.equals(m.toString()))
+                    if (#<`aggr>.equals(m))
                         return #<apply(`plus,tuple(`X,`Y))>;
                 };
         };
@@ -899,7 +1042,7 @@ final public class Streaming extends AlgebraicOptimization {
             for ( Tree monoid: monoids )
                 match monoid {
                 case `aggr(`mtp,`plus,`zero,`unit):
-                    if (aggr.equals(m.toString()))
+                    if (#<`aggr>.equals(m))
                         return zero;
                 };
         };
@@ -909,26 +1052,78 @@ final public class Streaming extends AlgebraicOptimization {
     /** Convert joins to coGroups, plus other transformations */
     private static Tree normalize_term ( Tree e ) {
         match e {
+        case join(`kx,`ky,`r,cmap(`f,`x),cmap(`g,`y)):
+            if (!x.equals(y))
+                fail;
+            Tree v = new_var(), w = new_var(),
+                wx = new_var(), wy = new_var(),
+                vx = new_var(), vy = new_var();
+            Tree xtp = TypeInference.type_inference(((Node)kx).children.head);
+            Tree ytp = TypeInference.type_inference(((Node)ky).children.head);
+            Tree T = #<union(inL(`xtp),inR(`ytp))>;
+            Tree X = #<cmap(lambda(`w,call(plus,cmap(lambda(`wx,bag(tuple(apply(`kx,`wx),
+                                                                          typed(tagged_union(0,`wx),`T)))),
+                                                     apply(`f,`w)),
+                                           cmap(lambda(`wy,bag(tuple(apply(`ky,`wy),
+                                                                     typed(tagged_union(1,`wy),`T)))),
+                                                apply(`g,`w)))),
+                            `x)>;
+            Tree sx = #<cmap(lambda(`vx,if(call(eq,union_tag(`vx),0),bag(typed(union_value(`vx),`xtp)),bag())),
+                             nth(`v,1))>;
+            Tree sy = #<cmap(lambda(`vy,if(call(eq,union_tag(`vy),1),bag(typed(union_value(`vy),`ytp)),bag())),
+                             nth(`v,1))>;
+            return normalize_term(#<cmap(lambda(`v,apply(`r,tuple(`sx,`sy))),
+                                         groupBy(`X))>);
+        case join(`kx,`ky,`r,`x,cmap(`g,`y)):
+            if (!x.equals(y))
+                fail;
+            Tree v = new_var(), w = new_var(), wy = new_var(),
+                vx = new_var(), vy = new_var();
+            Tree xtp = TypeInference.type_inference(((Node)kx).children.head);
+            Tree ytp = TypeInference.type_inference(((Node)ky).children.head);
+            Tree T = #<union(inL(`xtp),inR(`ytp))>;
+            Tree X = #<cmap(lambda(`w,call(plus,bag(tuple(apply(`kx,`w),typed(tagged_union(0,`w),`T))),
+                                           cmap(lambda(`wy,bag(tuple(apply(`ky,`wy),
+                                                                     typed(tagged_union(1,`wy),`T)))),
+                                                apply(`g,`w)))),
+                            `x)>;
+            Tree sx = #<cmap(lambda(`vx,if(call(eq,union_tag(`vx),0),bag(typed(union_value(`vx),`xtp)),bag())),
+                             nth(`v,1))>;
+            Tree sy = #<cmap(lambda(`vy,if(call(eq,union_tag(`vy),1),bag(typed(union_value(`vy),`ytp)),bag())),
+                             nth(`v,1))>;
+            return normalize_term(#<cmap(lambda(`v,apply(`r,tuple(`sx,`sy))),
+                                         groupBy(`X))>);
+        case join(`kx,`ky,`r,cmap(`f,`x),`y):
+            if (!x.equals(y))
+                fail;
+            Tree v = new_var(), w = new_var(), wx = new_var(),
+                vx = new_var(), vy = new_var();
+            Tree xtp = TypeInference.type_inference(((Node)kx).children.head);
+            Tree ytp = TypeInference.type_inference(((Node)ky).children.head);
+            Tree T = #<union(inL(`xtp),inR(`ytp))>;
+            Tree X = #<cmap(lambda(`w,call(plus,cmap(lambda(`wx,bag(tuple(apply(`kx,`wx),
+                                                                          typed(tagged_union(0,`wx),`T)))),
+                                                     apply(`f,`w)),
+                                           bag(tuple(apply(`ky,`w),typed(tagged_union(1,`w),`T))))),
+                            `x)>;
+            Tree sx = #<cmap(lambda(`vx,if(call(eq,union_tag(`vx),0),bag(typed(union_value(`vx),`xtp)),bag())),
+                             nth(`v,1))>;
+            Tree sy = #<cmap(lambda(`vy,if(call(eq,union_tag(`vy),1),bag(typed(union_value(`vy),`ytp)),bag())),
+                             nth(`v,1))>;
+            return normalize_term(#<cmap(lambda(`v,apply(`r,tuple(`sx,`sy))),
+                                         groupBy(`X))>);
         case join(`kx,`ky,`r,`x,`y):
-            match TypeInference.type_inference(x) {
-            case `T(`xtp):
-                match TypeInference.type_inference(x) {
-                case `S(`ytp):
-                    Tree v = new_var();
-                    Tree vx = new_var();
-                    Tree vy = new_var();
-                    type_env.insert(vx.toString(),xtp);
-                    type_env.insert(vy.toString(),ytp);
-                    type_env.insert(v.toString(),#<tuple(none,tuple(`T(`xtp),`S(`ytp)))>);
-                    return normalize_term(#<cmap(lambda(`v,apply(`r,tuple(nth(nth(`v,1),0),
-                                                                          nth(nth(`v,1),1)))),
-                                                 coGroup(cmap(lambda(`vx,bag(tuple(apply(`kx,`vx),`vx))),`x),
-                                                         cmap(lambda(`vy,bag(tuple(apply(`ky,`vy),`vy))),`y)))>);
-                }
-            };
-            fail
+            Tree v = new_var();
+            Tree vx = new_var();
+            Tree vy = new_var();
+            Tree X = #<cmap(lambda(`vx,bag(tuple(apply(`kx,`vx),`vx))),`x)>;
+            Tree Y = #<cmap(lambda(`vy,bag(tuple(apply(`ky,`vy),`vy))),`y)>;
+            return normalize_term(#<cmap(lambda(`v,apply(`r,tuple(nth(nth(`v,1),0),
+                                                                  nth(nth(`v,1),1)))),
+                                         coGroup(`X,`Y))>);
         case `gb(`u):
-            if (! #[groupBy,orderBy].member(#<`gb>) ) fail;
+            if (! #[groupBy,orderBy].member(#<`gb>) )
+                fail;
             match u {
             case cmap(...):
                 return #<`gb(`(normalize_term(u)))>;
@@ -956,38 +1151,18 @@ final public class Streaming extends AlgebraicOptimization {
             };
             Tree nv = new_var();
             return #<reduce(`m,cmap(lambda(`nv,bag(`nv)),`(normalize_term(u))))>;
-        case project(`x,`a):
-            match TypeInference.type_inference(x) {
-            case `T(`tp):
-                if (!is_collection(T))
-                    fail;
-                Tree v = new_var();
-                type_env.insert(v.toString(),tp);
-                return normalize_term(#<cmap(lambda(`v,bag(project(`v,`a))),`x)>);
-            };
-            fail
-        case nth(`x,`n):
-            match TypeInference.type_inference(x) {
-            case `T(`tp):
-                if (!is_collection(T))
-                    fail;
-                Tree v = new_var();
-                type_env.insert(v.toString(),tp);
-                return normalize_term(#<cmap(lambda(`v,bag(nth(`v,`n))),`x)>);
-            };
-            fail
         case call(`f,`s):
             for ( Tree monoid: monoids )
                 match monoid {
                 case `aggr(`mtp,`plus,`zero,`unit):
-                    if (aggr.equals(f.toString())) {
+                    if (#<`aggr>.equals(f)) {
                         match s {
                         case cmap(...):
                             return #<reduce(`aggr,`(normalize_term(s)))>;
                         };
                         Tree nv = new_var();
                         return #<reduce(`aggr,cmap(lambda(`nv,bag(`nv)),`(normalize_term(s))))>;
-		    }
+                    }
                 };
             fail
         case `f(...as):
@@ -999,6 +1174,50 @@ final public class Streaming extends AlgebraicOptimization {
         return e;
     }
 
+    /** Embed missing cmaps */
+    private static Tree embed_missing_cmaps ( Tree e ) {
+        match e {
+        case project(`x,`a):
+            match TypeInference.type_inference(x) {
+            case `T(`tp):
+                if (!is_collection(T))
+                    fail;
+                Tree v = new_var();
+                type_env.insert(v.toString(),tp);
+                return embed_missing_cmaps(#<cmap(lambda(`v,bag(project(`v,`a))),`x)>);
+            };
+            fail
+        case nth(`x,`n):
+            match TypeInference.type_inference(x) {
+            case `T(`tp):
+                if (!is_collection(T))
+                    fail;
+                Tree v = new_var();
+                type_env.insert(v.toString(),tp);
+                return embed_missing_cmaps(#<cmap(lambda(`v,bag(nth(`v,`n))),`x)>);
+            };
+            fail
+        case `f(...as):
+            Trees bs = #[ ];
+            for ( Tree a: as )
+                bs = bs.append(embed_missing_cmaps(a));
+            return #<`f(...bs)>;
+        };
+        return e;
+    }
+
+    private static Tree subst_pattern ( Tree pattern, Tree src, Tree dst ) {
+        match pattern {
+        case tuple(...as):
+            Tree res = dst;
+            int i = 0;
+            for ( Tree a: as )
+                res = subst_pattern(a,#<nth(`src,`(i++))>,res);
+            return res;
+        };
+        return subst_var(pattern,src,dst);
+    }
+
     /** Simplify the term e using rewrite rules */
     static Tree simplify_term ( Tree e ) {
         match e {
@@ -1008,12 +1227,22 @@ final public class Streaming extends AlgebraicOptimization {
             return simplify_term(subst_var(x,a,b));
         case cmap(lambda(`x,`b),bag()):
             return #<bag()>;
+        case cmap(`f,if(`p,`e1,`e2)):
+            return simplify_term(#<if(`p,cmap(`f,`e1),cmap(`f,`e2))>);
+        case cmap(`f,call(plus,`x,`y)):
+            return simplify_term(#<call(plus,cmap(`f,`x),cmap(`f,`y))>);
         case groupBy(bag()):
             return #<bag()>;
+        case cmap(`f,join(`kx,`ky,lambda(`v,`r),`X,`Y)):
+            return simplify_term(#<join(`kx,`ky,lambda(`v,cmap(`f,`r)),`X,`Y)>);
         case apply(lambda(`v,`b),`u):
             if (!v.is_variable())
                 fail;
             return simplify_term(subst_var(v,u,b));
+        case apply(lambda(`pattern,`b),`u):
+            return simplify_term(subst_pattern(pattern,u,b));
+        case call(elem,bag(`u)):
+            return simplify_term(u);
         case nth(tuple(...al),`n):
             if (!n.is_long())
                 fail;
@@ -1074,7 +1303,7 @@ final public class Streaming extends AlgebraicOptimization {
                         rs = rs.cons(b);
             return rs;
         };
-        if (repeat_var(e))
+        if (false && repeat_var(e))
             return #[`e];
         else return #[];
     }
@@ -1094,6 +1323,69 @@ final public class Streaming extends AlgebraicOptimization {
         return ne;
     }
 
+    public static Tree unstreamify ( Tree e ) {
+        match e {
+        case call(stream,...r):
+            return #<call(source,...r)>;
+        case BinaryStream(...r):
+            return #<BinarySource(...r)>;
+        case ParsedStream(...r):
+            return #<ParsedSource(...r)>;
+        case `f(...al):
+            Trees bs = #[ ];
+            for ( Tree a: al )
+                bs = bs.append(unstreamify(a));
+            return #<`f(...bs)>;
+        };
+        return e;
+    }
+
+    /** Return the answer function of a query e
+     * @param e a query
+     * @param var the input of the answer function
+     * @param merge the monoid associated with the input
+     * @return the answer function
+     */
+    static Tree answer ( Tree e, Tree var, Tree merge ) {
+        match e {
+        case cmap(`f,call(stream,...s)):
+            return var;
+        case cmap(`f,`v):
+            if (!repeat_var(v))
+                fail;
+            return var;
+        case cmap(lambda(`v,`b),`u):
+            match merge {
+            case `gb(`m):
+                if (! #[groupBy,orderBy].member(#<`gb>) )
+                    fail;
+                Tree nv = new_var();
+                return #<reduce(`gb(`m),
+                                cmap(lambda(`nv,bag(tuple(nth(nth(`nv,0),0),nth(`nv,1)))),
+                                     `var))>;
+            }
+        };
+        return var;
+    }
+
+    /** Remove the state from the query output */
+    private static Tree strip_state ( Tree e, Tree var ) {
+        match e {
+        case reduce(`m,call(stream,...s)):
+            return var;
+        case reduce(`m,`v):
+            if (!repeat_var(v))
+                fail;
+            return var;
+        case reduce(`m,`u):
+            return var;
+        case cmap(`f,`u):
+            Tree nn = new_var();
+            return #<cmap(lambda(`nn,bag(nth(`nn,1))),`var)>;
+        };
+        return var;
+    }
+
     /** Convert a stream-based query to an incremental stream-based program.
      *    It returns the quadruple (zero,merge,homomorphism,answer),
      *    where (zero,merge) is the monoid for the homomorphism
@@ -1103,16 +1395,15 @@ final public class Streaming extends AlgebraicOptimization {
      * @return a quadruple that represents the incremental stream-based program
      */
     static Tree generate_code ( Tree e, Environment env ) {
-        if (!is_streaming(e)) {
-            Tree x = new_var();
-            Tree s = new_var();
-            TypeInference.type_env.insert(x.toString(),#<tuple(tuple(),tuple())>);
-            TypeInference.type_env.insert(s.toString(),#<tuple()>);
-            return #<tuple(tuple(),lambda(`x,tuple()),tuple(),lambda(`s,`e))>;
-        }
-        Tree ne = SimplifyTerm(normalize_term(e));
         if (Config.trace) {
-            System.out.println("After converting joins to coGroup and simplifying:");
+            System.out.println("Subterm:");
+            System.out.println(e.pretty(0));
+        };
+        Tree ne = SimplifyTerm(normalize_term(e));
+        TypeInference.type_inference(ne);
+        ne = SimplifyTerm(embed_missing_cmaps(ne));
+        if (Config.trace) {
+            System.out.println("Subterm normalized:");
             System.out.println(ne.pretty(0));
         };
         Tree qe = SimplifyTerm(inject_q(ne));
@@ -1122,38 +1413,126 @@ final public class Streaming extends AlgebraicOptimization {
         };
         Tree nv = new_var();
         match split(qe,nv,env) {
-        case pair(`a,`q):
+        case pair(`a,`h):
             if (Config.trace) {
                 System.out.println("After split:");
-                System.out.println(a.pretty(0)+"\n"+q.pretty(0));
-                System.out.println("After split (simplified):");
-                System.out.println(SimplifyTerm(a).pretty(0)+"\n"+SimplifyTerm(q).pretty(0));
+                System.out.println(a.pretty(0)+"\n"+h.pretty(0));
             };
-            Tree m = inference(q,env);
+            h = SimplifyTerm(h);
+            if (Config.trace) {
+                System.out.println("After split (simplified):");
+                System.out.println(SimplifyTerm(a).pretty(0)+"\n"+h.pretty(0));
+            };
+            Tree m = get_monoid(h,env);
             if (Config.trace)
-                System.out.println("monoid: "+m.pretty(0));
-            q = convert_to_algebra(SimplifyTerm(q));
+                System.out.println("Subterm monoid: "+m.pretty(0));
+            Tree q = convert_to_algebra(h);
             Tree tp = TypeInference.type_inference(q);
             if (Config.trace) {
-                System.out.println("Query type: "+tp);
+                System.out.println("Subterm type: "+tp);
                 System.out.println("Merge function over X and Y: ");
                 System.out.println(SimplifyTerm(merge(m,tp,#<X>,#<Y>)).pretty(0));
             };
             type_env.insert(nv.toString(),tp);
             Tree answer = answer(ne,nv,m);
             answer = subst(nv,answer,a);
+            answer = strip_state(ne,answer);
             answer = SimplifyTerm(convert_to_algebra(SimplifyTerm(answer)));
             if (Config.trace) {
                 System.out.println("Answer function:");
                 System.out.println(answer.pretty(0));
             };
             Tree zero = zero(m);
-            Tree mv = new_var();
-            Tree merge = convert_to_algebra(SimplifyTerm(merge(m,tp,#<nth(`mv,0)>,#<nth(`mv,1)>)));
-            Tree res = #<tuple(`zero,lambda(`mv,`merge),`q,lambda(`nv,`answer))>;
+            Tree my = new_var();
+            Tree merge = convert_to_algebra(SimplifyTerm(merge(m,tp,nv,my)));
+            Tree res = #<tuple(`zero,lambda(tuple(`nv,`my),`merge),`q,lambda(`nv,`answer))>;
+            if (Config.trace) {
+                System.out.println("Incremental subterm:");
+                System.out.println(res.pretty(0));
+            };
             return res;
         };
         throw new Error("Cannot generate incremental code: "+e);
+    }
+
+    private static Tree generate_incremental_code ( Tree e, Environment env ) {
+        if (!is_streaming(e))
+            return #<tuple(tuple(),lambda(tuple(tuple(),tuple()),tuple()),tuple(),lambda(tuple(),`e))>;
+        match e {
+        case call(stream,...):
+            Tree v = new_var();
+            return generate_code(#<cmap(lambda(`v,bag(`v)),`e)>,env);
+        case call(`f,...qs):
+            boolean is_monoid = false;
+            for ( Tree monoid: monoids )
+                match monoid {
+                case `aggr(`mtp,`plus,`zero,`unit):
+                    if (#<`aggr>.equals(f))
+                        is_monoid = true;
+                };
+            if (is_monoid)
+                fail;
+            Trees zs = #[], vs = #[], ws = #[], ms = #[], hs = #[], as = #[];
+            int i = 0;
+            for ( Tree q: qs )
+                match generate_incremental_code(q,env) {
+                case tuple(`z,lambda(tuple(`v,`w),`m),`h,lambda(_,`a)):
+                    zs = zs.append(z); hs = hs.append(h); as = as.append(a);
+                    vs = vs.append(v); ws = ws.append(w); ms = ms.append(m);
+                    i++;
+                };
+            return #<tuple(tuple(...zs),
+                           lambda(tuple(tuple(...vs),tuple(...ws)),tuple(...ms)),
+                           tuple(...hs),
+                           lambda(tuple(...vs),call(`f,...as)))>;
+        case record(...rs):
+            Trees zs = #[], vs = #[], ws = #[], ms = #[], hs = #[], as = #[];
+            int i = 0;
+            for ( Tree r: rs )
+                match r {
+                case bind(`k,`q):
+                    match generate_incremental_code(q,env) {
+                    case tuple(`z,lambda(tuple(`v,`w),`m),`h,lambda(_,`a)):
+                        zs = zs.append(z); hs = hs.append(h); as = as.append(a);
+                        vs = vs.append(v); ws = ws.append(w); ms = ms.append(m);
+                        i++;
+                    }
+                };
+            return #<tuple(tuple(...zs),
+                           lambda(tuple(tuple(...vs),tuple(...ws)),tuple(...ms)),
+                           tuple(...hs),
+                           lambda(tuple(...vs),record(...as)))>;
+        case tuple(...qs):
+            Trees zs = #[], vs = #[], ws = #[], ms = #[], hs = #[], as = #[];
+            int i = 0;
+            for ( Tree q: qs )
+                match generate_incremental_code(q,env) {
+                case tuple(`z,lambda(tuple(`v,`w),`m),`h,lambda(_,`a)):
+                    zs = zs.append(z); hs = hs.append(h); as = as.append(a);
+                    vs = vs.append(v); ws = ws.append(w); ms = ms.append(m);
+                    i++;
+                };
+            return #<tuple(tuple(...zs),
+                           lambda(tuple(tuple(...vs),tuple(...ws)),tuple(...ms)),
+                           tuple(...hs),
+                           lambda(tuple(...vs),tuple(...as)))>;
+        };
+        return generate_code(e,env);
+    }
+
+    /** bind the pattern variables to types */
+    private static void bind_pattern2type ( Tree pattern, Tree tp ) {
+        match pattern {
+        case tuple(...pl):
+            match tp {
+            case tuple(...tl):
+                int i = 0;
+                for ( Tree p: pl )
+                    bind_pattern2type(p,tl.nth(i++));
+                return;
+            }
+        };
+        TypeInference.type_env.insert(pattern.toString(),tp);
     }
 
     /** Convert a stream-based query to an incremental stream-based program.
@@ -1163,7 +1542,7 @@ final public class Streaming extends AlgebraicOptimization {
     public static Tree generate_incremental_code ( Tree e ) {
         match e {
         case repeat(lambda(`v,`u),`x,`n):
-            if (!is_streaming(x))
+            if (false && !is_streaming(x))
                 fail;
             if (!(n instanceof LongLeaf))
                 throw new Error("The repeat must have a constant repetition: "+n);
@@ -1174,68 +1553,40 @@ final public class Streaming extends AlgebraicOptimization {
             u = #<cmap(lambda(`nv,bag(nth(`nv,0))),`u)>;
             TypeInference.type_inference(u);
             repeat_environment = new Environment(v.toString(),#<union>,repeat_environment);
-            match generate_code(u,null) {
-            case tuple(`z,`m,`h,lambda(`s,`a)):
-                match generate_code(x,null) {
-                case tuple(`xz,`xm,`xh,lambda(`xs,`xa)):
-                    Tree state = new_var();
-                    Tree w = new_var();
-                    TypeInference.type_env.insert(state.toString(),TypeInference.type_inference(s));
-                    TypeInference.type_env.insert(w.toString(),TypeInference.type_inference(s));
-                    Tree hh = subst(v,xa,h);
-                    h = subst(v,a,h);
-                    Tree q = #<repeat(lambda(`s,cmap(lambda(`w,bag(tuple(`w,true))),
-                                                     apply(`m,tuple(`state,`h)))),
-                                      apply(`m,tuple(`state,`hh)),
-                                      `(nn-1))>;
-                    Tree xq = #<apply(`xm,tuple(`xs,`xh))>;
-                    a = subst(s,state,a);
-                    TypeInference.type_inference(a);
-                    Tree res = #<tuple(tuple(`xz,`z),
-                                       lambda(tuple(`xs,`state),tuple(`xq,`q)),
-                                       lambda(tuple(`xs,`state),`a))>;
-                    res = SimplifyTerm(res);
-                    Tree tp = TypeInference.type_inference(res);
-                    return res;
-                }
-            }
-        case repeat(lambda(`v,`u),`x,`n):
-            // when x is invariant (doesn't contain a stream source)
-            if (!(n instanceof LongLeaf))
-                throw new Error("wrong repeat: "+n);
-            int nn = (int)((LongLeaf)n).value();
-            if (nn < 1)
-                throw new Error("wrong repeat number: "+n);
-            Tree nv = new_var();
-            u = #<cmap(lambda(`nv,bag(nth(`nv,0))),`u)>;
-            TypeInference.type_inference(u);
-            repeat_environment = new Environment(v.toString(),#<union>,repeat_environment);
-            match generate_code(u,null) {
-            case tuple(`z,`m,`h,lambda(`s,`a)):
-                Tree state = new_var();
+            match generate_incremental_code(u,null) {
+            case tuple(`z,lambda(tuple(`v1,`v2),`m),`h,lambda(`s,`a)):
+                Tree deltaT = new_var();
                 Tree w = new_var();
-                TypeInference.type_env.insert(state.toString(),TypeInference.type_inference(s));
+                TypeInference.type_env.insert(deltaT.toString(),TypeInference.type_inference(s));
                 TypeInference.type_env.insert(w.toString(),TypeInference.type_inference(s));
-                Tree hh = subst(v,x,h);
-                h = subst(v,a,h);
-                Tree q = #<repeat(lambda(`s,cmap(lambda(`w,bag(tuple(`w,true))),
-                                                 apply(`m,tuple(`state,`h)))),
-                                  apply(`m,tuple(`state,`hh)),
+                Tree nm = subst(v1,deltaT,subst(v2,h,m));
+                Tree m0 = subst(v,x,h);
+                Tree q = #<repeat(lambda(`deltaT,cmap(lambda(`w,bag(tuple(`w,true))),`nm)),
+                                  `m0,
                                   `(nn-1))>;
-                a = subst(s,state,a);
-                TypeInference.type_inference(a);
-                Tree res = #<tuple(`z,
-                                   lambda(`state,`q),
-                                   lambda(`state,`a))>;
+                Tree res = #<incr(tuple(`z,`(unstreamify(x))),
+                                  lambda(tuple(`s,`v),tuple(apply(lambda(tuple(`v1,`v2),`m),tuple(`s,`q)),`a)),
+                                  lambda(tuple(`s,`v),`v))>;
                 res = SimplifyTerm(res);
-                Tree tp = TypeInference.type_inference(res);
+                if (Config.trace) {
+                    System.out.println("Incremental program:");
+                    System.out.println(res.pretty(0));
+                };
+                TypeInference.type_inference(res);
                 return res;
             }
         };
-        match generate_code(e,null) {
-        case tuple(`z,`m,`h,lambda(`v,`a)):
-            Tree q = SimplifyTerm(#<apply(`m,tuple(`v,`h))>);
-            Tree res = #<tuple(`z,lambda(`v,`q),lambda(`v,`a))>;
+        match generate_incremental_code(e,null) {
+        case tuple(`z,lambda(tuple(`v1,`v2),`m),`h,lambda(_,`a)):
+            Tree tp = TypeInference.type_inference(h);
+            bind_pattern2type(v1,tp);
+            Tree nm = SimplifyTerm(#<apply(lambda(`v2,`m),`h)>);
+            a = SimplifyTerm(a);
+            Tree res = #<incr(`z,lambda(`v1,`nm),lambda(`v1,`a))>;
+            if (Config.trace) {
+                System.out.println("Incremental program:");
+                System.out.println(res.pretty(0));
+            };
             TypeInference.type_inference(res);
             return res;
         };

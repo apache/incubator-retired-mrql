@@ -219,6 +219,14 @@ final public class SystemFunctions {
         return (s.contains(e)) ? true_value : false_value;
     }
 
+    public static MRData elem ( Bag s ) {
+        s.materialize();
+        Iterator<MRData> it = s.iterator();
+        if (it.hasNext())
+            return it.next();
+        throw new Error("method elem was applied on an empty bag");
+    }
+
     public static MR_long count ( Bag s ) {
         if (s.materialized())
             return new MR_long(s.size());

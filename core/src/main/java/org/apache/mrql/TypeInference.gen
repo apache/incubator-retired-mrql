@@ -543,6 +543,9 @@ public class TypeInference extends Translator {
         case let(`p,`u,`b):
             bind_pattern_type(p,type_inference2(u));
             return type_inference2(b);
+        case Let(`p,`u,`b):
+            bind_pattern_type(p,type_inference2(u));
+            return type_inference2(b);
         case case(`u,...cs):
             Tree tp = type_inference2(u);
             Trees ts = #[];
@@ -667,10 +670,12 @@ public class TypeInference extends Translator {
             return type_inference2(b);
         case typed(null,`tp):
             return tp;
-        case typed(`f(...),`tp):
-            if (f.equals("tagged_union") || f.equals("union_value"))
-                return tp;
-            else fail
+        case typed(tagged_union(`n,`u),`tp):
+            type_inference2(u);
+            return tp;
+        case typed(union_value(`u),`tp):
+            type_inference2(u);
+            return tp;
         case typed(`x,`tp):
             if (tp.is_variable() && !tp.equals(#<string>)
                  && MRContainer.type_code(tp.toString()) >= 0) {
@@ -927,9 +932,9 @@ public class TypeInference extends Translator {
             case `T(tuple(`kx,`a)):
                 if (!is_collection(T))
                     type_error(e,"Wrong coGroup left operand: "+print_query(x));
-                match xtp {
+                match ytp {
                 case `S(tuple(`ky,`b)):
-                    if (!is_collection(T))
+                    if (!is_collection(S))
                         type_error(e,"Wrong coGroup right operand: "+print_query(y));
                     if (unify(kx,ky) == null)
                         type_error(e,"incompatible keys in coGroup: "+print_query(e));
@@ -1206,6 +1211,8 @@ public class TypeInference extends Translator {
             return rt;
         case call(inv,`x):
             return type_inference(x);
+        case incr(...s):
+            return type_inference(#<tuple(...s)>);
         case call(plus,`x,`y):
             Tree tx = type_inference2(x);
             Tree ty = type_inference2(y);
@@ -1250,6 +1257,14 @@ public class TypeInference extends Translator {
                 coerce(tx,t1,((Node)e).children.tail);
                 return #<bool>;
             };
+        case call(elem,`x):
+            Tree tp = type_inference2(x);
+            match tp {
+            case `T(`t):
+                if (is_collection(T))
+                    return t;
+            };
+            type_error(e,"method elem must be applied to a collection: "+tp);
         case call(`f,`x,`y):
             if (! #[eq,neq,lt,leq,gt,geq].member(f))
                 fail;

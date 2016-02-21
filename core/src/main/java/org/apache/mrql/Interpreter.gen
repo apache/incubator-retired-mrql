@@ -72,6 +72,8 @@ public class Interpreter extends TypeInference {
 
     /** insert a new global variable binding visible to all nodes */
     public final static void new_distributed_binding ( final String var, final MRData value ) {
+        if (value == null)
+            return;
         new_global_binding(var,value);
         if (Config.hadoop_mode) {   // insert the binding in the hadoop configuration
             String gvs = Plan.conf.get("mrql.global.vars");
@@ -222,6 +224,16 @@ public class Interpreter extends TypeInference {
         return b.toString();
     }
 
+    /** implements the DataSetCollect operation */
+    public static Bag dataSetCollect ( String var ) {
+        MRData val = lookup_global_binding(var);
+        if (val instanceof Bag)
+            return (Bag)val;
+        else if (val instanceof MR_dataset)
+            return new Bag(((MR_dataset)val).dataset().take(Integer.MAX_VALUE));
+        throw new Error("Cannot collect the MRQL value into a bag: "+val);
+    }
+
     public static long pre_trace ( String msg ) {
         tab_count += 3;
         trace_count++;
@@ -302,6 +314,14 @@ public class Interpreter extends TypeInference {
             return ((Tuple)evalE(x,env)).set((int)n.longValue(),evalE(v,env),evalE(ret,env));
         case materialize(`u):
             return MapReduceAlgebra.materialize(evalE(u,env));
+        case let(`v,DataSetCollect(`s),`body):
+            MRData x = evalE(s,env);
+            if (x instanceof MR_dataset)
+                x = new Bag(((MR_dataset)x).dataset().take(Integer.MAX_VALUE));
+            else if (x instanceof Bag)
+                ((Bag)x).materialize();
+            new_distributed_binding(v.toString(),x);
+            return evalE(body,new Environment(v.toString(),x,env));
         case let(`v,`u,`body):
             MRData x = evalE(u,env);
             if (x instanceof Bag)
@@ -414,8 +434,7 @@ public class Interpreter extends TypeInference {
                 return b;
             } catch (Exception ex) { throw new Error(ex); }
         case DataSetCollect(`s):
-            DataSet ds = Evaluator.evaluator.eval(s,env,"-");
-            return new Bag(ds.take(Integer.MAX_VALUE));
+            return dataSetCollect(s.toString());
         case dataset_size(`x):
             return new MR_long(Plan.size(Evaluator.evaluator.eval(x,env,"-")) / (1024*1024));
         case synchronize(`peer,`b):

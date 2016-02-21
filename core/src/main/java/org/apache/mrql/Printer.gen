@@ -398,8 +398,17 @@ public class Printer {
             return f+" ("+v+"):\n"+tab(n+3)+"init: "+print_plan(s,n+9,true)+"\n"
                    +tab(n+3)+"step: "+print_plan(b,n+9,true);
         case Let(`v,`u,`body):
-            return "let "+v+" = "+print_plan(u,n+10+v.toString().length(),pv)+"\n"
+            return "Let "+v+" = "+print_plan(u,n+10+v.toString().length(),pv)+"\n"
                    +tab(n)+print_plan(body,n,pv);
+        case let(`v,`u,`body):
+            if (print_plan(u,0,pv).length() > 0)
+                return "let "+v+" = "+print_plan(u,n+10+v.toString().length(),pv)+"\n"
+                    +tab(n)+print_plan(body,n,pv);
+            else return print_plan(body,n,pv);
+        case lambda(tuple(...vs),`b):
+            return "lambda "+vs+":\n"+tab(n+3)+print_plan(b,n+9,true);
+        case lambda(`v,`b):
+            return "lambda ("+v+"):\n"+tab(n+3)+print_plan(b,n+9,true);
         case If(_,`x1,If(_,`x2,If(_,`x3,`x4))):
             return "Choice 1: "+print_plan(x1,n+10,pv)+"\n"
                    +tab(n)+"Choice 2: "+print_plan(x2,n+10,pv)+"\n"
@@ -412,6 +421,25 @@ public class Printer {
         case If(`c,`x,`y):
             return "Choice 1: "+print_plan(x,n+10,pv)+"\n"
                    +tab(n)+"Choice 2: "+print_plan(y,n+10,pv);
+        case tuple():
+            return "( )";
+        case tuple(...ts):
+            String s = "( ";
+            if (print_plan(ts.head(),0,pv).length() > 0)
+                s += print_plan(ts.head(),n+2,pv)+"\n";
+            for ( Tree t: ts.tail() )
+                if (print_plan(t,0,pv).length() > 0)
+                    s += tab(n+2)+print_plan(t,n+2,pv)+"\n";
+            if (s.equals("( "))
+                return "";
+            else return s+tab(n)+")";
+        case incr(`z,lambda(tuple(...s),`h),lambda(tuple(...t),`a)):
+            return "Incremental:\n"+tab(n+3)+"State Transformer "+s+": "+print_plan(h,n+21+s.toString().length(),true)+"\n"
+                +tab(n+3)+"Answer "+t+": "+print_plan(a,n+10+t.toString().length(),true);
+        case incr(`z,lambda(`s,`h),lambda(`t,`a)):
+            return "Incremental:\n"+tab(n+3)+"Zero: "+print_plan(z,n+9,false)+"\n"
+                +tab(n+3)+"State Transformer ("+s+"): "+print_plan(h,n+23+s.toString().length(),true)+"\n"
+                +tab(n+3)+"Answer ("+t+"): "+print_plan(a,n+12+t.toString().length(),true);
         case `f(...as):
             String s = "";
             for (Tree a: as) {

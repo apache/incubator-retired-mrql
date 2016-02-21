@@ -624,8 +624,7 @@ final public class Compiler extends Translator {
                    +compileF(superstep)+","+compileE(state)+","+o+","
                    +"new Bag[]{"+ds.substring(1)+"})";
         case DataSetCollect(`s):
-            return "(new Bag(((MR_dataset)(Interpreter.lookup_global_binding(\""+s.toString()
-                +"\"))).dataset().take(Integer.MAX_VALUE)))";
+            return "Interpreter.dataSetCollect(\""+s+"\")";
         case `v:
             if (v.is_variable())
                 return v.toString();

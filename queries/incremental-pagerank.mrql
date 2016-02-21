@@ -17,12 +17,12 @@
  */
 
 // preprocessing: for each node, group its outgoing links into a bag
-graph = select (key,n#1)
-          from n in stream(binary,"tmp/graph.bin")
-         group by key: n#0;
+graph = select (src,dst)
+          from (src,dst) in stream(binary,"tmp/graph.bin")
+         group by src;
 
-store graph_size := count(select distinct n#0
-                            from n in source(binary,"tmp/graph.bin"));
+store graph_size := count(select distinct s
+                            from (s,d) in source(binary,"tmp/graph.bin"));
 
 // damping factor
 factor = 0.85;
@@ -31,9 +31,11 @@ incr repeat nodes = select < id: key, rank: 1.0/graph_size as double, adjacent: 
                       from (key,al) in graph
        step select ( < id: m.id, rank: n.rank, adjacent: m.adjacent >, true )
               from n in (select < id: key,
-                                  rank: (1-factor)/graph_size+factor*sum(select x.rank from x in c) >
+                                  rank: (1-factor)/graph_size+factor*sum(rank) >
                            from c in ( select < id: a, rank: n.rank/count(n.adjacent) >
-                                         from n in nodes, a in n.adjacent )
+                                         from n in nodes,
+                                              a in n.adjacent ),
+                                rank = c.rank
                           group by key: c.id),
                    m in nodes
              where n.id = m.id
