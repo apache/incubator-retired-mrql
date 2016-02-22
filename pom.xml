@@ -20,7 +20,7 @@
 
   <groupId>org.apache.mrql</groupId>
   <artifactId>mrql-parent</artifactId>
-  <version>0.9.6-incubating</version>
+  <version>0.9.6-incubating-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache MRQL parent POM</name>
   <description>Apache MRQL is a query processing and optimization system for large-scale, distributed data analysis, built on top of Apache Hadoop, Hama, Spark, and Flink</description>
@@ -127,7 +127,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
-        <version>2.2</version>
+        <version>2.5.3</version>
         <configuration>
           <mavenExecutorId>forked-path</mavenExecutorId>
           <autoVersionSubmodules>true</autoVersionSubmodules>
@@ -300,7 +300,7 @@
   <scm>
     <connection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-mrql.git</connection>
     <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-mrql.git</developerConnection>
-    <url>https://git-wip-us.apache.org/repos/asf?p=incubator-mrql.git</url>
+    <url>https://git-wip-us.apache.org/repos/asf/incubator-mrql.git</url>
   </scm>
 
   <issueManagement>
