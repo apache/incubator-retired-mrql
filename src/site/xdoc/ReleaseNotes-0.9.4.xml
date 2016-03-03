@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties></properties>
+  <title>Release Notes</title>
+  <body>
+    <section name="Release Notes - Apache MRQL 0.9.4-incubating"></section>
+
+<h3>New Features</h3>
+<ul>
+<li><b>[MRQL-45]</b> Add support for Apache Flink</li>
+<li><b>[MRQL-49]</b> Add Flink support info on the project web site</li>
+<li><b>[MRQL-63]</b> Add support for MRQL streaming in spark streaming mode</li>
+</ul>
+<h3>Bugs</h3>
+<ul>
+<li><b>[MRQL-41]</b> Post-release improvements</li>
+<li><b>[MRQL-42]</b> Fix bug in XML projections</li>
+<li><b>[MRQL-44]</b> Fix the map-reduce join for a complex reducer on map-reduce mode</li>
+<li><b>[MRQL-46]</b> MRQL does not build with Java 8</li>
+<li><b>[MRQL-47]</b> Fix various bugs for the Flink evaluation mode</li>
+<li><b>[MRQL-48]</b> Fix global variable bindings in Spark and Flink modes</li>
+<li><b>[MRQL-50]</b> Fix result dumping to a text file in Flink mode</li>
+<li><b>[MRQL-51]</b> Support for Spark 1.1.0</li>
+<li><b>[MRQL-52]</b> Fix Flink evaluation mode to pass all Junit tests</li>
+<li><b>[MRQL-53]</b> Fix processing of directories of text files in MapReduce mode</li>
+<li><b>[MRQL-58]</b> Fix config file and shell run scripts to support multiple HDFS users</li>
+<li><b>[MRQL-60]</b> Fix building dependencies for hadoop 1.x</li>
+<li><b>[MRQL-61]</b> Fix bug on select over union queries</li>
+<li><b>[MRQL-62]</b> Fix Map-Reduce mode on MultipleInput sources</li>
+<li><b>[MRQL-67]</b> Fix maven build errors for JDK 1.8</li>
+</ul>
+<h3>Improvements</h3>
+<ul>
+<li><b>[MRQL-43]</b> Add support for tracing</li>
+<li><b>[MRQL-54]</b> Adjust the split size of a map-reduce input file based on the number of requested nodes</li>
+<li><b>[MRQL-55]</b> Add support for Hadoop Sequence input format in flink mode</li>
+<li><b>[MRQL-56]</b> Improve total aggregations and repetitions with shared results in Flink mode</li>
+<li><b>[MRQL-57]</b> Make floating-point literals to be double instead of float</li>
+</ul>
+<h3>Tasks</h3>
+<ul>
+<li><b>[MRQL-64]</b> Prepare for 0.9.4 release</li>
+</ul>
+  </body>
+</document>

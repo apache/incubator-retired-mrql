@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties></properties>
+  <title>Release Notes</title>
+  <body>
+    <section name="Release Notes - Apache MRQL 0.9.6-incubating"></section>
+
+<h3>New Features</h3>
+<ul>
+<li><b>[MRQL-72]</b> Add support for stream input on TCP sockets</li>
+<li><b>[MRQL-79]</b> Add support for incremental query processing</li>
+</ul>
+<h3>Bugs</h3>
+<ul>
+<li><b>[MRQL-67]</b> Fix maven build errors for JDK 1.8</li>
+<li><b>[MRQL-69]</b> Allow escaped quotes in JSON strings</li>
+<li><b>[MRQL-73]</b> Set the max number of tasks in Spark mode</li>
+<li><b>[MRQL-76]</b> Change the mrql.flink shell script to work with Flink 0.9.0</li>
+<li><b>[MRQL-78]</b> Turn off Flink log INFO messages</li>
+<li><b>[MRQL-81]</b> Fix the coercion of persistent collections to in-memory bags</li>
+<li><b>[MRQL-82]</b> Fix the split size calculation in map-reduce mode</li>
+</ul>
+<h3>Improvements</h3>
+<ul>
+<li><b>[MRQL-70]</b> Update Flink version to 0.8.1</li>
+<li><b>[MRQL-74]</b> Update Flink version to 0.9.0</li>
+<li><b>[MRQL-75]</b> Add support for Hama v0.7 on Yarn</li>
+<li><b>[MRQL-77]</b> Support single Flink jobs on YARN</li>
+<li><b>[MRQL-80]</b> Support Flink 0.10</li>
+<li><b>[MRQL-84]</b> Improve performance of Incremental MRQL</li>
+</ul>
+<h3>Tasks</h3>
+<ul>
+<li><b>[MRQL-68]</b> GitHub integration for MRQL</li>
+<li><b>[MRQL-71]</b> Add google analytics tracking and bring the MRQL web site up-to-date</li>
+<li><b>[MRQL-85]</b> Prepare for the 0.9.6 release</li>
+</ul>
+  </body>
+</document>
