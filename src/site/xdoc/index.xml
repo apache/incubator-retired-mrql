@@ -32,6 +32,15 @@ xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd
 <li>in Flink mode using Apache Flink.</li>
 </ol>
 The MRQL query language is powerful enough to express most common data analysis tasks over many forms of raw in-situ data, such as XML and JSON documents, binary files, and CSV documents. MRQL is more powerful than other current high-level MapReduce languages, such as Hive and PigLatin, since it can operate on more complex data and supports more powerful query constructs, thus eliminating the need for using explicit MapReduce code. With MRQL, users are able to express complex data analysis tasks, such as PageRank, k-means clustering, matrix factorization, etc, using SQL-like queries exclusively, while the MRQL query processing system is able to compile these queries to efficient Java code.
+    <section name="Download MRQL"></section>
+<p>
+The latest stable release MRQL-0.9.6-incubating can be <a href="http://www.apache.org/dyn/closer.cgi/incubator/mrql/">downloaded from the ASF</a>.
+You can <a href="https://www.apache.org/info/verification.html">verify</a> the integrity of the downloaded files using the SHA1 or MD5 signatures.
+The signatures should be matched against the <a href="https://www.apache.org/dist/incubator/mrql/KEYS">KEYS file</a>.
+Older releases may be found in <a href="https://archive.apache.org/dist/incubator/mrql">the archives</a>.
+Detailed installation instructions can be found at the <a href="getting_started.html">Getting Started page</a>.
+</p>
+
     <section name="News"></section>
     <p>
       <ul>
