@@ -99,7 +99,8 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
 			ContextEnvironment ce = (ContextEnvironment)ExecutionEnvironment.getExecutionEnvironment();
 			List<URL> jars = Arrays.asList(flink_jar,new URL("file://"+Plan.conf.get("mrql.jar.path")));
 			flink_env = new ContextEnvironment(ce.getClient(),jars,new ArrayList<URL>(),
-                                                           FlinkEvaluator.class.getClassLoader(),true);
+                                                           FlinkEvaluator.class.getClassLoader(),
+                                                           Plan.new_path(Plan.conf));
 			flink_env.setParallelism(Config.nodes);
 		    } else flink_env = ExecutionEnvironment.createRemoteEnvironment(master_host,master_port,
 					     Config.nodes,flink_jar.toURI().getPath(),Plan.conf.get("mrql.jar.path"));
@@ -442,24 +443,14 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
     private static DataSet<FData> groupBy ( DataSet<FData> s, Tree combine_fnc, Tree reduce_fnc ) {
         final Function combiner = (combine_fnc == null) ? null : evalF(combine_fnc,null);
         final Function reducer = evalF(reduce_fnc,null);
-        GroupReduceOperator<FData,FData> ro = s.groupBy(new KeySelector<FData,FData>() {
-                @Override
-                public FData getKey ( FData value ) {
-                    return new FData(((Tuple)value.data()).first());
-                }
-            }).reduceGroup(new RichGroupReduceFunction<FData,FData>() {
-                @Override
-                public void reduce ( final Iterable<FData> values, Collector<FData> out ) {
-                    Bag s = new Bag();
-                    MRData key = null;
-                    for ( FData value: values ) {
-                        Tuple t = (Tuple)value.data();
-                        key = t.first();
-                        s.add(t.second());
-                    };
-                    for ( MRData v: (Bag)reducer.eval(new Tuple(key,s)) )
-                        out.collect(new FData(v));
-                }
+        DataSet<FData> ds = s;
+        if (combiner != null) {
+            ds = ds.groupBy(new KeySelector<FData,FData>() {
+                    @Override
+                    public FData getKey ( FData value ) {
+                        return new FData(((Tuple)value.data()).first());
+                    }
+            }).combineGroup(new RichGroupCombineFunction<FData,FData>() {
                 @Override
                 public void combine ( Iterable<FData> values, Collector<FData> out ) throws Exception {
                     Bag c = null;
@@ -473,35 +464,42 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
                     for ( MRData x: c )
                         out.collect(new FData(new Tuple(key,x)));
                 }
-            });
-        ro.setCombinable(combiner != null);
-        return ro;
+           });
+        };
+        return ds.groupBy(new KeySelector<FData,FData>() {
+                @Override
+                public FData getKey ( FData value ) {
+                    return new FData(((Tuple)value.data()).first());
+                }
+            }).reduceGroup(new GroupReduceFunction<FData,FData>() {
+                @Override
+                public void reduce ( final Iterable<FData> values, Collector<FData> out ) {
+                    Bag s = new Bag();
+                    MRData key = null;
+                    for ( FData value: values ) {
+                        Tuple t = (Tuple)value.data();
+                        key = t.first();
+                        s.add(t.second());
+                    };
+                    for ( MRData v: (Bag)reducer.eval(new Tuple(key,s)) )
+                        out.collect(new FData(v));
+                }
+           });
     }
 
     /* group-by and sort s and then reduce by reduce_fnc (optional: use combine_fnc) */
     private static DataSet<FData> sortBy ( DataSet<FData> s, Tree combine_fnc, Tree reduce_fnc ) {
         final Function combiner = (combine_fnc == null) ? null : evalF(combine_fnc,null);
         final Function reducer = evalF(reduce_fnc,null);
-        GroupReduceOperator<Tuple2<FData,FData>,FData> ro
-            = s.map(new RichMapFunction<FData,Tuple2<FData,FData>>() {
-                    @Override
-                    public Tuple2<FData,FData> map ( FData value ) {
-                        Tuple t = (Tuple)value.data();
-                        return new Tuple2<FData,FData>(new FData(t.first()),new FData(t.second()));
-                    }
-                }).groupBy(0).sortGroup(0,Order.ASCENDING)
-              .reduceGroup(new RichGroupReduceFunction<Tuple2<FData,FData>,FData>() {
-                    @Override
-                    public void reduce ( final Iterable<Tuple2<FData,FData>> values, Collector<FData> out ) {
-                        Bag s = new Bag();
-                        MRData key = null;
-                        for ( Tuple2<FData,FData> value: values ) {
-                            key = value.f0.data();
-                            s.add(value.f1.data());
-                        };
-                        for ( MRData v: (Bag)reducer.eval(new Tuple(key,s)) )
-                            out.collect(new FData(new Tuple(key,v)));
-                    }
+        DataSet<Tuple2<FData,FData>> ds = s.map(new RichMapFunction<FData,Tuple2<FData,FData>>() {
+                @Override
+                public Tuple2<FData,FData> map ( FData value ) {
+                    Tuple t = (Tuple)value.data();
+                    return new Tuple2<FData,FData>(new FData(t.first()),new FData(t.second()));
+                }
+            });
+        if (combiner != null) {
+            ds = ds.groupBy(0).combineGroup(new GroupCombineFunction<Tuple2<FData,FData>,Tuple2<FData,FData>>() {
                     @Override
                     public void combine ( Iterable<Tuple2<FData,FData>> values,
                                           Collector<Tuple2<FData,FData>> out ) throws Exception {
@@ -516,9 +514,22 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
                         for ( MRData x: c )
                             out.collect(new Tuple2<FData,FData>(key,new FData(x)));
                     }
-                  });
-        ro.setCombinable(combiner != null);
-        return ro;
+                });
+        };
+        return ds.groupBy(0).sortGroup(0,Order.ASCENDING)
+            .reduceGroup(new RichGroupReduceFunction<Tuple2<FData,FData>,FData>() {
+                    @Override
+                    public void reduce ( final Iterable<Tuple2<FData,FData>> values, Collector<FData> out ) {
+                        Bag s = new Bag();
+                        MRData key = null;
+                        for ( Tuple2<FData,FData> value: values ) {
+                            key = value.f0.data();
+                            s.add(value.f1.data());
+                        };
+                        for ( MRData v: (Bag)reducer.eval(new Tuple(key,s)) )
+                            out.collect(new FData(new Tuple(key,v)));
+                    }
+               });
     }
 
     public static final class join_key implements KeySelector<FData,FData> {
@@ -887,6 +898,9 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
                 if (x != null)
                     if (x instanceof MR_flink)
                         return ((MR_flink)x).flink();
+                    else if (x instanceof MR_dataset)
+                        return dataset(new Bag(((MR_dataset)x).dataset.take(Integer.MAX_VALUE)))
+			    .map(new restore_global_functions());
                     else new Error("Variable "+v+" is of type: "+x);
                 throw new Error("Variable "+v+" is not bound");
             };

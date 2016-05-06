@@ -27,6 +27,8 @@ final public class Environment implements Serializable {
     public MRData value;
     public Environment next;
 
+    Environment () {}
+
     Environment ( String n, MRData v, Environment next ) {
         name = n;
         value = v;
@@ -49,12 +51,31 @@ final public class Environment implements Serializable {
         return s+" ]";
     }
 
-    private void writeObject(ObjectOutputStream out) throws IOException {
-        out.defaultWriteObject();
+    final static MRData one = new MR_byte(1);
+
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+        if (value == null || value instanceof Lambda) {
+            out.writeUTF("");
+            one.write(out);
+        } else {
+            out.writeUTF(name);
+            value.write(out);
+        };
+        if (next == null)
+            out.writeByte(0);
+        else {
+            out.writeByte(1);
+            next.writeObject(out);
+        }
     }
 
-    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-        in.defaultReadObject();
+    private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
+        name = in.readUTF();
         name = Tree.add(name);
+        value = MRContainer.read(in);
+        if ( in.readByte() > 0 ) {
+            next = new Environment();
+            next.readObject(in);
+        } else next = null;
     }
 }

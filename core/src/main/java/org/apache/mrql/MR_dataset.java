@@ -35,7 +35,7 @@ final public class MR_dataset extends MRData {
     public DataSet dataset () { return dataset; }
 
     public void write ( DataOutput out ) throws IOException {
-        throw new Error("DataSets are not serializable");
+        new Bag(dataset.take(Integer.MAX_VALUE)).write(out);
     }
 
     public void readFields ( DataInput in ) throws IOException {

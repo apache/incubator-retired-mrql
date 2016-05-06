@@ -593,7 +593,7 @@ public class Interpreter extends TypeInference {
                 if (s != null)
                     try {
                         Tree ft = Tree.parse(s);
-                        TopLevel.store(f.toString(),ft);
+                        //TopLevel.store(f.toString(),ft);
                         fnc = evalE(ft,env);
                         new_global_binding(f.toString(),fnc);
                     } catch (Exception ex) {

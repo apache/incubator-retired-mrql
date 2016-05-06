@@ -93,8 +93,8 @@ SPARK_EXECUTOR_CORES=1
 SPARK_EXECUTOR_MEMORY=1G
 
 
-# Optional: Flink configuration. Supports versions 0.10.1 and 0.10.2
-FLINK_VERSION=0.10.2
+# Optional: Flink configuration. Supports version 1.0.2
+FLINK_VERSION=1.0.2
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
 # number of slots per TaskManager (typically, the number of CPUs per machine)
