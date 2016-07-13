@@ -51,7 +51,11 @@ if [[ ($MRQL_JAR -nt $FULL_JAR) ]]; then
 fi
 
 if [ "$1" == "-local" ] || [ "$1" == "-dist" ]; then
-   $HADOOP_HOME/bin/hadoop --config $HADOOP_CONFIG jar $FULL_JAR org.apache.mrql.Main $*
+    if [ "$HADOOP_CONFIG" == "" ]; then
+        $HADOOP_HOME/bin/hadoop jar $FULL_JAR org.apache.mrql.Main $*
+    else
+        $HADOOP_HOME/bin/hadoop --config $HADOOP_CONFIG jar $FULL_JAR org.apache.mrql.Main $*
+    fi
 else
    $JAVA_HOME/bin/java -classpath "$FULL_JAR:$HADOOP_JARS" org.apache.mrql.Main $*
 fi

@@ -120,16 +120,7 @@ else if [[ -d ${SPARK_HOME}/lib ]]; then
 fi
 fi
 
-if [[ -f ${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar ]]; then
-   # hadoop 2.x (YARN)
-   HADOOP_JARS=${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/hadoop-annotations-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/log4j-1.2.17.jar:${HADOOP_HOME}/share/hadoop/common/lib/commons-cli-1.2.jar:${HADOOP_HOME}/share/hadoop/common/lib/commons-logging-1.1.3.jar:${HADOOP_HOME}/share/hadoop/common/lib/guava-11.0.2.jar:${HADOOP_HOME}/share/hadoop/common/lib/commons-collections-3.2.1.jar
-else if [[ -f ${HADOOP_HOME}/hadoop-core-${HADOOP_VERSION}.jar ]]; then
-   # hadoop 1.x or 0.20.x
-   HADOOP_JARS=${HADOOP_HOME}/hadoop-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/lib/commons-logging-1.1.1.jar:${HADOOP_HOME}/lib/log4j-1.2.15.jar:${HADOOP_HOME}/lib/commons-cli-1.2.jar
-else
-   echo "*** Cannot find the hadoop jar files. Need to edit mrql-env.sh"; exit -1
-fi
-fi
+HADOOP_JARS=`$HADOOP_HOME/bin/hadoop classpath`
 
 if [[ !(-f ${CUP_JAR}) ]]; then
    echo "*** Cannot find the parser generator CUP jar file. Need to edit mrql-env.sh"; exit -1
