@@ -47,7 +47,7 @@
     <hadoop.version>1.2.1</hadoop.version>
     <yarn.version>2.7.1</yarn.version>
     <hama.version>0.7.0</hama.version>
-    <spark.version>1.6.0</spark.version>
+    <spark.version>1.6.2</spark.version>
     <scala.version>2.10</scala.version>
     <flink.version>1.0.2</flink.version>
     <skipTests>true</skipTests>

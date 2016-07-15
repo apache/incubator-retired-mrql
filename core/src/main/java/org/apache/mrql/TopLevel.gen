@@ -321,7 +321,7 @@ final public class TopLevel extends Interpreter {
             Evaluator.evaluator.initialize_query();
             final Tree qt = query_type;
             final String file = s.stringValue();
-            Evaluator.evaluator.streaming(plan,null,new Function(){
+            Evaluator.evaluator.streaming(plan,null,null,new Function(){
                     long i = 0;
                     public MRData eval ( final MRData data ) {
                         try {
@@ -342,7 +342,7 @@ final public class TopLevel extends Interpreter {
             Evaluator.evaluator.initialize_query();
             final Tree qt = query_type;
             final String file = s.stringValue();
-            Evaluator.evaluator.streaming(plan,null,new Function(){
+            Evaluator.evaluator.streaming(plan,null,null,new Function(){
                     long i = 0;
                     public MRData eval ( final MRData data ) {
                         try {
@@ -365,27 +365,10 @@ final public class TopLevel extends Interpreter {
             case incr(`zero,lambda(`state,`merge),lambda(_,`answer)):
                 final Tree qt = make_persistent_type(query_type);
                 MRData z = evalE(zero,null);
-                final Environment env = bind_list(state,z,null);
-                final boolean incr_test = false;
-                if (incr_test) {
-                    // for code testing only
-                    long t = System.currentTimeMillis();
-                    Environment nenv = bind_list(state,Streaming.unstreamify(merge),env);
-                    for ( Environment ev = nenv; ev != null; ev = ev.next )
-                        if (ev.value instanceof MR_dataset) {
-                            DataSet ds = ((MR_dataset)ev.value).dataset();
-                            List<MRData> vals = ds.take(Config.max_bag_size_print);
-                            System.out.println(ev.name+" = "+vals.size()+ " "+vals);
-                        };
-                    MRData a = Evaluator.evaluator.evalE(answer,nenv);
-                    System.out.println(print(a,qt));
-                    if (!Config.quiet_execution)
-                        System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
-                    return;
-                };
+                final Environment env =bind_list(state,z,null);
                 final Tree ans = answer;
                 merge = Streaming.streamify(merge);
-                Evaluator.evaluator.streaming(#<lambda(`state,`merge)>,env,
+                Evaluator.evaluator.streaming(#<lambda(`state,`merge)>,env,null,
                    new Function() {
                         public MRData eval ( final MRData state ) {
                             MRData a = Evaluator.evaluator.evalE(ans,env);

@@ -32,12 +32,11 @@ public class TypeInference extends Translator {
 
     public static Tree make_persistent_type ( Tree tp ) {
         match tp {
-        case `f(...al):
-            Trees bs = #[];
-            for ( Tree a: al )
-                bs = bs.append(make_persistent_type(a));
-            String g = persistent_collection(f);
-            return #<`g(...bs)>;
+        case `T(`t):
+            if (!is_collection(T))
+                fail;
+            String S = persistent_collection(T);
+            return #<`S(`t)>;
         };
         return tp;
     }
@@ -1200,6 +1199,32 @@ public class TypeInference extends Translator {
             };
         case cstep(`x):  // used in QueryPlan for closure
             return type_inference(x);
+        case outerMerge(lambda(`v,`b),`s,`d):
+            Tree ts = type_inference(s);
+            if (unify(type_inference(d),ts) == null)
+                type_error(e,"Wrong outerMerge");
+            match ts {
+            case `S(tuple(`k,`tp)):
+                if (!is_collection(S))
+                    fail;
+                type_env.insert(v.toString(),#<tuple(`tp,`tp)>);
+                type_inference(b);
+                return ts;
+            };
+            type_error(e,"Wrong OuterMerge");
+        case rightOuterMerge(lambda(`v,`b),`s,`d):
+            Tree ts = type_inference(s);
+            if (unify(type_inference(d),ts) == null)
+                type_error(e,"Wrong RightOuterMerge");
+            match ts {
+            case `S(tuple(`k,`tp)):
+                if (!is_collection(S))
+                    fail;
+                type_env.insert(v.toString(),#<tuple(`tp,`tp)>);
+                type_inference(b);
+                return ts;
+            };
+            type_error(e,"Wrong rightOuterMerge");
         case if(`p,`x,`y):
             if (unify(type_inference2(p),#<bool>) == null)
                 type_error(e,"Expected a boolean predicate in if-then-else: "+print_query(p));

@@ -932,17 +932,21 @@ final public class Streaming extends AlgebraicOptimization {
     }
 
     /** Return the merge function (over X and Y) of the monoid m; type is used for key equality */
-    private static Tree merge ( Tree m, Tree type, Tree X, Tree Y ) {
+    private static Tree merge ( Tree m, Tree type, Tree X, Tree Y, boolean first ) {
         match m {
         case `gb(`n):
             if (! #[groupBy,orderBy].member(#<`gb>) )
                 fail;
             match type {
             case `T(tuple(`keytp,`tp)):
-                if (unique_key(keytp)) {
+                if (first) {
+                    Tree nv = new_var();
+                    Tree mb = merge(n,tp,#<nth(`nv,0)>,#<nth(`nv,1)>,false);
+                    return #<outerMerge(lambda(`nv,`mb),`X,`Y)>;
+                } else if (unique_key(keytp)) {
                     Tree vx = new_var();
                     Tree vy = new_var();
-                    Tree v = merge(n,tp,#<nth(call(elem,`vx),1)>,#<nth(call(elem,`vy),1)>);
+                    Tree v = merge(n,tp,#<nth(call(elem,`vx),1)>,#<nth(call(elem,`vy),1)>,false);
                     if (is_persistent_collection(T)) {
                         X = #<Collect(`X)>;
                         Y = #<Collect(`Y)>;
@@ -961,7 +965,7 @@ final public class Streaming extends AlgebraicOptimization {
                 Tree vy = new_var();
                 Tree mx = new_var();
                 Tree my = new_var();
-                Tree mb = merge(n,tp,#<nth(`vx,1)>,#<nth(`vy,1)>);
+                Tree mb = merge(n,tp,#<nth(`vx,1)>,#<nth(`vy,1)>,false);
                 Tree b = #<cmap(lambda(`vx,cmap(lambda(`vy,bag(tuple(nth(`vx,0),`mb))),
                                                 `my)),
                                 `mx)>;
@@ -980,7 +984,7 @@ final public class Streaming extends AlgebraicOptimization {
             Trees bs = #[ ];
             int i = 0;
             for ( Tree a: ms ) {
-                bs = bs.append(merge(a,tps.nth(i),#<nth(`X,`i)>,#<nth(`Y,`i)>));
+                bs = bs.append(merge(a,tps.nth(i),#<nth(`X,`i)>,#<nth(`Y,`i)>,first));
                 i++;
             };
             return #<tuple(...bs)>;
@@ -992,7 +996,82 @@ final public class Streaming extends AlgebraicOptimization {
                 match b {
                 case bind(`n,`a):
                     cs = cs.append(#<bind(`n,`(merge(a,((Node)tps.nth(i++)).children().nth(1),
-                                                     #<project(`X,`n)>,#<project(`Y,`n)>)))>);
+                                                     #<project(`X,`n)>,#<project(`Y,`n)>,first)))>);
+                }
+            return #<record(...cs)>;
+        case union:
+            return #<call(plus,`X,`Y)>;
+        case fixed:
+            return Y;
+        case _:
+            if (!m.is_variable())
+                fail;
+            for ( Tree monoid: monoids )
+                match monoid {
+                case `aggr(`mtp,`plus,`zero,`unit):
+                    if (#<`aggr>.equals(m))
+                        return #<apply(`plus,tuple(`X,`Y))>;
+                };
+        };
+        throw new Error("Undefined monoid: "+m);
+    }
+
+    /** Return the merge function (over X and Y) of the monoid m; type is used for key equality */
+    private static Tree merge_left ( Tree m, Tree type, Tree X, Tree Y, boolean first ) {
+        match m {
+        case `gb(`n):
+            if (! #[groupBy,orderBy].member(#<`gb>) )
+                fail;
+            match type {
+            case `T(tuple(`keytp,`tp)):
+                if (first) {
+                    Tree nv = new_var();
+                    Tree mb = merge(n,tp,#<nth(`nv,0)>,#<nth(`nv,1)>,false);
+                    return #<rightOuterMerge(lambda(`nv,`mb),`X,`Y)>;
+                } else if (unique_key(keytp)) {
+                    Tree vx = new_var();
+                    Tree v = merge_left(n,tp,#<nth(call(elem,`vx),1)>,#<nth(call(elem,`Y),1)>,false);
+                    if (is_persistent_collection(T))
+                        X = #<Collect(`X)>;
+                    return #<let(`vx,`X,
+                                 if(call(exists,`vx),
+                                    bag(tuple(`keytp,`v)),
+                                    call(elem,`Y)))>;
+                };
+                // needs an outer-join in the reducer function
+                Tree v = new_var();
+                Tree vx = new_var();
+                Tree vy = new_var();
+                Tree mx = new_var();
+                Tree mb = merge_left(n,tp,#<nth(`vx,1)>,#<nth(`vy,1)>,false);
+                Tree b = #<cmap(lambda(`vx,cmap(lambda(`vy,bag(tuple(nth(`vx,0),`mb))),
+                                                nth(`v,1))),
+                                `mx)>;
+                return #<join(lambda(`vx,`(key_equality(keytp,#<nth(`vx,0)>))),
+                              lambda(`vy,`(key_equality(keytp,#<nth(`vy,0)>))),
+                              lambda(`v,let(`mx,nth(`v,0),
+                                            if(call(exists,`mx),`b,nth(`v,1)))),
+                              `X, `Y)>;
+            };
+            throw new Error("Unknown type for merge_left: "+type);
+        case product(...ms):
+            Trees tps = ((Node)type).children();
+            Trees bs = #[ ];
+            int i = 0;
+            for ( Tree a: ms ) {
+                bs = bs.append(merge_left(a,tps.nth(i),#<nth(`X,`i)>,#<nth(`Y,`i)>,first));
+                i++;
+            };
+            return #<tuple(...bs)>;
+        case record(...bs):
+            Trees tps = ((Node)type).children();
+            Trees cs = #[ ];
+            int i = 0;
+            for ( Tree b: bs )
+                match b {
+                case bind(`n,`a):
+                    cs = cs.append(#<bind(`n,`(merge_left(a,((Node)tps.nth(i++)).children().nth(1),
+                                                     #<project(`X,`n)>,#<project(`Y,`n)>,first)))>);
                 }
             return #<record(...cs)>;
         case union:
@@ -1431,7 +1510,7 @@ final public class Streaming extends AlgebraicOptimization {
             if (Config.trace) {
                 System.out.println("Subterm type: "+tp);
                 System.out.println("Merge function over X and Y: ");
-                System.out.println(SimplifyTerm(merge(m,tp,#<X>,#<Y>)).pretty(0));
+                System.out.println(SimplifyTerm(merge(m,tp,#<X>,#<Y>,true)).pretty(0));
             };
             type_env.insert(nv.toString(),tp);
             Tree answer = answer(ne,nv,m);
@@ -1444,8 +1523,8 @@ final public class Streaming extends AlgebraicOptimization {
             };
             Tree zero = zero(m);
             Tree my = new_var();
-            Tree merge = convert_to_algebra(SimplifyTerm(merge(m,tp,nv,my)));
-            Tree res = #<tuple(`zero,lambda(tuple(`nv,`my),`merge),`q,lambda(`nv,`answer))>;
+            Tree merge = convert_to_algebra(SimplifyTerm(merge(m,tp,nv,my,true)));
+            Tree res = #<tuple(`zero,lambda(tuple(`nv,`my),`merge),`q,lambda(`nv,`answer),`m)>;
             if (Config.trace) {
                 System.out.println("Incremental subterm:");
                 System.out.println(res.pretty(0));
@@ -1457,7 +1536,7 @@ final public class Streaming extends AlgebraicOptimization {
 
     private static Tree generate_incremental_code ( Tree e, Environment env ) {
         if (!is_streaming(e))
-            return #<tuple(tuple(),lambda(tuple(tuple(),tuple()),tuple()),tuple(),lambda(tuple(),`e))>;
+            return #<tuple(tuple(),lambda(tuple(tuple(),tuple()),tuple()),tuple(),lambda(tuple(),`e),fixed)>;
         match e {
         case call(stream,...):
             Tree v = new_var();
@@ -1472,50 +1551,53 @@ final public class Streaming extends AlgebraicOptimization {
                 };
             if (is_monoid)
                 fail;
-            Trees zs = #[], vs = #[], ws = #[], ms = #[], hs = #[], as = #[];
+            Trees zs = #[], vs = #[], ws = #[], ms = #[], hs = #[], as = #[], ns = #[];
             int i = 0;
             for ( Tree q: qs )
                 match generate_incremental_code(q,env) {
-                case tuple(`z,lambda(tuple(`v,`w),`m),`h,lambda(_,`a)):
+                case tuple(`z,lambda(tuple(`v,`w),`m),`h,lambda(_,`a),`n):
                     zs = zs.append(z); hs = hs.append(h); as = as.append(a);
                     vs = vs.append(v); ws = ws.append(w); ms = ms.append(m);
-                    i++;
+                    ns = ns.append(n); i++;
                 };
             return #<tuple(tuple(...zs),
                            lambda(tuple(tuple(...vs),tuple(...ws)),tuple(...ms)),
                            tuple(...hs),
-                           lambda(tuple(...vs),call(`f,...as)))>;
+                           lambda(tuple(...vs),call(`f,...as)),
+                           tuple(...ns))>;
         case record(...rs):
-            Trees zs = #[], vs = #[], ws = #[], ms = #[], hs = #[], as = #[];
+            Trees zs = #[], vs = #[], ws = #[], ms = #[], hs = #[], as = #[], ns = #[];
             int i = 0;
             for ( Tree r: rs )
                 match r {
                 case bind(`k,`q):
                     match generate_incremental_code(q,env) {
-                    case tuple(`z,lambda(tuple(`v,`w),`m),`h,lambda(_,`a)):
+                    case tuple(`z,lambda(tuple(`v,`w),`m),`h,lambda(_,`a),`n):
                         zs = zs.append(z); hs = hs.append(h); as = as.append(a);
                         vs = vs.append(v); ws = ws.append(w); ms = ms.append(m);
-                        i++;
+                        ns = ns.append(n); i++;
                     }
                 };
             return #<tuple(tuple(...zs),
                            lambda(tuple(tuple(...vs),tuple(...ws)),tuple(...ms)),
                            tuple(...hs),
-                           lambda(tuple(...vs),record(...as)))>;
+                           lambda(tuple(...vs),record(...as)),
+                           tuple(...ns))>;
         case tuple(...qs):
-            Trees zs = #[], vs = #[], ws = #[], ms = #[], hs = #[], as = #[];
+            Trees zs = #[], vs = #[], ws = #[], ms = #[], hs = #[], as = #[], ns = #[];
             int i = 0;
             for ( Tree q: qs )
                 match generate_incremental_code(q,env) {
-                case tuple(`z,lambda(tuple(`v,`w),`m),`h,lambda(_,`a)):
+                case tuple(`z,lambda(tuple(`v,`w),`m),`h,lambda(_,`a),`n):
                     zs = zs.append(z); hs = hs.append(h); as = as.append(a);
                     vs = vs.append(v); ws = ws.append(w); ms = ms.append(m);
-                    i++;
+                    ns = ns.append(n); i++;
                 };
             return #<tuple(tuple(...zs),
                            lambda(tuple(tuple(...vs),tuple(...ws)),tuple(...ms)),
                            tuple(...hs),
-                           lambda(tuple(...vs),tuple(...as)))>;
+                           lambda(tuple(...vs),tuple(...as)),
+                           tuple(...ns))>;
         };
         return generate_code(e,env);
     }
@@ -1554,7 +1636,50 @@ final public class Streaming extends AlgebraicOptimization {
             TypeInference.type_inference(u);
             repeat_environment = new Environment(v.toString(),#<union>,repeat_environment);
             match generate_incremental_code(u,null) {
-            case tuple(`z,lambda(tuple(`v1,`v2),`m),`h,lambda(`s,`a)):
+            case tuple(`z,lambda(tuple(`v1,`v2),`m),`h,lambda(`s,`a),`monoid):
+                Tree deltaT = new_var();
+                Tree w = new_var();
+                Tree tp = TypeInference.type_inference(s);
+                TypeInference.type_env.insert(deltaT.toString(),tp);
+                match tp {
+                case `T(`etp):
+                    TypeInference.type_env.insert(T.toString(),etp);
+                };
+                Tree m_hat = convert_to_algebra(SimplifyTerm(merge_left(monoid,tp,v1,v2,true)));
+                if (Config.trace) {
+                    System.out.println("Left-merge function over X and Y: ");
+                    System.out.println(SimplifyTerm(merge_left(monoid,tp,#<X>,#<Y>,true)).pretty(0));
+                };
+                Tree nm = subst(v1,s,subst(v2,subst(v,subst(s,deltaT,a),h),m_hat));
+                Tree m0 = subst(v,x,h);//subst(v1,s,subst(v2,subst(v,x,h),m_hat));
+                Tree q = #<repeat(lambda(`deltaT,cmap(lambda(`w,bag(tuple(`w,true))),`nm)),
+                                  `m0,
+                                  `(nn-1))>;
+                Tree res = #<incr(`z,
+                                  lambda(`s,apply(lambda(tuple(`v1,`v2),`m),tuple(`s,`q))),
+                                  lambda(`s,`a))>;
+                res = SimplifyTerm(res);
+                if (Config.trace) {
+                    System.out.println("Incremental program:");
+                    System.out.println(res.pretty(0));
+                };
+                TypeInference.type_inference(res);
+                return res;
+            }
+        case repeat(lambda(`v,`u),`x,`n):
+            if (false && !is_streaming(x))
+                fail;
+            if (!(n instanceof LongLeaf))
+                throw new Error("The repeat must have a constant repetition: "+n);
+            int nn = (int)((LongLeaf)n).value();
+            if (nn < 1)
+                throw new Error("Wrong repeat number: "+n);
+            Tree nv = new_var();
+            u = #<cmap(lambda(`nv,bag(nth(`nv,0))),`u)>;
+            TypeInference.type_inference(u);
+            repeat_environment = new Environment(v.toString(),#<union>,repeat_environment);
+            match generate_incremental_code(u,null) {
+            case tuple(`z,lambda(tuple(`v1,`v2),`m),`h,lambda(`s,`a),_):
                 Tree deltaT = new_var();
                 Tree w = new_var();
                 TypeInference.type_env.insert(deltaT.toString(),TypeInference.type_inference(s));
@@ -1576,8 +1701,8 @@ final public class Streaming extends AlgebraicOptimization {
                 return res;
             }
         };
-        match generate_incremental_code(e,null) {
-        case tuple(`z,lambda(tuple(`v1,`v2),`m),`h,lambda(_,`a)):
+    match generate_incremental_code(e,null) {
+    case tuple(`z,lambda(tuple(`v1,`v2),`m),`h,lambda(_,`a),_):
             Tree tp = TypeInference.type_inference(h);
             bind_pattern2type(v1,tp);
             Tree nm = SimplifyTerm(#<apply(lambda(`v2,`m),`h)>);

@@ -606,7 +606,7 @@ public class Interpreter extends TypeInference {
             return ((Lambda)fnc).lambda().eval(t);
         case Stream(...):  // streaming
             final Tree qt = query_type;
-            Evaluator.evaluator.streaming(e,env,new Function(){
+            Evaluator.evaluator.streaming(e,env,null,new Function(){
                     public MRData eval ( final MRData data ) {
                         System.out.println(print(data,qt));
                         return data;

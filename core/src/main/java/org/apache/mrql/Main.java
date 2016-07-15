@@ -28,7 +28,7 @@ import jline.*;
 
 
 final public class Main {
-    public final static String version = "0.9.6";
+    public final static String version = "0.9.8";
 
     public static PrintStream print_stream;
     public static Configuration conf;

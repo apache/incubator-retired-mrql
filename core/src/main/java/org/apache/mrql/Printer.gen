@@ -342,6 +342,12 @@ public class Printer {
         case CrossProduct(`mx,`my,`r,`x,`y):
             return "CrossProduct:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
                    +tab(n+3)+"right: "+print_plan(y,n+10,true);
+        case OuterMerge(`merge,`x,`y):
+            return "OuterMerge:\n"+tab(n+3)+"state: "+print_plan(x,n+10,true)+"\n"
+                   +tab(n+3)+"delta: "+print_plan(y,n+10,true);
+        case RightOuterMerge(`merge,`x,`y):
+            return "RightOuterMerge:\n"+tab(n+3)+"state: "+print_plan(x,n+10,true)+"\n"
+                   +tab(n+3)+"delta: "+print_plan(y,n+10,true);
         case CrossAggregateProduct(`mx,`my,`r,`a,null,`x,`y):
             return "CrossProduct:\n"+tab(n+3)+"left: "+print_plan(x,n+9,true)+"\n"
                    +tab(n+3)+"right: "+print_plan(y,n+10,true);

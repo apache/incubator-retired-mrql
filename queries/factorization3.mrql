@@ -44,7 +44,7 @@ macro mult ( a, X ) {
 
 // cell-wise addition:
 macro Cadd ( X, Y ) {
-  select ( x*y, i, j )
+  select ( x+y, i, j )
     from (x,i,j) in X, (y,i,j) in Y
 };
 

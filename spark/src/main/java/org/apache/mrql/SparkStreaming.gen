@@ -29,6 +29,7 @@ import org.apache.spark.streaming.dstream.*;
 import scala.collection.Seq;
 import scala.collection.JavaConversions;
 import scala.runtime.AbstractFunction2;
+import org.apache.spark.storage.RDDInfo;
 
 
 /** Evaluates physical plans in Apache Spark stream mode */
@@ -74,28 +75,29 @@ public class SparkStreaming extends SparkEvaluator {
         return plan;
     }
 
-    private final static Evaluator ef = Evaluator.evaluator;
+    private final static SparkEvaluator ef = (SparkEvaluator)Evaluator.evaluator;
 
     /** bind the pattern variables to values */
-    private static Environment bind_list ( Tree pattern, Tree src, Environment env ) {
+    private static void bind_list ( Tree pattern, Tree src, Environment env, Environment rdd_env ) {
         match pattern {
         case tuple(...ps):
             int i = 0;
             match src {
             case tuple(...es):
                 for ( Tree p: ps )
-                    env = bind_list(p,es.nth(i++),env);
-                return env;
+                    bind_list(p,es.nth(i++),env,rdd_env);
             }
         };
-        MRData value = ef.evalE(src,env);
-        env.replace(pattern.toString(),value);
+        MRData value = new MR_rdd(ef.eval(src,env,rdd_env));
+        if (variable_lookup(pattern.toString(),global_rdds) == null)
+            global_rdds = new Environment(pattern.toString(),value,global_rdds);
+        else global_rdds.replace(pattern.toString(),value);
         if (repeat_variables.member(pattern))
             Interpreter.new_distributed_binding(pattern.toString(),value);
-        return env;
     }
 
-    private static void stream_processing ( final Tree plan, final Environment env, final Function f ) {
+    private static void stream_processing ( final Tree plan, final Environment env,
+                                            final Environment dataset_env, final Function f ) {
         if (streams.size() == 0)
             throw new Error("No input streams in query");
         ArrayList<DStream<?>> rdds = new ArrayList<DStream<?>>();
@@ -106,7 +108,7 @@ public class SparkStreaming extends SparkEvaluator {
             new AbstractFunction2<Seq<RDD<?>>,Time,RDD<MRData>>() {
             public RDD<MRData> apply ( Seq<RDD<?>> rdds, Time tm ) {
                 long t = System.currentTimeMillis();
-                Environment new_env = env;
+                Environment rdd_env = dataset_env;
                 int i = 0;
                 for ( RDD<?> rdd: JavaConversions.seqAsJavaList(rdds) ) {
                     try {
@@ -115,17 +117,25 @@ public class SparkStreaming extends SparkEvaluator {
                     } catch (Exception ex) {
                         return SparkEvaluator.spark_context.sc().emptyRDD(classtag);
                     };
-                    new_env = new Environment(vars.get(i++),new MR_rdd(new JavaRDD(rdd,classtag)),new_env);
+                    MRData d = new MR_rdd(new JavaRDD(rdd,classtag));
+                    global_rdds = new Environment(vars.get(i),d,global_rdds);
+                    rdd_env = new Environment(vars.get(i++),d,rdd_env);
                 };
                 match plan {
                 case lambda(`pat,`e):
-                    new_env = bind_list(pat,e,new_env);
+                    bind_list(pat,e,env,rdd_env);
                     f.eval(null);
                 case _: // non-incremental streaming
-                    f.eval(ef.evalE(plan,new_env));
+                    f.eval(ef.evalE(plan,env));
                 };
                 if (!Config.quiet_execution)
                     System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
+                for ( RDD<?> rdd: JavaConversions.seqAsJavaList(rdds) )
+                    rdd.unpersist(true);
+		GC_cached_rdds();
+		System.gc();
+		for ( RDDInfo rdi: SparkEvaluator.spark_context.sc().getRDDStorageInfo() )
+                    System.err.println("Warning: cached RDD "+rdi);
 		if (++tries >= Config.stream_tries) {  // for performance experiments only
 		    tries = 0;
 		    SparkEvaluator.stream_context.stop(true,true);
@@ -138,16 +148,16 @@ public class SparkStreaming extends SparkEvaluator {
     }
 
     /** evaluate plan in stream mode: evaluate each batch of data and apply the function f */
-    final public static void evaluate ( Tree plan, Environment env, Function f ) {
+    final public static void evaluate ( Tree plan, Environment env, Environment dataset_env, Function f ) {
         streams = new ArrayList<JavaInputDStream<MRData>>();
         stream_names = new ArrayList<String>();
         match plan {
         case lambda(`p,`b):
             b = get_streams(b,env);
-            stream_processing(#<lambda(`p,`b)>,env,f);
+            stream_processing(#<lambda(`p,`b)>,env,null,f);
         case _:  // non-incremental streaming
             plan = get_streams(plan,env);
-            stream_processing(plan,env,f);
+            stream_processing(plan,env,dataset_env,f);
         };
         stream_context.start();
         stream_context.awaitTermination();

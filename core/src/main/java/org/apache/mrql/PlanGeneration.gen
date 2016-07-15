@@ -418,6 +418,18 @@ final public class PlanGeneration extends AlgebraicOptimization {
                                      `(makePlan(x)),
                                      `(makePlan(y)))>;
            else fail
+       case outerMerge(`m,`x,`y):
+               if (is_dataset_expr(x) && is_dataset_expr(y))
+                   return #<OuterMerge(`(makePlan(m)),
+                                       `(makePlan(x)),
+                                       `(makePlan(y)))>;
+               else fail
+       case rightOuterMerge(`m,`x,`y):
+               if (is_dataset_expr(x) && is_dataset_expr(y))
+                   return #<RightOuterMerge(`(makePlan(m)),
+                                            `(makePlan(x)),
+                                            `(makePlan(y)))>;
+               else fail
        case cmap(`m,`s):
            if (is_dataset_expr(s))
                return #<cMap(`(makePlan(m)),

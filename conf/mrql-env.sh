@@ -72,12 +72,12 @@ HAMA_ZOOKEEPER_QUORUM=localhost
 BSP_SPLIT_INPUT=
 
 
-# Optional: Spark configuration. Supports versions 1.0.0, 1.0.2, 1.1.0, 1.1.1, 1.2.0, 1.3.0, 1.3.1, and 1.6.0
+# Optional: Spark configuration. Supports versions 1.0.0, 1.0.2, 1.1.0, 1.1.1, 1.2.0, 1.3.0, 1.3.1, 1.6.0, and 1.6.2
 # (Spark versions 0.8.1, 0.9.0, and 0.9.1 are supported by MRQL 0.9.0)
 # You may use the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
 # For distributed mode, give write permission to /tmp: hadoop fs -chmod -R 777 /tmp
 # Tested in local, standalone deploy, and Yarn modes
-SPARK_HOME=${HOME}/spark-1.6.0-bin-hadoop2.6
+SPARK_HOME=${HOME}/spark-1.6.2-bin-hadoop2.6
 # URI of the Spark master node:
 #   to run Spark on Standalone Mode, set it to spark://`hostname`:7077
 #   to run Spark on a YARN cluster, set it to "yarn-client"
