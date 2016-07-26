@@ -80,9 +80,11 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
 		master_host = m[0];
 		master_port = Integer.parseInt(m[1]);
 	    };
-            fs_default_name = System.getenv("FS_DEFAULT_NAME");
+            if (!System.getenv("FS_DEFAULT_NAME").equals("")) {
+                fs_default_name = System.getenv("FS_DEFAULT_NAME");
+                Plan.conf.set("fs.defaultFS",fs_default_name);
+            } else fs_default_name = Plan.conf.get("fs.defaultFS");
             data_source_dir_name = absolute_path("tmp/data_source_dir.txt");
-	    Plan.conf.set("fs.defaultFS",fs_default_name);
         }
     }
 

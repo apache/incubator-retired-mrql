@@ -79,7 +79,8 @@ public class SparkEvaluator extends Evaluator implements Serializable {
             spark_conf.set("spark.executor.instances",""+Config.nodes);
             spark_context = new JavaSparkContext(spark_conf);
             Plan.conf = spark_context.hadoopConfiguration();
-            FileSystem.setDefaultUri(Plan.conf,System.getenv("FS_DEFAULT_NAME"));
+            if (!System.getenv("FS_DEFAULT_NAME").equals(""))
+                FileSystem.setDefaultUri(Plan.conf,System.getenv("FS_DEFAULT_NAME"));
         };
         if (Config.stream_window > 0 && (Config.local_mode || Config.hadoop_mode))
             stream_context = new JavaStreamingContext(spark_context,new Duration(Config.stream_window));

@@ -34,7 +34,7 @@
 
 
 # Required: The Java installation directory
-if [[ !(-f ${JAVA_HOME}) ]]; then
+if [ ! -f ${JAVA_HOME}) ]; then
    export JAVA_HOME=/usr/lib/jvm/java-8-oracle
 fi
 
@@ -47,20 +47,22 @@ CUP_JAR=${HOME}/.m2/repository/net/sf/squirrel-sql/thirdparty/non-maven/java-cup
 JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 
 
-# Required: Hadoop configuration. Supports versions 1.x and 2.x (YARN)
-HADOOP_VERSION=2.7.1
+# Hadoop configuration. Supports versions 1.x and 2.x (YARN)
 # The Hadoop installation directory
-HADOOP_HOME=${HOME}/hadoop-${HADOOP_VERSION}
-# The Hadoop configuration directory (where core-site.xml is)
+if [ ! -f ${HADOOP_HOME}) ]; then
+    HADOOP_VERSION=2.7.1
+    HADOOP_HOME=${HOME}/hadoop-${HADOOP_VERSION}
+fi
+# The Hadoop configuration directory. Set it to empty to use the default
 HADOOP_CONFIG=${HADOOP_HOME}/etc/hadoop
-# The Hadoop job tracker (as defined in mapred-site.xml)
-MAPRED_JOB_TRACKER=localhost:9001
-# The HDFS namenode URI (as defined in core-site.xml)
-FS_DEFAULT_NAME=hdfs://localhost:9000/
+# The Hadoop job tracker (eg, localhost:9001). If empty, it is the one defined in mapred-site.xml
+MAPRED_JOB_TRACKER=
+# The HDFS namenode URI (eg, hdfs://localhost:9000/). If empty, it is the one defined in core-site.xml
+FS_DEFAULT_NAME=
 
 
-# Optional: Hama configuration. Supports versions 0.6.2, 0.6.3, 0.6.4, and 0.7.0
-HAMA_VERSION=0.7.0
+# Optional: Hama configuration. Supports versions 0.6.2, 0.6.3, 0.6.4, and 0.7.0, and 0.7.1
+HAMA_VERSION=0.7.1
 # The Hama installation directory
 HAMA_HOME=${HOME}/hama-${HAMA_VERSION}
 # The Hama configuration directory
@@ -93,11 +95,11 @@ SPARK_EXECUTOR_CORES=1
 SPARK_EXECUTOR_MEMORY=1G
 
 
-# Optional: Flink configuration. Supports version 1.0.2
+# Optional: Flink configuration. Supports version 1.0.2 and 1.0.3
 FLINK_VERSION=1.0.2
 # Flink installation directory
 FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
-# number of slots per TaskManager (typically, the number of CPUs per machine)
+# number of slots per TaskManager (typically, the number of cores per node)
 FLINK_SLOTS=4
 # memory per TaskManager
 FLINK_TASK_MANAGER_MEMORY=2048
