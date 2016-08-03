@@ -184,6 +184,8 @@ DOUBLE = [0-9]+([\.][0-9]+)?([eE][+-]?[0-9]+)?
 <YYINITIAL> "include"		{ return symbol(sym.INCLUDE); }
 <YYINITIAL> "aggregation"	{ return symbol(sym.AGGREGATION); }
 <YYINITIAL> "trace"	        { return symbol(sym.TRACE); }
+<YYINITIAL> "lineage"	        { return symbol(sym.LINEAGE); }
+<YYINITIAL> "debug"	        { return symbol(sym.DEBUG); }
 
 <YYINITIAL> {ID}		{ return symbol(sym.Variable,yytext()); }
 

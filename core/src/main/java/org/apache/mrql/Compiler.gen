@@ -421,6 +421,8 @@ final public class Compiler extends Translator {
             for ( Tree x: el )
                 ret += ","+compileE(x);
             return ret+"))";
+        case Lineage(...el):
+            return compileE(#<tuple(...el)>);
         case tagged_union(`n,`u):
             return "(new Union((byte)"+((LongLeaf)n).value()+","+compileE(u)+"))";
         case union_value(`x):

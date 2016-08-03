@@ -179,7 +179,7 @@ public class Translator extends Printer {
         = #[MapReduce,MapAggregateReduce,MapCombineReduce,FroupByJoin,Aggregate,
             MapReduce2,MapCombineReduce2,MapAggregateReduce2,MapJoin,MapAggregateJoin,
             CrossProduct,CrossAggregateProduct,cMap,AggregateMap,BSP,GroupByJoin,
-            OuterMerge,RightOuterMerge];
+            OuterMerge,RightOuterMerge,Provenance];
 
     static Trees algebraic_operators
         = #[mapReduce,mapReduce2,cmap,join,groupBy,orderBy,aggregate,map,filter,repeat,closure];

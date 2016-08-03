@@ -1199,6 +1199,19 @@ public class TypeInference extends Translator {
             };
         case cstep(`x):  // used in QueryPlan for closure
             return type_inference(x);
+        case provenance(`x,...exprs):   // used in Provenance generation
+            match type_inference(x) {
+            case `S(tuple(`tp,_)):
+                if (!is_collection(S))
+                    fail;
+                return #<`S(`tp)>;
+            case tuple(`tp,_):
+                return tp;
+            };
+            type_error(e,"Wrong provenance injection");
+        case Lineage(...as):   // used in Provenance generation
+            type_inference(#<tuple(...as)>);
+            return #<lineage>;
         case outerMerge(lambda(`v,`b),`s,`d):
             Tree ts = type_inference(s);
             if (unify(type_inference(d),ts) == null)

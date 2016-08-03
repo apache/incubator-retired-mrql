@@ -89,6 +89,9 @@ final public class Config {
     public static int stream_tries = 100;
     // if true and stream_window > 0, then incremental streaming
     public static boolean incremental = false;
+    // if true, generate provenance tracing
+    public static boolean lineage = false;
+    public static boolean debug = false;
 
     /** store the configuration parameters */
     public static void write ( Configuration conf ) {
@@ -121,6 +124,8 @@ final public class Config {
         conf.setBoolean("mrql.info",info);
         conf.setInt("mrql.stream.window",stream_window);
         conf.setBoolean("mrql.incremental",incremental);
+        conf.setBoolean("mrql.lineage",lineage);
+        conf.setBoolean("mrql.debug",debug);
     }
 
     /** load the configuration parameters */
@@ -154,6 +159,8 @@ final public class Config {
         info = conf.getBoolean("mrql.info",info);
         stream_window = conf.getInt("mrql.stream.window",stream_window);
         incremental = conf.getBoolean("mrql.incremental",incremental);
+        lineage = conf.getBoolean("mrql.lineage",lineage);
+        debug = conf.getBoolean("mrql.debug",debug);
     }
 
     public static ArrayList<String> extra_args = new ArrayList<String>();

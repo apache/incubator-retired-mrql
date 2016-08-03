@@ -184,6 +184,8 @@ public class AlgebraicOptimization extends Simplification {
                     };
             };
             fail
+        case provenance(`x,...s):
+            return #<provenance(`(translate(x)),...s)>;
         case `f(...al):
             Trees bl = #[];
             for ( Tree a: al )

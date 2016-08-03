@@ -34,8 +34,12 @@
 
 
 # Required: The Java installation directory
-if [ ! -f ${JAVA_HOME}) ]; then
+if [ -z ${JAVA_HOME} ]; then
    export JAVA_HOME=/usr/lib/jvm/java-8-oracle
+fi
+if [ ! -e ${JAVA_HOME} ]; then
+    echo "*** Non-existent JAVA_HOME"
+    exit -1
 fi
 
 # Required: The CUP parser library
@@ -49,7 +53,7 @@ JLINE_JAR=${HOME}/.m2/repository/jline/jline/1.0/jline-1.0.jar
 
 # Hadoop configuration. Supports versions 1.x and 2.x (YARN)
 # The Hadoop installation directory
-if [ ! -f ${HADOOP_HOME}) ]; then
+if [ -z ${HADOOP_HOME} ]; then
     HADOOP_VERSION=2.7.1
     HADOOP_HOME=${HOME}/hadoop-${HADOOP_VERSION}
 fi

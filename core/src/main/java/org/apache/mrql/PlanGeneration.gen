@@ -744,6 +744,11 @@ final public class PlanGeneration extends AlgebraicOptimization {
                };
            body = makePlan(body);
            return #<function(tuple(...params),`outp,`body)>;
+       case provenance(`x,...s):
+           Tree px = makePlan(x);
+           if (is_dataset_expr(x))
+               return #<Provenance(`px,...s)>;
+           else return #<provenance(`px,...s)>;
        case `f(...al):
            Trees bl = #[];
            for ( Tree a: al )

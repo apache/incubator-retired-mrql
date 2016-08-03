@@ -377,6 +377,25 @@ final public class TopLevel extends Interpreter {
                         }
                     });
             };
+        case lineage(`e):
+            Config.lineage = true;
+            boolean quiet = Config.quiet_execution;
+            Config.quiet_execution = true;
+            long t = System.currentTimeMillis();
+            if (expression(e,false) != null && !Config.quiet_execution)
+                System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
+            Config.lineage = false;
+            Config.quiet_execution = quiet;
+        case debug(`path,`e):
+            Config.debug = true;
+            boolean quiet = Config.quiet_execution;
+            Config.quiet_execution = true;
+            long t = System.currentTimeMillis();
+            dump(path.stringValue(),e);
+            if (!Config.quiet_execution)
+                System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
+            Config.debug = false;
+            Config.quiet_execution = quiet;
         case dump(`s,`e):
             long t = System.currentTimeMillis();
             dump(s.stringValue(),e);

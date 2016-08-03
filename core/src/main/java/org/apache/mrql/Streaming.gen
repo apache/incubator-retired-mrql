@@ -20,7 +20,7 @@ package org.apache.mrql;
 import org.apache.mrql.gen.*;
 
 /** Generates code for streaming queries */
-final public class Streaming extends AlgebraicOptimization {
+public class Streaming extends AlgebraicOptimization {
     private static int istate = 0; 
     // set it to true to debug the monoid inference
     private static boolean inference_tracing = false;
@@ -846,7 +846,7 @@ final public class Streaming extends AlgebraicOptimization {
     }
 
     /** Convert coGroups back to joins and reduces to aggregations */
-    private static Tree convert_to_algebra ( Tree e ) {
+    static Tree convert_to_algebra ( Tree e ) {
         match e {
         case coGroup(`x,`y):
             Tree v = new_var();
@@ -1129,7 +1129,7 @@ final public class Streaming extends AlgebraicOptimization {
     }
 
     /** Convert joins to coGroups, plus other transformations */
-    private static Tree normalize_term ( Tree e ) {
+    static Tree normalize_term ( Tree e ) {
         match e {
         case join(`kx,`ky,`r,cmap(`f,`x),cmap(`g,`y)):
             if (!x.equals(y))
@@ -1254,18 +1254,18 @@ final public class Streaming extends AlgebraicOptimization {
     }
 
     /** Embed missing cmaps */
-    private static Tree embed_missing_cmaps ( Tree e ) {
+    static Tree embed_missing_cmaps ( Tree e ) {
         match e {
         case project(`x,`a):
             match TypeInference.type_inference(x) {
             case `T(`tp):
                 if (!is_collection(T))
-                    fail;
+                    return #<project(`(embed_missing_cmaps(x)),`a)>;
                 Tree v = new_var();
                 type_env.insert(v.toString(),tp);
                 return embed_missing_cmaps(#<cmap(lambda(`v,bag(project(`v,`a))),`x)>);
             };
-            fail
+            return #<project(`(embed_missing_cmaps(x)),`a)>;
         case nth(`x,`n):
             match TypeInference.type_inference(x) {
             case `T(`tp):
@@ -1335,6 +1335,16 @@ final public class Streaming extends AlgebraicOptimization {
                     if (v.equals(a))
                         return simplify_term(u);
                 };
+        case nth(let(`v,`w,tuple(...al)),`n):
+            if (!n.is_long())
+                fail;
+            int i = (int)n.longValue();
+            if (i >= 0 && i < al.length())
+                return #<let(`v,`w,`(simplify_term(al.nth(i))))>;
+        case let(`v,`w,`x):
+            if (occurences(v,x) <= 1)
+                return subst_var(v,w,x);
+            fail
         case `f(...as):
             Trees bs = #[ ];
             for ( Tree a: as )

@@ -895,6 +895,9 @@ public class FlinkEvaluator extends Evaluator implements Serializable {
                 if (x != null)
                     if (x instanceof MR_flink)
                         return ((MR_flink)x).flink();
+                    else if (x instanceof MR_dataset)
+                        return dataset(new Bag(((MR_dataset)x).dataset.take(Integer.MAX_VALUE)))
+			    .map(new restore_global_functions());
                     else new Error("Variable "+v+" is of type: "+x);
                 x = variable_lookup(v.toString(),global_env);
                 if (x != null)

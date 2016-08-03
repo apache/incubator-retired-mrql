@@ -613,6 +613,26 @@ public class Interpreter extends TypeInference {
                     }
                 });
             return new Bag();
+        case provenance(`x,`tp,...s):
+            MRData value = evalE(x,env);
+            Provenance.display(value,tp,#[...s]);
+            return new Tuple(0);
+        case Provenance(`x,`tp,...s):
+            MRData value = (Config.hadoop_mode)
+                ? new MR_dataset(Evaluator.evaluator.eval(x,env,"-"))
+                : evalS(x,env);
+            Provenance.display(value,tp,#[...s]);
+            return new Tuple(0);
+        case Lineage(...as):
+            return evalEE(#<tuple(...as)>,env);
+        case Let(`v,`x,`y):
+            if (Config.hadoop_mode)
+                return evalEE(y,new Environment(v.toString(),
+                                                new MR_dataset(Evaluator.evaluator.eval(x,env,"-")),
+                                                env));
+            Bag b = evalS(x,env);
+            b.materialize();
+            return evalEE(y,new Environment(v.toString(),b,env));
         case _:
             try {
                 if (Config.hadoop_mode)
@@ -889,6 +909,15 @@ public class Interpreter extends TypeInference {
                 System.out.println("Algebraic type: "+print_type(pt));
             if (Config.stream_window > 0 && Config.incremental)
                 ne = Streaming.generate_incremental_code(ne);
+            else if (Config.lineage) {
+                ne = Provenance.embed_provenance(ne,false);
+                if (Config.trace)
+                    System.out.println("After provenance injection:\n"+ne.pretty(0));
+            } else if (Config.debug) {
+                ne = Provenance.embed_provenance(ne,true);
+                if (Config.trace)
+                    System.out.println("After provenance injection:\n"+ne.pretty(0));
+            };
             ne = AlgebraicOptimization.translate_all(ne);
             if (Config.trace)
                 System.out.println("Translated expression:\n"+ne.pretty(0));
@@ -941,3 +970,4 @@ public class Interpreter extends TypeInference {
         }
     }
 }
+
