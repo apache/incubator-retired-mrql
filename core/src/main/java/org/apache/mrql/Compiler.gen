@@ -164,7 +164,7 @@ final public class Compiler extends Translator {
             compiled_lambdas = #[ ];
             user_functions_num = lambda_num++;
             // remove the old jar
-            if (jar_path != null)
+            if (false && jar_path != null) // Spark 2.* needs the old jar
                 remove(new File(jar_path));
             jar_path = tmp_dir+"/mrql_args_"+(new Random().nextInt(1000000))+".jar";
             out = new StringBuffer(1000);

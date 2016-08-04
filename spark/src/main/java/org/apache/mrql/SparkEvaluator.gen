@@ -41,8 +41,6 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.Function3;
 import org.apache.spark.api.java.function.PairFunction;
-import org.apache.spark.api.java.function.FlatMapFunction;
-import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -388,13 +386,13 @@ public class SparkEvaluator extends Evaluator implements Serializable {
     }
 
     /* convert an MRQL lambda to a Spark Function */
-    private static FlatMapFunction<MRData,MRData> cmap_fnc ( Tree fnc, Environment env ) {
+    private static FmFunction<MRData,MRData> cmap_fnc ( Tree fnc, Environment env ) {
         final Broadcast<Environment> broadcast_env = spark_context.broadcast(global_env);
         final org.apache.mrql.Function f = evalF(fnc,env);
-        return new FlatMapFunction<MRData,MRData>() {
-            public Iterable<MRData> call ( MRData value ) {
+        return new FmFunction<MRData,MRData>() {
+            public Iterator<MRData> eval ( MRData value ) {
                 global_env = broadcast_env.value();
-                return (Bag)f.eval(value);
+                return ((Bag)f.eval(value)).iterator();
             }
         };
     }
@@ -443,26 +441,22 @@ public class SparkEvaluator extends Evaluator implements Serializable {
             });
     }
 
-    private static Iterable<Tuple2<MRData,MRData>> joinIterator ( final Iterator<MRData> i ) {
-        return new Iterable<Tuple2<MRData,MRData>>() {
-            public Iterator<Tuple2<MRData,MRData>> iterator() {
-                return new Iterator<Tuple2<MRData,MRData>> () {
-                    public Tuple2<MRData,MRData> next () {
-                        Tuple data = (Tuple)i.next();
-                        return new Tuple2<MRData,MRData>(data.first(),data.second());
-                    }
-                    public boolean hasNext () {
-                        return i.hasNext();
-                    }
-                    public void remove () {}
-                };
+    private static Iterator<Tuple2<MRData,MRData>> joinIterator ( final Iterator<MRData> i ) {
+        return new Iterator<Tuple2<MRData,MRData>> () {
+            public Tuple2<MRData,MRData> next () {
+                Tuple data = (Tuple)i.next();
+                return new Tuple2<MRData,MRData>(data.first(),data.second());
             }
+            public boolean hasNext () {
+                return i.hasNext();
+            }
+            public void remove () {}
         };
     }
 
-    private static FlatMapFunction<Iterator<MRData>,MRData> combiner_fnc ( final org.apache.mrql.Function f ) {
-        return new FlatMapFunction<Iterator<MRData>,MRData>() {
-                  public Iterable<MRData> call ( final Iterator<MRData> i ) {
+    private static FmFunction<Iterator<MRData>,MRData> combiner_fnc ( final org.apache.mrql.Function f ) {
+        return new FmFunction<Iterator<MRData>,MRData>() {
+                  public Iterator<MRData> eval ( final Iterator<MRData> i ) {
                       return MapReduceAlgebra.cmap(new org.apache.mrql.Function() {
                               public MRData eval ( MRData x ) {
                                   final MRData key = ((Tuple)x).first();
@@ -483,7 +477,7 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                                   public boolean hasNext () {
                                       return i.hasNext();
                                   }
-                              })));
+                              }))).iterator();
                   }
         };
     }
@@ -519,9 +513,9 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                 return eval(x,env,rdd_env)
                     .flatMap(cmap_fnc(mx,env))
                     .cartesian(eval(y,env,rdd_env).flatMap(cmap_fnc(my,env)))
-                    .flatMap(new FlatMapFunction<Tuple2<MRData,MRData>,MRData>() {
-                            public Iterable<MRData> call ( Tuple2<MRData,MRData> value ) {
-                                return (Bag)fr.eval(new Tuple(value._1,value._2));
+                    .flatMap(new FmFunction<Tuple2<MRData,MRData>,MRData>() {
+                            public Iterator<MRData> eval ( Tuple2<MRData,MRData> value ) {
+                                return ((Bag)fr.eval(new Tuple(value._1,value._2))).iterator();
                             }
                         });
             case MapReduce2(`mx,`my,`r,`x,`y,`o):
@@ -544,8 +538,8 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                                 return new Tuple2(t.first(),t.second());
                             }
                         })
-                    : eval(x,env,rdd_env).flatMapToPair(new PairFlatMapFunction<MRData,MRData,MRData>() {
-                            public Iterable<Tuple2<MRData,MRData>> call ( MRData value ) {
+                    : eval(x,env,rdd_env).flatMapToPair(new PairFmFunction<MRData,MRData,MRData>() {
+                            public Iterator<Tuple2<MRData,MRData>> eval ( MRData value ) {
                                 return joinIterator(((Bag)fx.eval(value)).iterator());
                             }
                         });
@@ -567,15 +561,15 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                                 return new Tuple2(t.first(),t.second());
                             }
                         })
-                    : eval(y,env,rdd_env).flatMapToPair(new PairFlatMapFunction<MRData,MRData,MRData>() {
-                            public Iterable<Tuple2<MRData,MRData>> call ( MRData value ) {
+                    : eval(y,env,rdd_env).flatMapToPair(new PairFmFunction<MRData,MRData,MRData>() {
+                            public Iterator<Tuple2<MRData,MRData>> eval ( MRData value ) {
                                 return joinIterator(((Bag)fy.eval(value)).iterator());
                             }
                         });
 		return xs.cogroup(ys)
-                    .flatMap(new FlatMapFunction<Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>>,MRData>() {
-                            public Iterable<MRData> call ( Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>> value ) {
-                                return (Bag)fr.eval(new Tuple(bag(value._2._1),bag(value._2._2)));
+                    .flatMap(new FmFunction<Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>>,MRData>() {
+                            public Iterator<MRData> eval ( Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>> value ) {
+                                return ((Bag)fr.eval(new Tuple(bag(value._2._1),bag(value._2._2)))).iterator();
                             }
                         });
             case GroupByJoin(`kx,`ky,`gx,`gy,`acc,`zero,`r,`x,`y,`o):
@@ -592,50 +586,42 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                 final MRData one = new MR_byte(1);
                 final MRData two = new MR_byte(2);
                 final JavaPairRDD<MRData,MRData> xs
-                    = eval(x,env,rdd_env).flatMapToPair(new PairFlatMapFunction<MRData,MRData,MRData>() {
-                            public Iterable<Tuple2<MRData,MRData>> call ( final MRData value ) {
-                                return new Iterable<Tuple2<MRData,MRData>>() {
-                                    public Iterator<Tuple2<MRData,MRData>> iterator() {
-                                        return new Iterator<Tuple2<MRData,MRData>>() {
-                                            int i = 0;
-                                            public Tuple2<MRData,MRData> next () {
-                                                MRData key = new MR_int((fgx.eval(value).hashCode() % m)+m*i);
-                                                i++;
-                                                return new Tuple2<MRData,MRData>(key,new Tuple(one,value));
-                                            }
-                                            public boolean hasNext () {
-                                                return i < n;
-                                            }
-                                            public void remove () {}
-                                        };
+                    = eval(x,env,rdd_env).flatMapToPair(new PairFmFunction<MRData,MRData,MRData>() {
+                            public Iterator<Tuple2<MRData,MRData>> eval ( final MRData value ) {
+                                return new Iterator<Tuple2<MRData,MRData>>() {
+                                    int i = 0;
+                                    public Tuple2<MRData,MRData> next () {
+                                        MRData key = new MR_int((fgx.eval(value).hashCode() % m)+m*i);
+                                        i++;
+                                        return new Tuple2<MRData,MRData>(key,new Tuple(one,value));
                                     }
+                                    public boolean hasNext () {
+                                        return i < n;
+                                    }
+                                    public void remove () {}
                                 };
                             }
                         });
                 final JavaPairRDD<MRData,MRData> ys
-                    = eval(y,env,rdd_env).flatMapToPair(new PairFlatMapFunction<MRData,MRData,MRData>() {
-                            public Iterable<Tuple2<MRData,MRData>> call ( final MRData value ) {
-                                return new Iterable<Tuple2<MRData,MRData>>() {
-                                    public Iterator<Tuple2<MRData,MRData>> iterator() {
-                                        return new Iterator<Tuple2<MRData,MRData>>() {
-                                            int j = 0;
-                                            public Tuple2<MRData,MRData> next () {
-                                                MRData key = new MR_int((fgy.eval(value).hashCode() % n)*m+j);
-                                                j++;
-                                                return new Tuple2<MRData,MRData>(key,new Tuple(two,value));
-                                            }
-                                            public boolean hasNext () {
-                                                return j < m;
-                                            }
-                                            public void remove () {}
-                                        };
+                    = eval(y,env,rdd_env).flatMapToPair(new PairFmFunction<MRData,MRData,MRData>() {
+                            public Iterator<Tuple2<MRData,MRData>> eval ( final MRData value ) {
+                                return new Iterator<Tuple2<MRData,MRData>>() {
+                                    int j = 0;
+                                    public Tuple2<MRData,MRData> next () {
+                                        MRData key = new MR_int((fgy.eval(value).hashCode() % n)*m+j);
+                                        j++;
+                                        return new Tuple2<MRData,MRData>(key,new Tuple(two,value));
                                     }
+                                    public boolean hasNext () {
+                                        return j < m;
+                                    }
+                                    public void remove () {}
                                 };
                             }
                         });
                 return xs.union(ys).groupByKey()
-                    .mapPartitions(new FlatMapFunction<Iterator<Tuple2<MRData,Iterable<MRData>>>,MRData>() {
-                        public Iterable<MRData> call ( final Iterator<Tuple2<MRData,Iterable<MRData>>> value ) {
+                    .mapPartitions(new FmFunction<Iterator<Tuple2<MRData,Iterable<MRData>>>,MRData>() {
+                        public Iterator<MRData> eval ( final Iterator<Tuple2<MRData,Iterable<MRData>>> value ) {
                             Bag xb = new Bag();
                             Bag yb = new Bag();
                             while (value.hasNext()) {
@@ -649,18 +635,14 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                             };
                             final Bag b = MapReduceAlgebra.mergeGroupByJoin(fkx,fky,fgx,fgy,fc,z,fr,xb,yb);
                             xb = null; yb = null;
-                            return new Iterable<MRData>() {
-                                public Iterator<MRData> iterator() {
-                                    return b.iterator();
-                                }
-                            };
+                            return b.iterator();
                         }
                         });                
             case OuterMerge(`merge,`state,`data):
                 final org.apache.mrql.Function fm = evalF(merge,env);
                 JavaPairRDD<MRData,MRData> S = eval(state,env,rdd_env)
-                    .mapPartitionsToPair(new PairFlatMapFunction<Iterator<MRData>,MRData,MRData>() {
-                            public Iterable<Tuple2<MRData,MRData>> call ( final Iterator<MRData> i ) {
+                    .mapPartitionsToPair(new PairFmFunction<Iterator<MRData>,MRData,MRData>() {
+                            public Iterator<Tuple2<MRData,MRData>> eval ( final Iterator<MRData> i ) {
                                 return joinIterator(i);
                             }
                         },true);   // do not repartition the state S
@@ -672,8 +654,8 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                             }
                         });
                 JavaRDD<MRData> res = S.cogroup(ds)
-                    .flatMap(new FlatMapFunction<Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>>,MRData>() {
-                            public Iterable<MRData> call ( Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>> value ) {
+                    .flatMap(new FmFunction<Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>>,MRData>() {
+                            public Iterator<MRData> eval ( Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>> value ) {
                                 final Iterator<MRData> ix = value._2._1.iterator();
                                 final Iterator<MRData> iy = value._2._2.iterator();
                                 ArrayList<MRData> a = new ArrayList<MRData>();
@@ -683,7 +665,7 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                                     else a.add(new Tuple(value._1,ix.next()));
                                 else if (iy.hasNext())
                                     a.add(new Tuple(value._1,iy.next()));
-                                return a;
+                                return a.iterator();
                             }
                         }).cache();
                 cached_rdds.add(res);
@@ -691,8 +673,8 @@ public class SparkEvaluator extends Evaluator implements Serializable {
             case RightOuterMerge(`merge,`state,`data):
                 final org.apache.mrql.Function fm = evalF(merge,env);
                 JavaPairRDD<MRData,MRData> S = eval(state,env,rdd_env)
-                    .mapPartitionsToPair(new PairFlatMapFunction<Iterator<MRData>,MRData,MRData>() {
-                            public Iterable<Tuple2<MRData,MRData>> call ( final Iterator<MRData> i ) {
+                    .mapPartitionsToPair(new PairFmFunction<Iterator<MRData>,MRData,MRData>() {
+                            public Iterator<Tuple2<MRData,MRData>> eval ( final Iterator<MRData> i ) {
                                 return joinIterator(i);
                             }
                         },true);   // do not repartition the state S
@@ -704,17 +686,17 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                             }
                         });
                 JavaRDD<MRData> res = S.cogroup(ds)
-                    .flatMap(new FlatMapFunction<Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>>,MRData>() {
-                            public Iterable<MRData> call ( Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>> value ) {
+                    .flatMap(new FmFunction<Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>>,MRData>() {
+                            public Iterator<MRData> eval ( Tuple2<MRData,Tuple2<Iterable<MRData>,Iterable<MRData>>> value ) {
                                 final Iterator<MRData> ix = value._2._1.iterator();
                                 final Iterator<MRData> iy = value._2._2.iterator();
-                                return (ix.hasNext())
+                                return ((ix.hasNext())
                                     ? ((iy.hasNext())
                                        ? new Bag(new Tuple(value._1,fm.eval(new Tuple(ix.next(),iy.next()))))
                                        : new Bag())
                                     : ((iy.hasNext())
                                        ? new Bag(new Tuple(value._1,iy.next()))
-                                       : new Bag());
+                                       : new Bag())).iterator();
                             }
                         }).cache();
                 cached_rdds.add(res);
@@ -731,23 +713,19 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                                 return new Tuple2(t.first(),t.second());
                             }
                         }).collectAsMap());
-                return eval(x,env,rdd_env).mapPartitions(new FlatMapFunction<Iterator<MRData>,MRData>() {
-                        public Iterable<MRData> call ( final Iterator<MRData> i ) {
+                return eval(x,env,rdd_env).mapPartitions(new FmFunction<Iterator<MRData>,MRData>() {
+                        public Iterator<MRData> eval ( final Iterator<MRData> i ) {
                             final Map<MRData,MRData> m = ys.value();
-                            return new Iterable<MRData>() {
-                                public Iterator<MRData> iterator() {
-                                    return new Iterator<MRData> () {
-                                        public MRData next () {
-                                            final Tuple p = (Tuple)fx.eval(i.next());
-                                            final MRData pd = m.get(p.first());
-                                            return ((Bag)fr.eval(new Tuple(p.second(),(pd == null) ? empty_bag : pd)));
-                                        }
-                                        public boolean hasNext () {
-                                            return i.hasNext();
-                                        }
-                                        public void remove () {}
-                                    };
+                            return new Iterator<MRData> () {
+                                public MRData next () {
+                                    final Tuple p = (Tuple)fx.eval(i.next());
+                                    final MRData pd = m.get(p.first());
+                                    return ((Bag)fr.eval(new Tuple(p.second(),(pd == null) ? empty_bag : pd)));
                                 }
+                                public boolean hasNext () {
+                                    return i.hasNext();
+                                }
+                                public void remove () {}
                             };
                         }
                     },true);
@@ -757,39 +735,35 @@ public class SparkEvaluator extends Evaluator implements Serializable {
                 final org.apache.mrql.Function fr = evalF(r,env);
                 final Broadcast<Map<MRData,MRData>> ys
                     = spark_context.broadcast(eval(y,env,rdd_env)
-                         .flatMapToPair(new PairFlatMapFunction<MRData,MRData,MRData>() {
-                            public Iterable<Tuple2<MRData,MRData>> call ( MRData value ) {
+                         .flatMapToPair(new PairFmFunction<MRData,MRData,MRData>() {
+                            public Iterator<Tuple2<MRData,MRData>> eval ( MRData value ) {
                                 return joinIterator(((Bag)fy.eval(value)).iterator());
                             }
                         }).collectAsMap());
-                return eval(x,env,rdd_env).flatMap(new FlatMapFunction<MRData,MRData>() {
-                        public Iterable<MRData> call ( MRData value ) {
+                return eval(x,env,rdd_env).flatMap(new FmFunction<MRData,MRData>() {
+                        public Iterator<MRData> eval ( MRData value ) {
                             final Map<MRData,MRData> m = ys.value();
                             final Iterator<MRData> i = ((Bag)fx.eval(value)).iterator();
-                            return new Iterable<MRData>() {
-                                public Iterator<MRData> iterator() {
-                                    return new Iterator<MRData>() {
-                                        Tuple p;
-                                        Iterator<MRData> ix = null;
-                                        public MRData next () {
-                                            return ix.next();
-                                        }
-                                        public boolean hasNext () {
-                                            if (ix != null && ix.hasNext())
-                                                return true;
-                                            while (i.hasNext()) {
-                                                p = (Tuple)i.next();
-                                                MRData pd = m.get(p.first());
-                                                Bag bb = ((Bag)fr.eval(new Tuple(p.second(),(pd == null) ? empty_bag : pd)));
-                                                ix = bb.iterator();
-                                                if (ix.hasNext())
-                                                    return true;
-                                            };
-                                            return false;
-                                        }
-                                        public void remove () {}
-                                    };
+                            return new Iterator<MRData>() {
+                                Tuple p;
+                                Iterator<MRData> ix = null;
+                                public MRData next () {
+                                    return ix.next();
                                 }
+                                public boolean hasNext () {
+                                    if (ix != null && ix.hasNext())
+                                        return true;
+                                    while (i.hasNext()) {
+                                        p = (Tuple)i.next();
+                                        MRData pd = m.get(p.first());
+                                        Bag bb = ((Bag)fr.eval(new Tuple(p.second(),(pd == null) ? empty_bag : pd)));
+                                        ix = bb.iterator();
+                                        if (ix.hasNext())
+                                            return true;
+                                    };
+                                    return false;
+                                }
+                                public void remove () {}
                             };
                         }
                     });

@@ -159,7 +159,11 @@ public class SparkStreaming extends SparkEvaluator {
             plan = get_streams(plan,env);
             stream_processing(plan,env,dataset_env,f);
         };
-        stream_context.start();
-        stream_context.awaitTermination();
+        try {
+            stream_context.start();
+            stream_context.awaitTermination();
+        } catch (Exception ex) {
+            throw new Error(ex);
+        }
     }
 }

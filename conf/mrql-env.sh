@@ -78,10 +78,10 @@ HAMA_ZOOKEEPER_QUORUM=localhost
 BSP_SPLIT_INPUT=
 
 
-# Optional: Spark configuration. Supports versions 1.0.0, 1.0.2, 1.1.0, 1.1.1, 1.2.0, 1.3.0, 1.3.1, 1.6.0, and 1.6.2
-# (Spark versions 0.8.1, 0.9.0, and 0.9.1 are supported by MRQL 0.9.0)
+# Optional: Spark configuration. Supports versions 1.*, and 2.0.0
+# For Spark 2.*, use: mvn -Dspark2
+# Spark versions 0.8.1, 0.9.0, and 0.9.1 are supported by MRQL 0.9.0 only.
 # You may use the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
-# For distributed mode, give write permission to /tmp: hadoop fs -chmod -R 777 /tmp
 # Tested in local, standalone deploy, and Yarn modes
 SPARK_HOME=${HOME}/spark-1.6.2-bin-hadoop2.6
 # URI of the Spark master node:
@@ -123,10 +123,13 @@ if [[ -d ${SPARK_HOME}/assembly/target ]]; then
    SPARK_JARS=`ls ${SPARK_HOME}/assembly/target/scala-*/*.jar`
 else if [[ -d ${SPARK_HOME}/lib ]]; then
    SPARK_JARS=`ls ${SPARK_HOME}/lib/spark-assembly-*.jar`
+else if [[ -d ${SPARK_HOME}/jars ]]; then
+   SPARK_JARS=`ls ${SPARK_HOME}/jars/spark-core*.jar`
+fi
 fi
 fi
 
-HADOOP_JARS=`$HADOOP_HOME/bin/hadoop classpath`
+HADOOP_JARS=`${HADOOP_HOME}/bin/hadoop classpath`
 
 if [[ !(-f ${CUP_JAR}) ]]; then
    echo "*** Cannot find the parser generator CUP jar file. Need to edit mrql-env.sh"; exit -1
