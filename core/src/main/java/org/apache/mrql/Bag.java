@@ -87,6 +87,8 @@ public class Bag extends MRData implements Iterable<MRData> {
         mode = Modes.STREAMED;
         iterator = i;
         consumed = false;
+        if (Config.debug)
+            materialize();
     }
 
     /** is the Bag stored in an ArrayList? */

@@ -57,7 +57,7 @@ public class Provenance extends Streaming {
     }
 
     /** The nodes of the query AST */
-    private static Trees exprs = #[];
+    static Trees exprs = #[];
 
     /** Construct a provenance tuple
      * @param expr the AST that corresponds to this value
@@ -68,6 +68,8 @@ public class Provenance extends Streaming {
     private static Tree prov ( Tree expr, Tree value, Trees provenance ) {
         exprs = exprs.append(expr);
         int loc = exprs.length()-1;
+        if (value.is_variable())
+            return #<tuple(`value,Lineage(`loc,`value,...provenance))>;
         Tree nv = new_var();
         return #<let(`nv,`value,tuple(`nv,Lineage(`loc,`nv,...provenance)))>;
     }
@@ -111,13 +113,11 @@ public class Provenance extends Streaming {
             Tree nw = new_var();
             Tree ex = embedB(x);
             Tree nb = subst(v,#<nth(`nv,0)>,b);
-            return #<cmap(lambda(`nv,cmap(lambda(`nw,bag(tuple(`nw,nth(`nv,1)))),
-                                          `nb)),
-                                 `ex)>;
+            Tree p = prov(e,nw,#<nth(`nv,1)>);
+            return #<cmap(lambda(`nv,cmap(lambda(`nw,bag(`p)),`nb)),`ex)>;
         case cmap(lambda(`v,`b),`x):
             Tree nv = new_var();
             Tree nw = new_var();
-            Tree y = new_var();
             Tree ex = embedB(x);
             Tree ef = lift_var(v,nv,#<nth(`nv,0)>,embedB(b));
             Tree p = prov(e,#<nth(`nw,0)>,#<nth(`nw,1)>);
@@ -136,13 +136,15 @@ public class Provenance extends Streaming {
             return #<cmap(lambda(`nv,bag(`p)),orderBy(`ex))>;
         case coGroup(`x,`y):
             Tree nv = new_var();
+            Tree xv = new_var();
+            Tree yv = new_var();
             Tree ex = flip(embedB(x));
             Tree ey = flip(embedB(y));
-            Tree val = #<tuple(nth(`nv,0),tuple(`(first(#<nth(nth(`nv,1),0)>)),
-                                                `(first(#<nth(nth(`nv,1),1)>))))>;
-            Tree p = prov(e,val,#[`(second(#<nth(nth(`nv,1),0)>)),
-                                  `(second(#<nth(nth(`nv,1),1)>))]);
-            return #<cmap(lambda(`nv,bag(`p)),coGroup(`ex,`ey))>;
+            Tree val = #<tuple(nth(`nv,0),tuple(`(first(xv)),`(first(yv))))>;
+            Tree p = prov(e,val,#[`(second(xv)),`(second(yv))]);
+            return #<cmap(lambda(`nv,bag(let(`xv,nth(nth(`nv,1),0),
+                                             let(`yv,nth(nth(`nv,1),1),`p)))),
+                          coGroup(`ex,`ey))>;
         case call(source,...):
             Tree nv = new_var();
             Tree p = prov(e,nv,#[ ]);
@@ -196,12 +198,22 @@ public class Provenance extends Streaming {
 
     /** Lift the expression e of type t to (t,provenance) */
     public static Tree embedP ( Tree e ) {
+        match TypeInference.type_inference(e) {
+        case `T(_):
+            if (!is_collection(T))
+                fail;
+            Tree nv = new_var();
+            Tree ex = embedB(e);
+            Tree p = prov(e,first(nv),second(nv));
+            return #<let(`nv,`ex,`p)>;
+        };
         match e {
         case reduce(`m,`x):
             Tree nv = new_var();
             Tree ex = embedB(x);
             Tree p = prov(e,#<reduce(`m,`(first(nv)))>,second(nv));
-            return #<Let(`nv,`ex,`p)>;
+            return #<let(`nv,`ex,`p)>;
+            //return #<Let(`nv,`ex,`p)>;
         case tuple(...as):
             Tree nv = new_var();
             Trees es = #[ ];
@@ -277,15 +289,6 @@ public class Provenance extends Streaming {
                     return prov(e,e,#[ ]);
                 else return v;
         };
-        match TypeInference.type_inference(e) {
-        case `T(_):
-            if (!is_collection(T))
-                fail;
-            Tree nv = new_var();
-            Tree ex = embedB(e);
-            Tree p = prov(e,first(nv),second(nv));
-            return #<Let(`nv,`ex,`p)>;
-        };
         return prov(e,e,#[ ]);
     }
 
@@ -328,21 +331,20 @@ public class Provenance extends Streaming {
             Bag s = new Bag();
             for ( int i = 2; i < p.size() && s.size() < Config.max_bag_size_print; i++ )
                 for ( MRData e: collect_lineage(p.get(i)) )
-                    if (!member(s,e))
-                        s.add(e);
+                    s.add(e);
             return s;
         } else if (value instanceof Bag) {
             Bag s = new Bag();
             ((Bag)value).materialize();
             for ( MRData e: (Bag)value )
                 for ( MRData x: collect_lineage(e) )
-                    if (s.size() < Config.max_bag_size_print && !member(s,x))
+                    if (s.size() < Config.max_bag_size_print)
                         s.add(x);
             return s;
         } else return new Bag();
     }
 
-    /** Print the the data sources that contribute to the output to the output */
+    /** Print the data sources that contribute to the output */
     public static void display ( MRData value, Tree tp, Trees prov_exprs ) {
         exprs = prov_exprs;
         match tp {

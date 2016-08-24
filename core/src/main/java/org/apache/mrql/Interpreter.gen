@@ -28,6 +28,7 @@ import java.io.PrintStream;
 public class Interpreter extends TypeInference {
 
     public final static Tree identity_mapper = #<lambda(x,bag(x))>;
+    public static boolean debug_mode = false;
 
     protected static Environment global_env = null;
 
@@ -615,13 +616,17 @@ public class Interpreter extends TypeInference {
             return new Bag();
         case provenance(`x,`tp,...s):
             MRData value = evalE(x,env);
-            Provenance.display(value,tp,#[...s]);
+            if (Config.debug)
+                Debugger.debug(value,tp,#[...s]);
+            else Provenance.display(value,tp,#[...s]);
             return new Tuple(0);
         case Provenance(`x,`tp,...s):
             MRData value = (Config.hadoop_mode)
                 ? new MR_dataset(Evaluator.evaluator.eval(x,env,"-"))
                 : evalS(x,env);
-            Provenance.display(value,tp,#[...s]);
+            if (Config.debug)
+                Debugger.debug(value,tp,#[...s]);
+            else Provenance.display(value,tp,#[...s]);
             return new Tuple(0);
         case Lineage(...as):
             return evalEE(#<tuple(...as)>,env);
@@ -914,7 +919,7 @@ public class Interpreter extends TypeInference {
                 if (Config.trace)
                     System.out.println("After provenance injection:\n"+ne.pretty(0));
             } else if (Config.debug) {
-                ne = Provenance.embed_provenance(ne,true);
+                ne = Provenance.embed_provenance(ne,debug_mode);
                 if (Config.trace)
                     System.out.println("After provenance injection:\n"+ne.pretty(0));
             };

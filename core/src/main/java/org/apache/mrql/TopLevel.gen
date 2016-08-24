@@ -379,23 +379,25 @@ final public class TopLevel extends Interpreter {
             };
         case lineage(`e):
             Config.lineage = true;
-            boolean quiet = Config.quiet_execution;
-            Config.quiet_execution = true;
+            if (Config.hadoop_mode)
+                Config.write(Plan.conf);
             long t = System.currentTimeMillis();
             if (expression(e,false) != null && !Config.quiet_execution)
                 System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
-            Config.lineage = false;
-            Config.quiet_execution = quiet;
-        case debug(`path,`e):
+            if (Config.hadoop_mode)
+                Config.write(Plan.conf);
+        case debug(`mode,`e):
             Config.debug = true;
             boolean quiet = Config.quiet_execution;
             Config.quiet_execution = true;
-            long t = System.currentTimeMillis();
-            dump(path.stringValue(),e);
-            if (!Config.quiet_execution)
-                System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
+            if (Config.hadoop_mode)
+                Config.write(Plan.conf);
+            debug_mode = mode.equals(#<fine>);
+            expression(e,false);
             Config.debug = false;
             Config.quiet_execution = quiet;
+            if (Config.hadoop_mode)
+                Config.write(Plan.conf);
         case dump(`s,`e):
             long t = System.currentTimeMillis();
             dump(s.stringValue(),e);

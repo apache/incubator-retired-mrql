@@ -854,15 +854,13 @@ public class Streaming extends AlgebraicOptimization {
             Tree vy = new_var();
             Tree cx = convert_to_algebra(x);
             Tree cy = convert_to_algebra(y);
-            Tree mx = new_var();
-            Tree my = new_var();
             return #<join(lambda(`vx,nth(`vx,0)),lambda(`vy,nth(`vy,0)),
                           lambda(`v,bag(tuple(call(join_key,nth(`v,0),nth(`v,1)),
                                               tuple(cmap(lambda(`vx,bag(nth(`vx,1))),nth(`v,0)),
                                                     cmap(lambda(`vy,bag(nth(`vy,1))),nth(`v,1)))))),
                           `cx, `cy)>;
-      case reduce(`aggr,`s):
-            return convert_reduce(aggr,convert_to_algebra(s));
+        case reduce(`aggr,`s):
+          return convert_reduce(aggr,convert_to_algebra(s));
         case `f(...as):
             Trees bs = #[ ];
             for ( Tree a: as )

@@ -1,0 +1,282 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.mrql;
+
+import org.apache.mrql.gen.*;
+import java.util.Enumeration;
+import java.io.*;
+import javax.swing.*;
+import javax.swing.JTree.*;
+import javax.swing.tree.*;
+import javax.swing.event.*;
+import java.awt.*;
+import java.awt.event.*;
+
+
+/* The MRQL debugger that uses the lineage generated in Provenance.gen */
+public class Debugger extends JPanel implements TreeSelectionListener {
+    final MRData result;
+    final JTree tree;
+    final JTextField search = new JTextField(20);
+    private static volatile boolean exit = false;
+    Trees exprs;
+
+    /** wrapped strings to be colored red */
+    private final static class TaggedString {
+        public String value;
+        TaggedString ( String value ) { this.value = value; }
+        public String toString () { return value; }
+    }
+
+    public Debugger ( MRData result_value, Trees exprs ) {
+        super(new GridLayout(1,0));
+        result = result_value;
+        this.exprs = exprs;
+        JToolBar toolBar = new JToolBar("");
+        toolBar.setPreferredSize(new Dimension(1000,40));
+        JButton button = new JButton();
+        button.setActionCommand("Previous");
+        button.setText("prev");
+        button.addActionListener(new ActionListener() {
+                public void actionPerformed ( ActionEvent e ) {
+                }
+            });
+        button.setVisible(false);
+        toolBar.add(button);
+        button = new JButton();
+        button.setActionCommand("Next");
+        button.setText("next");
+        button.addActionListener(new ActionListener() {
+                public void actionPerformed ( ActionEvent e ) {
+                }
+            });
+        button.setVisible(false);
+        toolBar.add(button);
+        toolBar.add(Box.createRigidArea(new Dimension(400,0)));
+        button = new JButton();
+        button.setActionCommand("Clear");
+        button.setText("clear");
+        button.addActionListener(new ActionListener() {
+                public void actionPerformed ( ActionEvent e ) {
+                    search.setText("");
+                    DefaultTreeModel model = (DefaultTreeModel)tree.getModel();
+                    DefaultMutableTreeNode root = createNode(result,"","");
+                    root.setUserObject("results");
+                    model.setRoot(root);
+                    model.reload(root);
+                }
+            });
+        toolBar.add(button);
+        toolBar.add(search);
+        button = new JButton();
+        button.setActionCommand("SearchOutput");
+        button.setText("Search Output");
+        button.addActionListener(new ActionListener() {
+                public void actionPerformed ( ActionEvent e ) {
+                    if (!search.getText().equals("")) {
+                        DefaultTreeModel model = (DefaultTreeModel)tree.getModel();
+                        DefaultMutableTreeNode root = createNode(result,search.getText(),"");
+                        root.setUserObject("search output results");
+                        model.setRoot(root);
+                        model.reload(root);
+                    }
+                }
+            });
+        toolBar.add(button);
+        button = new JButton();
+        button.setActionCommand("SearchInput");
+        button.setText("Search Input");
+        button.addActionListener(new ActionListener() {
+                public void actionPerformed ( ActionEvent e ) {
+                    if (!search.getText().equals("")) {
+                        DefaultTreeModel model = (DefaultTreeModel)tree.getModel();
+                        DefaultMutableTreeNode root = createNode(result,"",search.getText());
+                        root.setUserObject("search input results");
+                        model.setRoot(root);
+                        model.reload(root);
+                    }
+                }
+            });
+        toolBar.add(button);
+        tree = new JTree(createNode(result,"",""));
+        JScrollPane sp = new JScrollPane(tree,JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                                         JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        sp.setPreferredSize(new Dimension(1000,2000));
+        sp.getVerticalScrollBar().setPreferredSize(new Dimension(20,0));
+        tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+        Font currentFont = tree.getFont();
+        tree.setFont(new Font(currentFont.getName(),
+                              currentFont.getStyle(),
+                              (int)(currentFont.getSize()*1.5)));
+        DefaultTreeCellRenderer renderer = new DefaultTreeCellRenderer() {
+                public Component getTreeCellRendererComponent
+                    ( JTree tree, Object value, boolean sel, boolean exp,
+                      boolean leaf, int row, boolean hasFocus ) {
+                    super.getTreeCellRendererComponent(tree,value,sel,exp,leaf,row,hasFocus);
+                    // tagged strings are red
+                    if (((DefaultMutableTreeNode)value).getUserObject() instanceof TaggedString)
+                        setForeground(Color.red);
+                    return this;
+                }
+            };
+        renderer.setLeafIcon(null);
+        renderer.setOpenIcon(null);
+        renderer.setClosedIcon(null);
+        tree.setCellRenderer(renderer);
+        tree.addTreeSelectionListener(this);
+        setLayout(new BorderLayout());
+        add(toolBar,BorderLayout.NORTH);
+        add(sp,BorderLayout.CENTER);
+    }
+
+    public void valueChanged ( TreeSelectionEvent e ) { }
+
+    private String exprNode ( Tree e ) {
+        match e {
+        case call(source,_,`path,...):
+            return "source: "+path;
+        case call(`f,...):
+            return f.toString();
+        case cmap(lambda(`v,_),_):
+            return "cmap "+v;
+        case groupBy(_):
+            return "groupBy";
+        case coGroup(...):
+            return "coGroup";
+        case reduce(`m,...):
+            return "reduce("+m+")";
+        case project(`v,`a):
+            return exprNode(v)+"."+a;
+        case nth(`x,`n):
+            return exprNode(x)+"#"+n;
+        case `f(...):
+            return f;
+        };
+        return e.toString();
+    }
+
+    private DefaultMutableTreeNode create_node ( MRData value, int n, String inputSearch ) {
+        if (value instanceof Tuple) {
+            DefaultMutableTreeNode node = new DefaultMutableTreeNode("input "+n);
+            DefaultMutableTreeNode child = provenanceNode(value,inputSearch);
+            if (child.getUserObject() instanceof TaggedString)
+                node.setUserObject(new TaggedString("input "+n));
+            node.add(child);
+            return node;
+        } else if (value instanceof Bag) {
+            DefaultMutableTreeNode node = new DefaultMutableTreeNode("input "+n);
+            boolean matched = false;
+            for ( MRData e: (Bag)value ) {
+                DefaultMutableTreeNode child = provenanceNode(e,inputSearch);
+                matched |= child.getUserObject() instanceof TaggedString;
+                node.add(child);
+            };
+            if (matched)
+                node.setUserObject(new TaggedString("input "+n));
+            return node;
+        } else return new DefaultMutableTreeNode(value.toString());
+    }
+
+    private DefaultMutableTreeNode provenanceNode ( MRData value, String inputSearch ) {
+        Tuple p = ((Tuple)value);
+        MRData v = p.get(1);
+        DefaultMutableTreeNode node = new DefaultMutableTreeNode(v.toString());
+        Tree opr = exprs.nth(((MR_int)p.get(0)).get());
+        node.add(new DefaultMutableTreeNode(exprNode(opr)));
+        boolean matched = false;
+        for ( int i = 2; i < p.size(); i++ ) {
+            DefaultMutableTreeNode child = create_node(p.get(i),i-1,inputSearch);
+            node.add(child);
+            matched |= child.getUserObject() instanceof TaggedString;
+        };
+        if (matched)
+            node.setUserObject(new TaggedString(v.toString()));
+        else match opr {
+        case call(source,...):
+            if (!inputSearch.equals("") && v.toString().contains(inputSearch))
+                node.setUserObject(new TaggedString(v.toString()));
+        };
+        return node;
+    }
+
+    private DefaultMutableTreeNode createNode ( MRData value, String outputSearch, String inputSearch ) {
+        if (value instanceof Bag) {
+            DefaultMutableTreeNode node = new DefaultMutableTreeNode("results");
+            for ( MRData e: (Bag)value )
+                if (outputSearch.equals("") || ((Tuple)e).get(0).toString().contains(outputSearch)) {
+                    DefaultMutableTreeNode child = provenanceNode(((Tuple)e).get(1),inputSearch);
+                    if (inputSearch.equals("") || (child.getUserObject() instanceof TaggedString))
+                        node.add(child);
+                };
+            return node;
+        } else if (value instanceof MR_dataset) {
+            DefaultMutableTreeNode node = new DefaultMutableTreeNode("results");
+            for ( MRData e: ((MR_dataset)value).dataset().take(Config.max_bag_size_print) )
+                if (outputSearch.equals("") || ((Tuple)e).get(0).toString().contains(outputSearch)) {
+                    DefaultMutableTreeNode child = provenanceNode(((Tuple)e).get(1),inputSearch);
+                    if (inputSearch.equals("") || (child.getUserObject() instanceof TaggedString))
+                        node.add(child);
+                };
+            return node;
+        } else {
+            DefaultMutableTreeNode node = new DefaultMutableTreeNode(((Tuple)value).get(0).toString());
+            node.add(provenanceNode(((Tuple)value).get(1),inputSearch));
+            return node;
+        }
+    }
+    
+    private static void createAndShowGUI ( MRData lineage, Tree tp, Trees exprs ) {
+        final JFrame frame = new JFrame("MRQL debugger");
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+ 	frame.addWindowListener(new WindowListener() {
+                public void windowClosing ( WindowEvent e ) {
+                    frame.setVisible(false);
+                    frame.dispose();
+                    exit = true;
+                }
+                public void windowActivated ( WindowEvent e ) {}
+                public void windowClosed ( WindowEvent e ) {}
+                public void windowDeactivated ( WindowEvent e ) {}
+                public void windowDeiconified ( WindowEvent e ) {}
+                public void windowIconified ( WindowEvent e ) {}
+                public void windowOpened ( WindowEvent e ) {}
+            });
+        frame.add(new Debugger(lineage,exprs));
+        frame.pack();
+        frame.setVisible(true);
+    }
+
+    /** use the MRQL debugger on a query result
+     * @param lineage the query result extended with lineage
+     * @param type the result type
+     * @param exprs the expr terms used in the lineage
+     */
+    public static void debug ( final MRData lineage, final Tree type, final Trees exprs ) {
+        try {
+            SwingUtilities.invokeLater(new Runnable() {
+                    public void run () {
+                        createAndShowGUI(lineage,type,exprs);
+                    }
+                });
+            exit = false;
+            while (!exit)
+                Thread.sleep(1000);
+        } catch (Exception ex) {
+        }
+    }
+}
