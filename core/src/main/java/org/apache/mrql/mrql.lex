@@ -61,17 +61,20 @@ import org.apache.mrql.gen.Tree;
 
   public static void start_trace_code () {
     trace_nest++;
-    trace_code += "$(";
+    trace_code += "$("+Tree.line_number+"("+Tree.position_number+") ";
   }
 
   public static String get_trace_code () {
     int loc = trace_code.lastIndexOf("$");
     String s = trace_code.substring(loc+2);
     s = s.substring(0,s.length()-1);
+    int locn = s.indexOf(")");
+    if (loc > 0)
+      locn++;
     trace_nest--;
     if (loc > 0)
       loc--;
-    trace_code = trace_code.substring(0,loc)+s;
+    trace_code = trace_code.substring(0,loc)+s.substring(locn+1);
     return s.replaceAll("\\p{Space}+"," ");
   }
 

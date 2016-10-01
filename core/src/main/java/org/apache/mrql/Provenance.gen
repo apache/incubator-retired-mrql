@@ -66,6 +66,8 @@ public class Provenance extends Streaming {
      * @return a provenance tuple
      */
     private static Tree prov ( Tree expr, Tree value, Trees provenance ) {
+        Tree tp = TypeInference.type_inference(expr);
+        exprs = exprs.append(tp);
         exprs = exprs.append(expr);
         int loc = exprs.length()-1;
         if (value.is_variable())
@@ -81,7 +83,7 @@ public class Provenance extends Streaming {
     private static Tree lift_var ( Tree var, Tree nvar, Tree fvar, Tree e ) {
         match e {
         case cmap(`f,`x):
-            if (fine_grain)
+            if (fine_grain || contains_trace(f))
                 fail;
             // don't lift the cmap function in coarse-grained provenance
             Tree nf = subst(var,fvar,f);
@@ -96,19 +98,30 @@ public class Provenance extends Streaming {
         return (e.equals(var)) ? nvar : e;
     }
 
+    private static boolean contains_trace ( Tree e ) {
+        match e {
+        case trace(`msg,`tp,`x):
+            return true;
+        case `f(...as):
+            for ( Tree a: as )
+                if (contains_trace(a))
+                    return true;
+        };
+        return false;
+    }
+
     /** Lift the expression e of type {t} to {(t,{provenance})} */
     private static Tree embedB ( Tree e ) {
         match e {
         case repeat(lambda(`v,`u),`x,`n):
             Tree nv = new_var();
-            Tree nn = new_var();
             Tree ex = embedB(x);
-            Tree ef = lift_var(v,nv,#<cmap(lambda(`nn,bag(nth(`nn,0))),`nv)>,
-                               flipr(embedB(u)));
+            Tree ef = subst(v,nv,flipr(embedB(u)));
             return #<repeat(lambda(`nv,`ef),`ex,`n)>;
         case cmap(lambda(`v,`b),`x):
-            if (fine_grain)
+            if (fine_grain || contains_trace(b))
                 fail;
+            // coarse grain
             Tree nv = new_var();
             Tree nw = new_var();
             Tree ex = embedB(x);
@@ -116,10 +129,11 @@ public class Provenance extends Streaming {
             Tree p = prov(e,nw,#<nth(`nv,1)>);
             return #<cmap(lambda(`nv,cmap(lambda(`nw,bag(`p)),`nb)),`ex)>;
         case cmap(lambda(`v,`b),`x):
+            // fine grain
             Tree nv = new_var();
             Tree nw = new_var();
             Tree ex = embedB(x);
-            Tree ef = lift_var(v,nv,#<nth(`nv,0)>,embedB(b));
+            Tree ef = subst(v,nv,embedB(b));
             Tree p = prov(e,#<nth(`nw,0)>,#<nth(`nw,1)>);
             return #<cmap(lambda(`nv,cmap(lambda(`nw,bag(`p)),`ef)),`ex)>;
         case groupBy(`x):
@@ -142,8 +156,8 @@ public class Provenance extends Streaming {
             Tree ey = flip(embedB(y));
             Tree val = #<tuple(nth(`nv,0),tuple(`(first(xv)),`(first(yv))))>;
             Tree p = prov(e,val,#[`(second(xv)),`(second(yv))]);
-            return #<cmap(lambda(`nv,bag(let(`xv,nth(nth(`nv,1),0),
-                                             let(`yv,nth(nth(`nv,1),1),`p)))),
+            return #<cmap(lambda(`nv,let(`xv,nth(nth(`nv,1),0),
+                                         let(`yv,nth(nth(`nv,1),1),bag(`p)))),
                           coGroup(`ex,`ey))>;
         case call(source,...):
             Tree nv = new_var();
@@ -170,11 +184,25 @@ public class Provenance extends Streaming {
                                       project(nth(`nw,0),`a)))>;
         case if(`pred,`x,`y):
             Tree nv = new_var();
+            Tree nw = new_var();
             Tree ep = embedP(pred);
             Tree ex = embedB(x);
             Tree ey = embedB(y);
-            return #<let(`nv,tuple(`ep,`ex,`ey),
-                         if(nth(nth(`nv,0),0),nth(`nv,1),nth(`nv,2)))>;
+            Tree p = prov(e,#<nth(`nw,0)>,#[nth(`nv,1),nth(`nw,1)]);
+            return #<let(`nv,`ep,
+                         cmap(lambda(`nw,bag(`p)),if(nth(`nv,0),`ex,`ey)))>;
+        case typed(`x,`T(`tp)):
+            if (!is_collection(T))
+                fail;
+            Tree nv = new_var();
+            Tree ex = embedB(x);
+            Tree p = prov(e,#<typed(nth(`nv,0),`tp)>,#<nth(`nv,1)>);
+            return #<cmap(lambda(`nv,bag(`p)),`ex)>;
+        case trace(`msg,`tp,`x):
+            Tree nv = new_var();
+            Tree ex = embedB(x);
+            Tree p = prov(e,#<nth(`nv,0)>,#<nth(`nv,1)>);
+            return #<cmap(lambda(`nv,bag(`p)),`ex)>;
         case `v:
             if (v.is_variable())
                 if (Interpreter.repeat_variables.member(v))
@@ -213,7 +241,6 @@ public class Provenance extends Streaming {
             Tree ex = embedB(x);
             Tree p = prov(e,#<reduce(`m,`(first(nv)))>,second(nv));
             return #<let(`nv,`ex,`p)>;
-            //return #<Let(`nv,`ex,`p)>;
         case tuple(...as):
             Tree nv = new_var();
             Trees es = #[ ];
@@ -276,13 +303,45 @@ public class Provenance extends Streaming {
             Tree p = prov(e,#<if(nth(nth(`nv,0),0),nth(nth(`nv,1),0),nth(nth(`nv,2),0))>,
                           #[nth(nth(`nv,0),1),nth(nth(`nv,1),1),nth(nth(`nv,2),1)]);
             return #<let(`nv,tuple(`ep,`ex,`ey),`p)>;
-        case typed(`u,_):
-            return embedP(u);
         case index(`x,`n):
             Tree ex = embedB(x);
             return #<index(`ex,`n)>;
         case true: return prov(e,e,#[ ]);
         case false: return prov(e,e,#[ ]);
+        case typed(tagged_union(`n,`u),`tp):
+            Tree nv = new_var();
+            Tree ex = embedP(u);
+            Tree p = prov(e,#<typed(tagged_union(`n,nth(`nv,0)),`tp)>,#<nth(`nv,1)>);
+            return #<let(`nv,`ex,`p)>;
+        case typed(union_value(`u),`tp):
+            Tree nv = new_var();
+            Tree ex = embedP(u);
+            Tree p = prov(e,#<typed(union_value(nth(`nv,0)),`tp)>,#<nth(`nv,1)>);
+            return #<let(`nv,`ex,`p)>;
+        case typed(`x,`tp):
+            Tree nv = new_var();
+            Tree ex = embedP(x);
+            Tree p = prov(e,#<typed(nth(`nv,0),`tp)>,#<nth(`nv,1)>);
+            return #<let(`nv,`ex,`p)>;
+        case trace(`msg,`tp,`x):
+            Tree nv = new_var();
+            Tree ex = embedP(x);
+            Tree p = prov(e,#<nth(`nv,0)>,#<nth(`nv,1)>);
+            return #<let(`nv,`ex,`p)>;
+        case `f(...as):
+            Tree nv = new_var();
+            Trees es = #[ ];
+            Trees vs = #[ ];
+            Trees ps = #[ ];
+            int i = 0;
+            for ( Tree a: as ) {
+                es = es.append(embedP(a));
+                vs = vs.append(#<nth(nth(`nv,`i),0)>);
+                ps = ps.append(#<nth(nth(`nv,`i),1)>);
+                i++;
+            };
+            Tree p = prov(e,#<`f(...vs)>,ps);
+            return #<let(`nv,tuple(...es),`p)>;
         case `v:
             if (v.is_variable())
                 if (Interpreter.lookup_global_binding(v.toString()) != null)
@@ -305,6 +364,7 @@ public class Provenance extends Streaming {
             if (!is_collection(T))
                 fail;
             ne = SimplifyTerm(embedB(ne));
+            TypeInference.type_inference(ne);
         case _: ne = SimplifyTerm(embedP(ne));
         };
         ne = SimplifyTerm(convert_to_algebra(ne));
@@ -319,29 +379,40 @@ public class Provenance extends Streaming {
         return false;
     }
 
-    /** Collect the provenance leaves (the data sources that contribute to the output) into a bag */
-    private static Bag collect_lineage ( MRData value ) {
+    /** Print the provenance trace and leaf nodes
+     *   (the data sources that have contributed to the output value) */
+    private static void print_lineage ( MRData value, boolean trace_only, String tab ) {
         if (value instanceof Tuple) {
             Tuple p = ((Tuple)value);
-            if (p.size() == 2)
-                match exprs.nth(((MR_int)p.get(0)).get()) {
-                case call(source,...):
-                    return new Bag(p.get(1));
-                };
-            Bag s = new Bag();
-            for ( int i = 2; i < p.size() && s.size() < Config.max_bag_size_print; i++ )
-                for ( MRData e: collect_lineage(p.get(i)) )
-                    s.add(e);
-            return s;
+            Tree e = exprs.nth(((MR_int)p.get(0)).get());
+            match e {
+            case call(source,_,`path,...):
+                if (trace_only)
+                    fail;
+                match exprs.nth(((MR_int)p.get(0)).get()-1) {
+                case `T(`tp):
+                    if (!is_collection(T))
+                        fail;
+                    System.out.println(tab+path.stringValue()+": "
+                                       +Printer.print(p.get(1),tp));
+                }
+            case trace(`msg,`T(`tp),`x):
+                if (!is_collection(T))
+                    fail;
+                System.out.println(tab+msg.stringValue()+": "+Printer.print(p.get(1),tp));
+                print_lineage(p.get(2),true,tab+"    ");
+            case trace(`msg,`tp,`x):
+                System.out.println(tab+msg.stringValue()+": "+Printer.print(p.get(1),tp));
+                print_lineage(p.get(2),true,tab+"    ");
+            case _:
+                for ( int i = 2; i < p.size(); i++ )
+                    print_lineage(p.get(i),trace_only,tab);
+            }
         } else if (value instanceof Bag) {
-            Bag s = new Bag();
             ((Bag)value).materialize();
             for ( MRData e: (Bag)value )
-                for ( MRData x: collect_lineage(e) )
-                    if (s.size() < Config.max_bag_size_print)
-                        s.add(x);
-            return s;
-        } else return new Bag();
+                print_lineage(e,trace_only,tab);
+        }
     }
 
     /** Print the data sources that contribute to the output */
@@ -354,15 +425,15 @@ public class Provenance extends Streaming {
             if (value instanceof Bag)
                 for ( MRData e: (Bag)value ) {
                     System.out.println(Printer.print(((Tuple)e).get(0),etp));
-                    System.out.println(" <- "+collect_lineage(((Tuple)e).get(1)));
+                    print_lineage(((Tuple)e).get(1),false,"    ");
                 } else if (value instanceof MR_dataset)
                 for ( MRData e: ((MR_dataset)value).dataset().take(Config.max_bag_size_print) ) {
                     System.out.println(Printer.print(((Tuple)e).get(0),etp));
-                    System.out.println(" <- "+collect_lineage(((Tuple)e).get(1)));
+                    print_lineage(((Tuple)e).get(1),false,"    ");
                 }
         case _:
             System.out.println(Printer.print(((Tuple)value).get(0),tp));
-            System.out.println(" <- "+collect_lineage(((Tuple)value).get(1)));
+            print_lineage(((Tuple)value).get(1),false,"    ");
         }
     }
 

@@ -18,7 +18,6 @@
 package org.apache.mrql;
 
 import org.apache.mrql.gen.*;
-import java.util.Enumeration;
 import java.io.*;
 import javax.swing.*;
 import javax.swing.JTree.*;
@@ -33,7 +32,9 @@ public class Debugger extends JPanel implements TreeSelectionListener {
     final MRData result;
     final JTree tree;
     final JTextField search = new JTextField(20);
+    static JFrame frame;
     private static volatile boolean exit = false;
+    private static volatile boolean trace_nodes_only = false;
     Trees exprs;
 
     /** wrapped strings to be colored red */
@@ -50,6 +51,38 @@ public class Debugger extends JPanel implements TreeSelectionListener {
         JToolBar toolBar = new JToolBar("");
         toolBar.setPreferredSize(new Dimension(1000,40));
         JButton button = new JButton();
+        button.setActionCommand("Exit");
+        button.setText("exit");
+        final JFrame nframe = frame;
+        button.addActionListener(new ActionListener() {
+                public void actionPerformed ( ActionEvent e ) {
+                    nframe.setVisible(false);
+                    nframe.dispose();
+                    exit = true;
+                }
+            });
+        button.setVisible(true);
+        toolBar.add(button);
+        toolBar.add(Box.createRigidArea(new Dimension(200,0)));
+        JCheckBox checkb = new JCheckBox();
+        checkb.setActionCommand("traceOnly");
+        checkb.setText("trace nodes only");
+        checkb.addActionListener(new ActionListener() {
+                public void actionPerformed ( ActionEvent e ) {
+                    trace_nodes_only = !trace_nodes_only;
+                    if (trace_nodes_only) {
+                        search.setText("");
+                        DefaultTreeModel model = (DefaultTreeModel)tree.getModel();
+                        DefaultMutableTreeNode root = createNode(result,"","");
+                        root.setUserObject("results with trace and input nodes only");
+                        model.setRoot(root);
+                        model.reload(root);
+                    } else reset();
+                }
+            });
+        checkb.setVisible(true);
+        toolBar.add(checkb);
+        button = new JButton();
         button.setActionCommand("Previous");
         button.setText("prev");
         button.addActionListener(new ActionListener() {
@@ -57,7 +90,7 @@ public class Debugger extends JPanel implements TreeSelectionListener {
                 }
             });
         button.setVisible(false);
-        toolBar.add(button);
+        //toolBar.add(button);
         button = new JButton();
         button.setActionCommand("Next");
         button.setText("next");
@@ -66,19 +99,14 @@ public class Debugger extends JPanel implements TreeSelectionListener {
                 }
             });
         button.setVisible(false);
-        toolBar.add(button);
-        toolBar.add(Box.createRigidArea(new Dimension(400,0)));
+        //toolBar.add(button);
+        toolBar.add(Box.createRigidArea(new Dimension(200,0)));
         button = new JButton();
         button.setActionCommand("Clear");
         button.setText("clear");
         button.addActionListener(new ActionListener() {
                 public void actionPerformed ( ActionEvent e ) {
-                    search.setText("");
-                    DefaultTreeModel model = (DefaultTreeModel)tree.getModel();
-                    DefaultMutableTreeNode root = createNode(result,"","");
-                    root.setUserObject("results");
-                    model.setRoot(root);
-                    model.reload(root);
+                    reset();
                 }
             });
         toolBar.add(button);
@@ -146,10 +174,21 @@ public class Debugger extends JPanel implements TreeSelectionListener {
 
     public void valueChanged ( TreeSelectionEvent e ) { }
 
+    private void reset () {
+        search.setText("");
+        DefaultTreeModel model = (DefaultTreeModel)tree.getModel();
+        DefaultMutableTreeNode root = createNode(result,"","");
+        root.setUserObject("results");
+        model.setRoot(root);
+        model.reload(root);
+    }
+
     private String exprNode ( Tree e ) {
         match e {
         case call(source,_,`path,...):
-            return "source: "+path;
+            return path.stringValue();
+        case trace(`msg,_,_):
+            return msg.stringValue();
         case call(`f,...):
             return f.toString();
         case cmap(lambda(`v,_),_):
@@ -170,78 +209,87 @@ public class Debugger extends JPanel implements TreeSelectionListener {
         return e.toString();
     }
 
-    private DefaultMutableTreeNode create_node ( MRData value, int n, String inputSearch ) {
-        if (value instanceof Tuple) {
-            DefaultMutableTreeNode node = new DefaultMutableTreeNode("input "+n);
-            DefaultMutableTreeNode child = provenanceNode(value,inputSearch);
-            if (child.getUserObject() instanceof TaggedString)
-                node.setUserObject(new TaggedString("input "+n));
-            node.add(child);
-            return node;
-        } else if (value instanceof Bag) {
-            DefaultMutableTreeNode node = new DefaultMutableTreeNode("input "+n);
-            boolean matched = false;
-            for ( MRData e: (Bag)value ) {
-                DefaultMutableTreeNode child = provenanceNode(e,inputSearch);
-                matched |= child.getUserObject() instanceof TaggedString;
-                node.add(child);
-            };
-            if (matched)
-                node.setUserObject(new TaggedString("input "+n));
-            return node;
-        } else return new DefaultMutableTreeNode(value.toString());
+    private boolean consider_node ( Tree e ) {
+        match e {
+        case call(source,...): return true;
+        case trace(...): return true;
+        };
+        return !trace_nodes_only;
     }
 
-    private DefaultMutableTreeNode provenanceNode ( MRData value, String inputSearch ) {
+    private boolean existing_child ( DefaultMutableTreeNode node, DefaultMutableTreeNode parent ) {
+        Object no = node.getUserObject();
+        String ns = (no instanceof TaggedString) ? ((TaggedString)no).value : (String)no;
+        for ( int i = 0; i < parent.getChildCount(); i++ ) {
+            Object co = ((DefaultMutableTreeNode)parent.getChildAt(i)).getUserObject();
+            String cs = (co instanceof TaggedString) ? ((TaggedString)co).value : (String)co;
+            if (cs.equals(ns))
+                return true;
+        };
+        return false;
+    }
+
+    private void create_nodes ( MRData value, DefaultMutableTreeNode parent,
+                                String inputSearch, boolean first ) {
         Tuple p = ((Tuple)value);
         MRData v = p.get(1);
-        DefaultMutableTreeNode node = new DefaultMutableTreeNode(v.toString());
         Tree opr = exprs.nth(((MR_int)p.get(0)).get());
-        node.add(new DefaultMutableTreeNode(exprNode(opr)));
+        Tree tp = exprs.nth(((MR_int)p.get(0)).get()-1);
+        match tp {
+        case `T(`etp):
+            if (!Provenance.is_collection(T))
+                fail;
+            tp = etp;
+        }
+        DefaultMutableTreeNode node
+            = new DefaultMutableTreeNode((first) ? Printer.print(v,tp)
+                                         : exprNode(opr)+": "+Printer.print(v,tp));
+        if (first || consider_node(opr)) {
+            if (!existing_child(node,parent))
+                parent.add(node);
+        } else node = parent;
+        for ( int i = 2; i < p.size(); i++ )
+            if (p.get(i) instanceof Bag)
+                for ( MRData e: (Bag)p.get(i) )
+                    create_nodes(e,node,inputSearch,false);
+            else create_nodes(p.get(i),node,inputSearch,false);
         boolean matched = false;
-        for ( int i = 2; i < p.size(); i++ ) {
-            DefaultMutableTreeNode child = create_node(p.get(i),i-1,inputSearch);
-            node.add(child);
+        for ( int i = 0; i < node.getChildCount(); i++ ) {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode)node.getChildAt(i);
             matched |= child.getUserObject() instanceof TaggedString;
         };
-        if (matched)
-            node.setUserObject(new TaggedString(v.toString()));
+        if (matched && node.getUserObject() instanceof String)
+            node.setUserObject(new TaggedString((String)node.getUserObject()));
         else match opr {
         case call(source,...):
-            if (!inputSearch.equals("") && v.toString().contains(inputSearch))
-                node.setUserObject(new TaggedString(v.toString()));
-        };
-        return node;
+            if (!inputSearch.equals("") && v.toString().contains(inputSearch)
+                && node.getUserObject() instanceof String)
+                node.setUserObject(new TaggedString((String)node.getUserObject()));
+        }
     }
 
     private DefaultMutableTreeNode createNode ( MRData value, String outputSearch, String inputSearch ) {
         if (value instanceof Bag) {
             DefaultMutableTreeNode node = new DefaultMutableTreeNode("results");
             for ( MRData e: (Bag)value )
-                if (outputSearch.equals("") || ((Tuple)e).get(0).toString().contains(outputSearch)) {
-                    DefaultMutableTreeNode child = provenanceNode(((Tuple)e).get(1),inputSearch);
-                    if (inputSearch.equals("") || (child.getUserObject() instanceof TaggedString))
-                        node.add(child);
-                };
+                if (outputSearch.equals("") || ((Tuple)e).get(0).toString().contains(outputSearch))
+                    create_nodes(((Tuple)e).get(1),node,inputSearch,true);
             return node;
         } else if (value instanceof MR_dataset) {
             DefaultMutableTreeNode node = new DefaultMutableTreeNode("results");
             for ( MRData e: ((MR_dataset)value).dataset().take(Config.max_bag_size_print) )
-                if (outputSearch.equals("") || ((Tuple)e).get(0).toString().contains(outputSearch)) {
-                    DefaultMutableTreeNode child = provenanceNode(((Tuple)e).get(1),inputSearch);
-                    if (inputSearch.equals("") || (child.getUserObject() instanceof TaggedString))
-                        node.add(child);
-                };
+                if (outputSearch.equals("") || ((Tuple)e).get(0).toString().contains(outputSearch))
+                    create_nodes(((Tuple)e).get(1),node,inputSearch,true);
             return node;
         } else {
-            DefaultMutableTreeNode node = new DefaultMutableTreeNode(((Tuple)value).get(0).toString());
-            node.add(provenanceNode(((Tuple)value).get(1),inputSearch));
+            DefaultMutableTreeNode node = new DefaultMutableTreeNode("value");
+            if (outputSearch.equals("") || ((Tuple)value).get(0).toString().contains(outputSearch))
+                create_nodes(((Tuple)value).get(1),node,inputSearch,true);
             return node;
         }
     }
-    
+
     private static void createAndShowGUI ( MRData lineage, Tree tp, Trees exprs ) {
-        final JFrame frame = new JFrame("MRQL debugger");
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
  	frame.addWindowListener(new WindowListener() {
                 public void windowClosing ( WindowEvent e ) {
@@ -268,12 +316,14 @@ public class Debugger extends JPanel implements TreeSelectionListener {
      */
     public static void debug ( final MRData lineage, final Tree type, final Trees exprs ) {
         try {
+            exit = false;
+            trace_nodes_only = false;
+            frame = new JFrame("MRQL debugger");
             SwingUtilities.invokeLater(new Runnable() {
                     public void run () {
                         createAndShowGUI(lineage,type,exprs);
                     }
                 });
-            exit = false;
             while (!exit)
                 Thread.sleep(1000);
         } catch (Exception ex) {

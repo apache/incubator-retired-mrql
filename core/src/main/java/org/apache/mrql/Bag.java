@@ -87,7 +87,8 @@ public class Bag extends MRData implements Iterable<MRData> {
         mode = Modes.STREAMED;
         iterator = i;
         consumed = false;
-        if (Config.debug)
+        // during debugging, bags are materialized to vectors
+        if (Config.debug || Config.lineage)
             materialize();
     }
 

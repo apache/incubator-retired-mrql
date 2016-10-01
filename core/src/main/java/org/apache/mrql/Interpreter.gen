@@ -243,6 +243,7 @@ public class Interpreter extends TypeInference {
     }
 
     public static MRData trace ( long count, Tree type, MRData value ) {
+        value.materializeAll();
         System.out.print(tabs(tab_count)+"--> "+count+": ");
         System.out.println(Printer.print(value,type));
         tab_count -= 3;
@@ -813,6 +814,10 @@ public class Interpreter extends TypeInference {
                     });
             case let(`v,`u,`body):
                 return evalM(body,new Environment(v.toString(),evalE(u,env),env));
+            case materialize(`u):
+                Bag res = evalM(u,env);
+                res.materialize();
+                return res;
             case trace(`msg,`tp,`x):
                 String m = ((MR_string)evalE(msg,env)).get();
                 return (Bag)trace(pre_trace(m),tp,evalM(x,env));

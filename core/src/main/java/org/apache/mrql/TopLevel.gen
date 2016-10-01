@@ -124,8 +124,7 @@ final public class TopLevel extends Interpreter {
             global_vars.remove(v);
         MRData res = expression(e,false);
         global_type_env.insert(v,query_type);
-        if (res instanceof Bag)
-            ((Bag)res).materialize();
+        res.materializeAll();
         new_distributed_binding(v,res);
         return query_plan;
     }
@@ -137,8 +136,7 @@ final public class TopLevel extends Interpreter {
             global_vars.remove(v);
         MRData res = expression(e,false);
         global_type_env.insert(v,query_type);
-        if (res instanceof Bag)
-            ((Bag)res).materialize();
+        res.materializeAll();
         new_global_binding(v,res);
         return query_plan;
     }
@@ -384,6 +382,7 @@ final public class TopLevel extends Interpreter {
             long t = System.currentTimeMillis();
             if (expression(e,false) != null && !Config.quiet_execution)
                 System.out.println("Run time: "+(System.currentTimeMillis()-t)/1000.0+" secs");
+            Config.lineage = false;
             if (Config.hadoop_mode)
                 Config.write(Plan.conf);
         case debug(`mode,`e):
