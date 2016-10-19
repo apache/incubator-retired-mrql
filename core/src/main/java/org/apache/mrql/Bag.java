@@ -483,6 +483,10 @@ public class Bag extends MRData implements Iterable<MRData> {
     }
 
     private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {
         materialize();
         WritableUtils.writeVInt(out,size());
         for ( MRData e: this )
@@ -490,17 +494,8 @@ public class Bag extends MRData implements Iterable<MRData> {
     }
 
     private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
-        int n = WritableUtils.readVInt(in);
-        mode = Modes.MATERIALIZED;
-        iterator = null;
-        path = null;
-        writer = null;
-        content = new ArrayList<MRData>(n);
-        for ( int i = 0; i < n; i++ )
-            add(MRContainer.read(in));
+        readFields(in);
     }
-
-    private void readObjectNoData () throws ObjectStreamException { };
 
     /** compare this Bag with a given Bag by comparing their associated elements */
     public int compareTo ( MRData x ) {

@@ -66,7 +66,7 @@ final public class Node extends Tree {
                  + children().tail().head().toString() + ")";
     }
 
-    private void writeObject(ObjectOutputStream out) throws IOException {
+    public void writeData(ObjectOutputStream out) throws IOException {
         out.defaultWriteObject();
     }
 

@@ -17,9 +17,7 @@
  */
 package org.apache.mrql;
 
-import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.spark.api.java.JavaRDD;
@@ -40,6 +38,14 @@ final public class MR_rdd extends MRData {
     }
 
     public void readFields ( DataInput in ) throws IOException {
+        throw new Error("RDDs are not serializable");
+    }
+
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {
         throw new Error("RDDs are not serializable");
     }
 

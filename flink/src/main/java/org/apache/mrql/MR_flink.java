@@ -17,9 +17,7 @@
  */
 package org.apache.mrql;
 
-import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.*;
 import org.apache.flink.api.java.DataSet;
 
 
@@ -38,6 +36,14 @@ final public class MR_flink extends MRData {
     }
 
     public void readFields ( DataInput in ) throws IOException {
+        throw new Error("DataSets are not serializable");
+    }
+
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {
         throw new Error("DataSets are not serializable");
     }
 

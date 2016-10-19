@@ -17,9 +17,7 @@
  */
 package org.apache.mrql;
 
-import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.*;
 
 
 /** used for BSP synchronization */
@@ -33,6 +31,12 @@ final public class MR_sync extends MRData {
     }
 
     public void readFields ( DataInput in ) throws IOException {}
+
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {}
 
     public int compareTo ( MRData x ) { return 0; }
 

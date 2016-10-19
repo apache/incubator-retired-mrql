@@ -17,9 +17,7 @@
  */
 package org.apache.mrql;
 
-import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.*;
 
 
 final public class Inv extends MRData {
@@ -43,7 +41,19 @@ final public class Inv extends MRData {
     }
 
     public void readFields ( DataInput in ) throws IOException {
-        value.readFields(in);
+        value = MRContainer.read(in);
+    }
+
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {
+        value.write(out);
+    }
+
+    private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
+        readFields(in);
     }
 
     public int compareTo ( MRData x ) {

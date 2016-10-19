@@ -17,9 +17,7 @@
  */
 package org.apache.mrql;
 
-import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 
@@ -36,6 +34,14 @@ final public class MR_dataset extends MRData {
 
     public void write ( DataOutput out ) throws IOException {
         new Bag(dataset.take(Integer.MAX_VALUE)).write(out);
+    }
+
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {
+        throw new Error("DataSets are not serializable");
     }
 
     public void readFields ( DataInput in ) throws IOException {

@@ -40,7 +40,7 @@ final public class FData implements CopyableValue<FData>, Comparable<FData> {
 
     @Override
     public void write ( DataOutputView out ) throws IOException {
-        data.write(out);
+         data.write(out);
     }
 
     @Override
@@ -48,7 +48,7 @@ final public class FData implements CopyableValue<FData>, Comparable<FData> {
 
     @Override
     public void copyTo ( FData target ) {
-        target.data = data;
+         target.data = data;
     }
 
     @Override

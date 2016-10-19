@@ -49,6 +49,18 @@ final public class MR_int extends MRData {
         value = WritableUtils.readVInt(in);
     }
 
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {
+        WritableUtils.writeVInt(out,value);
+    }
+
+    private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
+        readFields(in);
+    }
+
     public int compareTo ( MRData x ) {
         assert(x instanceof MR_int);
         return value - ((MR_int) x).value;

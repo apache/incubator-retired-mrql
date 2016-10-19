@@ -17,8 +17,7 @@
  */
 package org.apache.mrql;
 
-import java.io.IOException;
-import java.io.DataInput;
+import java.io.*;
 import java.io.DataOutput;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
@@ -55,6 +54,19 @@ public class Union extends MRData {
     public void readFields ( DataInput in ) throws IOException {
         tag = in.readByte();
         value = MRContainer.read(in);
+    }
+
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {
+        out.writeByte(tag);
+        value.write(out);
+    }
+
+    private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
+        readFields(in);
     }
 
     public int compareTo ( MRData x ) {

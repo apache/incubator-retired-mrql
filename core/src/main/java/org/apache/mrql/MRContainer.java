@@ -67,7 +67,10 @@ public class MRContainer implements WritableComparable<MRContainer>, Serializabl
     public String toString () { return data.toString(); }
 
     final public static MRData read ( DataInput in ) throws IOException {
-        final byte tag = in.readByte();
+        return readData(in.readByte(),in);
+    }
+
+    final public static MRData readData ( byte tag, DataInput in ) throws IOException {
         switch (tag) {
         case TUPLE: return Tuple.read(in);
         case NULL: return new Tuple(0);
@@ -120,14 +123,16 @@ public class MRContainer implements WritableComparable<MRContainer>, Serializabl
     }
 
     private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {
         data.write(out);
     }
 
     private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
         data = read(in);
     }
-
-    private void readObjectNoData () throws ObjectStreamException {}
 
     final static class MR_EOLB extends MRData {
         MR_EOLB () {}
@@ -139,6 +144,12 @@ public class MRContainer implements WritableComparable<MRContainer>, Serializabl
         }
 
         public void readFields ( DataInput in ) throws IOException {}
+
+        private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {}
 
         public int compareTo ( MRData x ) { return 0; }
 

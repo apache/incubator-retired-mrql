@@ -97,6 +97,20 @@ final public class Tuple extends MRData {
         return t;
     }
 
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {
+        WritableUtils.writeVInt(out,tuple.length);
+        for (short i = 0; i < tuple.length; i++)
+            tuple[i].write(out);
+    }
+
+    private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
+        readFields(in);
+    }
+
     final public static Tuple read2 ( DataInput in ) throws IOException {
         return new Tuple(MRContainer.read(in),MRContainer.read(in));
     }
@@ -107,7 +121,7 @@ final public class Tuple extends MRData {
 
     public void readFields ( DataInput in ) throws IOException {
         int n = WritableUtils.readVInt(in);
-        tuple = new Tuple[n];
+        tuple = new MRData[n];
         for ( short i = 0; i < n; i++ )
             tuple[i] = MRContainer.read(in);
     }

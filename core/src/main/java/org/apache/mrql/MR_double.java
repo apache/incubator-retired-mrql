@@ -17,9 +17,7 @@
  */
 package org.apache.mrql;
 
-import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 
@@ -55,6 +53,18 @@ final public class MR_double extends MRData {
         assert(x instanceof MR_double);
         double v = ((MR_double) x).value;
         return (value == v) ? 0 : ((value > v) ? 1 : -1);
+    }
+
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {
+        out.writeDouble(value);
+    }
+
+    private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
+        readFields(in);
     }
 
     final public static int compare ( byte[] x, int xs, int xl, byte[] y, int ys, int yl, int[] size ) {

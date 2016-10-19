@@ -17,9 +17,7 @@
  */
 package org.apache.mrql;
 
-import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 
@@ -51,6 +49,18 @@ final public class MR_byte extends MRData {
 
     public void readFields ( DataInput in ) throws IOException {
         value = in.readByte();
+    }
+
+    private void writeObject ( ObjectOutputStream out ) throws IOException {
+        writeData(out);
+    }
+
+    public void writeData ( ObjectOutputStream out ) throws IOException {
+        out.writeByte(value);
+    }
+
+    private void readObject ( ObjectInputStream in ) throws IOException, ClassNotFoundException {
+        readFields(in);
     }
 
     public int compareTo ( MRData x ) {

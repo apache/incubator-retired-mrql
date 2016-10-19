@@ -53,7 +53,6 @@ final public class RDDDataSource extends DataSource implements Serializable {
                     return acc.eval(t);
                 }
             },new Function2<MRData,MRData,MRData>() {
-                Tuple t = new Tuple(new Tuple(),new Tuple());
                 public MRData call ( MRData x, MRData y ) {
                     return (y.equals(zero)) ? x : y;
                 }

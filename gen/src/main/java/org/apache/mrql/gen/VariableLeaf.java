@@ -41,7 +41,7 @@ final public class VariableLeaf extends Tree {
 
     public String pretty ( int position ) { return value; }
 
-    private void writeObject(ObjectOutputStream out) throws IOException {
+    public void writeData(ObjectOutputStream out) throws IOException {
         out.defaultWriteObject();
     }
 
