@@ -21,6 +21,18 @@ import java.util.*;
 import java.lang.Math;
 
 
+final class MR_bag<T> extends Bag {
+    public MR_bag ( int size ) {
+        super(size);
+    }
+}
+
+final class MR_list<T> extends Bag {
+    public MR_list ( int size ) {
+        super(size);
+    }
+}
+
 /** System functions must be from MRData to MRData */
 final public class SystemFunctions {
 
@@ -194,6 +206,29 @@ final public class SystemFunctions {
     public static MR_bool contains ( MR_string x, MR_string y ) { return new MR_bool(x.get().contains(y.get())); }
     public static MR_int length ( MR_string x ) { return new MR_int(x.get().length()); }
     public static MR_string substring ( MR_string x, MR_int b, MR_int e ) { return new MR_string(x.get().substring(b.get(),e.get())); }
+    public static MR_string replace ( MR_string x, MR_string from, MR_string to ) { return new MR_string(x.get().replace(from.get(),to.get())); }
+    public static MR_string replaceAll ( MR_string x, MR_string from, MR_string to ) { return new MR_string(x.get().replaceAll(from.get(),to.get())); }
+    public static MR_string replaceFirst ( MR_string x, MR_string from, MR_string to ) { return new MR_string(x.get().replaceFirst(from.get(),to.get())); }
+    public static MR_bool startsWith ( MR_string x, MR_string y ) { return new MR_bool(x.get().startsWith(y.get())); }
+    public static MR_string toLowerCase ( MR_string x ) { return new MR_string(x.get().toLowerCase()); }
+    public static MR_string toUpperCase ( MR_string x ) { return new MR_string(x.get().toUpperCase()); }
+    public static MR_string trim ( MR_string x ) { return new MR_string(x.get().trim()); }
+
+    public static MR_list<MR_string> split ( MR_string x, MR_string reg ) {
+        final String[] vs = x.get().split(reg.get());
+        MR_list<MR_string> l = new MR_list<MR_string>(vs.length);
+        for (String v: vs)
+            l.add(new MR_string(v));
+        return l;
+    };
+
+    public static MR_list<MR_string> split ( MR_string x, MR_string reg, MR_int n ) {
+        final String[] vs = x.get().split(reg.get(),n.get());
+        MR_list<MR_string> l = new MR_list<MR_string>(vs.length);
+        for (String v: vs)
+            l.add(new MR_string(v));
+        return l;
+    }
 
     public static MR_bool exists ( Bag s ) {
         return (s.iterator().hasNext()) ? true_value : false_value;

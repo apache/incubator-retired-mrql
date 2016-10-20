@@ -17,7 +17,7 @@
  */
 package org.apache.mrql;
 
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import org.apache.mrql.gen.*;
 import java.util.*;
 
@@ -46,11 +46,19 @@ final public class ClassImporter {
         return false;
     }
 
-    private static Tree getType ( Class<?> c ) {
+    private static Tree getType ( Class<?> c, Type[] genTypes ) {
         String cn = c.getCanonicalName();
         Class<?>[] inf = c.getInterfaces();
         if (cn.equals("org.apache.mrql.MRData"))
             return new VariableLeaf("any");
+        if (cn.equals("org.apache.mrql.MR_list")) {
+            Class ec = ((Class)((ParameterizedType)genTypes[0]).getActualTypeArguments()[0]);
+            return new Node("list",new Trees(getType(ec,new Type[0])));
+        }
+        if (cn.equals("org.apache.mrql.MR_bag")) {
+            Class ec = ((Class)((ParameterizedType)genTypes[0]).getActualTypeArguments()[0]);
+            return new Node("bag",new Trees(getType(ec,new Type[0])));
+        }
         if (cn.startsWith("org.apache.mrql.MR_"))
             return new VariableLeaf(cn.substring(19));
         if (cn.equals("org.apache.mrql.Bag"))
@@ -69,9 +77,10 @@ final public class ClassImporter {
     private static Trees signature ( Method m ) {
         Class<?> co = m.getReturnType();
         Class<?>[] cs = m.getParameterTypes();
-        Trees as = new Trees(getType(co));
+        Type[] gs = m.getGenericParameterTypes();
+        Trees as = new Trees(getType(co,new Type[]{m.getGenericReturnType()}));
         for (int i = 0; i < cs.length; i++)
-            as = as.append(getType(cs[i]));
+            as = as.append(getType(cs[i],gs));
         return as;
     }
 
