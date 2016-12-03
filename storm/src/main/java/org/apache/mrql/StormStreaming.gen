@@ -1,0 +1,136 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ package org.apache.mrql;
+
+ import java.util.ArrayList;
+ import java.io.*;
+ import org.apache.mrql.gen.*;
+ import org.apache.storm.LocalCluster;
+ import org.apache.storm.trident.Stream;
+
+ /** Evaluates physical plans in Apache Storm mode */
+ public class StormStreaming extends StormEvaluator implements Serializable {
+    
+    private static ArrayList<Stream> streams;
+    private static ArrayList<String> stream_names;
+    private static int tries = 0;
+    private final static StormEvaluator ef = (StormEvaluator)Evaluator.evaluator;
+    
+
+    private static Stream stream_source ( Tree source, Environment env,String streamName) {
+        match source {
+            case BinaryStream(`file,_):
+            String path = ((MR_string)evalE(file,env)).get();
+            new BinaryDataSource(path,Plan.conf);
+            return topology.newStream(streamName, new HDFSFileInputStream(path, is_dataset, new StormBinaryInputFormat()));
+
+            case ParsedStream(`parser,`file,...args):
+            String path = ((MR_string)evalE(file,env)).get();
+            Class<? extends Parser> p = DataSource.parserDirectory.get(parser.toString());
+            if (p == null)
+            throw new Error("Unknown parser: "+parser);
+            new ParsedDataSource(path,p,args,Plan.conf);
+            try {
+                dump_source_dir();
+                } catch (IOException ex) {
+                  throw new Error("Cannot dump source directory");
+              };
+              return topology.newStream(streamName, new HDFSFileInputStream(path, is_dataset, new StormParsedInputFormat()));
+              
+          };
+          throw new Error("Unknown stream source: "+print_query(source));
+      }
+
+      private static Tree get_streams ( Tree plan, Environment env ) {
+        match plan {
+            case Stream(lambda(`v,`b),`source):
+            streams.add(stream_source(source,env,v.toString()));
+            stream_names.add(v.toString());
+            return get_streams(b,env);
+        };
+        return plan;
+    }
+
+    /** bind the pattern variables to values */
+    private static void bind_list ( Tree pattern, Tree src, Environment env, Environment rdd_env ) {
+        //System.out.println("Inside bind_list ");
+        throw new Error("Operation not implemented.");
+    }
+    
+    private static void stream_processing ( final Tree plan, final Environment env,
+        final Environment dataset_env, final Function f ) {
+       
+        if (streams.size() == 0)
+        throw new Error("No input streams in query");
+        ArrayList<Stream> rdds = new ArrayList<Stream>();
+        for ( Stream jd: streams )
+        rdds.add(jd);
+
+        
+        final ArrayList<String> vars = stream_names;
+
+
+        long t = System.currentTimeMillis();
+        Environment rdd_env = dataset_env;
+        int i = 0;
+        
+        for(String name:stream_names){
+            MRData d = new MR_stream(streams.get(i));
+            global_streams = new Environment(vars.get(i),d,global_streams);
+            rdd_env = new Environment(vars.get(i++),d,rdd_env);
+        }
+
+        match plan {
+            case lambda(`pat,`e):
+            bind_list(pat,e,env,rdd_env);
+            f.eval(null);
+        case _: // non-incremental streaming
+        final MRData result = ef.evalE(plan,env);
+    };
+    
+}
+
+/** evaluate plan in stream mode: evaluate each batch of data and apply the function f */
+final public static void evaluate ( Tree plan, Environment env, Environment dataset_env, Function f ) {
+    streams = new ArrayList<Stream>();
+    stream_names = new ArrayList<String>();
+    match plan {
+        case lambda(`p,`b):
+        b = get_streams(b,env);
+        stream_processing(#<lambda(`p,`b)>,env,null,f);
+        case _:  // non-incremental streaming
+        plan = get_streams(plan,env);
+        stream_processing(plan,env,dataset_env,f);
+    };
+
+    org.apache.storm.Config conf = new org.apache.storm.Config();
+    conf.setFallBackOnJavaSerialization(false);
+    try{
+
+        conf.setMaxSpoutPending(20);
+        //StormSubmitter.submitTopology("mrqlstormevaluator",conf,topology.build());
+        LocalCluster cluster = new LocalCluster();
+        cluster.submitTopology("mrqlstormevaluator", conf, topology.build());
+        Thread.sleep(15000);
+        cluster.shutdown();
+    }
+    catch(Exception e2){
+        e2.printStackTrace();
+    }
+}
+}

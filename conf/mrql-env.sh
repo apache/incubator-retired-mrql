@@ -64,7 +64,6 @@ MAPRED_JOB_TRACKER=
 # The HDFS namenode URI (eg, hdfs://localhost:9000/). If empty, it is the one defined in core-site.xml
 FS_DEFAULT_NAME=
 
-
 # Optional: Hama configuration. Supports versions 0.6.2, 0.6.3, 0.6.4, and 0.7.0, and 0.7.1
 HAMA_VERSION=0.7.1
 # The Hama installation directory
@@ -83,7 +82,7 @@ BSP_SPLIT_INPUT=
 # Spark versions 0.8.1, 0.9.0, and 0.9.1 are supported by MRQL 0.9.0 only.
 # You may use the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
 # Tested in local, standalone deploy, and Yarn modes
-SPARK_HOME=${HOME}/spark-1.6.2-bin-hadoop2.6
+SPARK_HOME=${HOME}/spark
 # URI of the Spark master node:
 #   to run Spark on Standalone Mode, set it to spark://`hostname`:7077
 #   to run Spark on a YARN cluster, set it to "yarn-client"
@@ -100,13 +99,21 @@ SPARK_EXECUTOR_MEMORY=1G
 
 
 # Optional: Flink configuration. Supports version 1.0.2 and 1.0.3
-FLINK_VERSION=1.0.2
+FLINK_VERSION=1.1.2
 # Flink installation directory
-FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
+FLINK_HOME=${HOME}/ap/flink-${FLINK_VERSION}
 # number of slots per TaskManager (typically, the number of cores per node)
 FLINK_SLOTS=4
 # memory per TaskManager
 FLINK_TASK_MANAGER_MEMORY=2048
+
+
+
+# STORM CONFIGURATIONS
+STORM_VERSION=1.0.2
+
+#Strom installation directory
+STORM_HOME=${HOME}/apache-storm-${STORM_VERSION}
 
 
 # Claspaths
@@ -117,6 +124,14 @@ for I in ${FLINK_HOME}/lib/*.jar; do
     FLINK_JARS=${FLINK_JARS}:$I
 done
 
+STORM_JARS=.
+for I in ${STORM_HOME}/lib/*.jar; do
+    
+    if [[ $I != *"log4j-over-slf4j-"* ]]
+    then
+      STORM_JARS=${STORM_JARS}:$I
+    fi
+done
 
 # YARN-enabled assembly jar
 if [[ -d ${SPARK_HOME}/assembly/target ]]; then

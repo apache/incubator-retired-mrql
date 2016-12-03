@@ -93,6 +93,8 @@ public class Plan {
                 conf.set("mrql.jar.path",Compiler.jar_path);
             else if (Config.spark_mode)
                 conf.set("mrql.jar.path",local_path.toString());
+            else if (Config.storm_mode)
+                conf.set("mrql.jar.path",Compiler.jar_path);
             else {
                 // distribute the jar file with the compiled arguments to all clients
                 Path hdfs_path = new Path("mrql-tmp/class"+random_generator.nextInt(1000000)+".jar");

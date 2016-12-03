@@ -34,8 +34,8 @@ import java.util.Enumeration;
 public abstract class QueryTest extends TestCase {
 	private static String TEST_QUERY_DIR = "../tests/queries";
 	private static String TEST_RESULT_DIR = "../tests/results";
-	private File queryDir;
-	private File resultDir;
+	protected File queryDir;
+	protected File resultDir;
 	private static Evaluator evaluator;
 	
 	@BeforeClass
@@ -154,7 +154,7 @@ public abstract class QueryTest extends TestCase {
 		assertEquals(0, queryAndCompare(new File(queryDir, "xml_2.mrql"), resultDir));
 	}
 
-    private int queryAndCompare ( File query, File resultDir ) throws Exception {
+    protected int queryAndCompare ( File query, File resultDir ) throws Exception {
         System.err.println("Testing "+query);
         Translator.global_reset();
         String qname = query.getName();

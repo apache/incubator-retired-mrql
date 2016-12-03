@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ -->
+ <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.apache.mrql</groupId>
+  <artifactId>mrql-storm</artifactId>
+  <packaging>jar</packaging>
+  <name>Apache MRQL Storm mode</name>
+  <description>Apache MRQL evaluation in storm mode on Apache storm</description>
+  <url>http://mrql.incubator.apache.org/</url>
+  <inceptionYear>2016</inceptionYear>
+
+  <parent>
+    <groupId>org.apache.mrql</groupId>
+    <artifactId>mrql-parent</artifactId>
+    <version>0.9.8-incubating-SNAPSHOT</version>
+  </parent>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.mrql</groupId>
+      <artifactId>mrql-gen</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.mrql</groupId>
+      <artifactId>mrql-core</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.storm</groupId>
+      <artifactId>storm-core</artifactId>
+      <version>${storm.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.storm</groupId>
+      <artifactId>storm-hdfs</artifactId>
+      <version>${storm.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.mrql</groupId>
+      <artifactId>mrql-core</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals><goal>add-source</goal></goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.14.1</version>
+        <configuration>
+          <argLine>-Xmx1024m</argLine>
+          <useSystemClassLoader>true</useSystemClassLoader>
+          <skipTests>true</skipTests>
+<!--  Storm mode not ready for tests yet
+          <skipTests>${skipTests}</skipTests>
+-->
+        </configuration>
+      </plugin>
+      <plugin>
+       <groupId>org.apache.maven.plugins</groupId>
+       <artifactId>maven-shade-plugin</artifactId>
+       <version>2.1</version>
+       <executions>
+         <execution>
+           <phase>package</phase>
+           <goals>
+             <goal>shade</goal>
+           </goals>
+           <configuration>
+             <artifactSet>
+              <includes>
+               <include>org.apache.mrql:*</include>
+             </includes>
+             <excludes>
+               <exclude>org.apache.mrql:mrql-gen</exclude>
+               <exclude>org.apache.mrql:mrql-core</exclude>
+             </excludes>
+           </artifactSet>
+         </configuration>
+       </execution>
+     </executions>
+   </plugin>
+   <plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-jar-plugin</artifactId>
+    <version>2.4</version>
+    <configuration>
+     <finalName>mrql-storm-${project.version}</finalName>
+     <outputDirectory>${project.parent.basedir}/lib</outputDirectory>
+   </configuration>
+ </plugin>
+ <plugin>
+   <artifactId>maven-antrun-plugin</artifactId>
+   <version>1.7</version>
+   <executions>
+     <execution>
+       <phase>generate-sources</phase>
+       <goals>
+         <goal>run</goal>
+       </goals>
+       <configuration>
+        <target>
+          <mkdir dir="${project.build.directory}/generated-sources/org/apache/mrql" />
+          <property name="compile_classpath" refid="maven.compile.classpath" />
+          <fileset id="mr.gen.path" dir="src/main/java/org/apache/mrql" includes="*.gen" />
+          <pathconvert pathsep=" " property="mr.gen.files" refid="mr.gen.path" />
+          <java classname="org.apache.mrql.gen.Main" classpath="../lib/mrql-gen-${project.version}.jar:${compile_classpath}">
+            <arg line="${mr.gen.files}" />
+            <arg line="-o" />
+            <arg file="${project.build.directory}/generated-sources/org/apache/mrql" />
+          </java>
+        </target>
+      </configuration>
+    </execution>
+  </executions>
+</plugin>
+</plugins>
+</build>
+</project>

@@ -1,0 +1,77 @@
+#!/bin/bash
+#--------------------------------------------------------------------------------
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#--------------------------------------------------------------------------------
+#
+# run Apache MRQL in Storm mode using Apache Storm
+#
+#--------------------------------------------------------------------------------
+
+MRQL_HOME="$(cd `dirname $0`/..; pwd -P)"
+
+. "$MRQL_HOME/conf/mrql-env.sh"
+
+GEN_JAR=`ls "$MRQL_HOME"/lib/mrql-gen-*.jar`
+CORE_JAR=`ls "$MRQL_HOME"/lib/mrql-core-*.jar`
+MRQL_JAR=`ls "$MRQL_HOME"/lib/mrql-storm-*.jar`
+FULL_JAR="/tmp/${USER}_mrql_storm.jar"
+CLASS_DIR="/tmp/${USER}_mrql_classes"
+
+if [[ -z ${STORM_JARS} ]]; then
+   echo "*** Cannot find the Storm jar file. Need to edit mrql-env.sh"; exit -1
+fi
+HADOOP_JARS=${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/lib/*
+LAMDA_JARS="/tmp/mrql_jar_${USER}/*"
+
+export JAVA_HOME FS_DEFAULT_NAME BSP_MASTER_ADDRESS STORM_ZOOKEEPER_QUORUM BSP_SPLIT_INPUT
+
+if [[ ($MRQL_JAR -nt $FULL_JAR) ]]; then
+   rm -rf $CLASS_DIR
+   mkdir -p $CLASS_DIR
+   pushd $CLASS_DIR > /dev/null
+   $JAVA_HOME/bin/jar xf $CUP_JAR
+   $JAVA_HOME/bin/jar xf $JLINE_JAR
+   $JAVA_HOME/bin/jar xf $GEN_JAR
+   $JAVA_HOME/bin/jar xf $CORE_JAR
+   $JAVA_HOME/bin/jar xf $MRQL_JAR
+   #$JAVA_HOME/bin/jar xf $HADOOP_JARS
+   #$JAVA_HOME/bin/jar xf $LAMDA_JARS
+   cd ..
+   $JAVA_HOME/bin/jar cf $FULL_JAR -C $CLASS_DIR .
+   popd > /dev/null
+fi
+
+if [ "$1" == "-local" ]; then
+   export STORM_CLASSPATH=$FULL_JAR  # FOR LOCAL CLUSTER IN STORM
+   export storm.jar=$FULL_JAR
+   $STORM_HOME/bin/storm jar --config $STORM_CONFIG jar $FULL_JAR org.apache.mrql.Main -storm $*
+else if [ "$1" == "-dist" ]; then
+   #export STORM_CLASSPATH=$FULL_JAR  # FOR LOCAL CLUSTER IN STORM
+   #export storm.jar=$FULL_JAR
+   #echo $storm.jar
+   $STORM_HOME/bin/storm jar --config $STORM_CONFIG jar $FULL_JAR org.apache.mrql.Main -storm $*
+else
+   #storm.jar=$FULL_JAR
+   #echo $storm.jar
+   #$STORM_HOME/bin/storm jar $FULL_JAR org.apache.mrql.Main -storm $*
+   #$JAVA_HOME/bin/java -classpath "$FULL_JAR:$STORM_JARS:$HADOOP_JARS" -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=1044 org.apache.mrql.Main -storm $*
+   $JAVA_HOME/bin/java -classpath "$FULL_JAR:$STORM_JARS:$HADOOP_JARS:$LAMDA_JARS" org.apache.mrql.Main -storm $*
+fi
+fi

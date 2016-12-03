@@ -41,6 +41,8 @@ final public class Config {
     public static boolean spark_mode = false;
     // true, for Flink mode
     public static boolean flink_mode = false;
+    // true, for Storm mode
+    public static boolean storm_mode = false;
     // if true, it process the input interactively
     public static boolean interactive = true;
     // compile the MR functional arguments to Java bytecode at run-time
@@ -193,7 +195,11 @@ final public class Config {
             } else if (args[i].equals("-flink")) {
                 flink_mode = true;
                 i++;
-            } else if (args[i].equals("-bsp_tasks")) {
+            }else if (args[i].equals("-storm")) {
+                storm_mode = true;
+                i++;
+            }  
+            else if (args[i].equals("-bsp_tasks")) {
                 if (++i >= args.length && Integer.parseInt(args[i]) < 1)
                     throw new Error("Expected max number of bsp tasks > 1");
                 nodes = Integer.parseInt(args[i]);
