@@ -503,7 +503,7 @@ public class Bag extends MRData implements Iterable<MRData> {
         Iterator<MRData> xi = xt.iterator();
         Iterator<MRData> yi = iterator();
         while ( xi.hasNext() && yi.hasNext() ) {
-            int c = xi.next().compareTo(yi.next());
+            int c = yi.next().compareTo(xi.next());
             if (c < 0)
                 return -1;
             else if (c > 0)
@@ -551,7 +551,7 @@ public class Bag extends MRData implements Iterable<MRData> {
         while ( xi.hasNext() && yi.hasNext() )
             if ( !xi.next().equals(yi.next()) )
                 return false;
-        return xi.hasNext() || yi.hasNext();
+        return !xi.hasNext() && !yi.hasNext();
     }
 
     /** the hash code of this Bag is the XOR of the hash code of its elements */
