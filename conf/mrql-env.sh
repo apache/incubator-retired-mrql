@@ -82,7 +82,7 @@ BSP_SPLIT_INPUT=
 # Spark versions 0.8.1, 0.9.0, and 0.9.1 are supported by MRQL 0.9.0 only.
 # You may use the Spark prebuilts bin-hadoop1 or bin-hadoop2 (Yarn)
 # Tested in local, standalone deploy, and Yarn modes
-SPARK_HOME=${HOME}/spark
+SPARK_HOME=${HOME}/spark-1.6.2-bin-hadoop2.6
 # URI of the Spark master node:
 #   to run Spark on Standalone Mode, set it to spark://`hostname`:7077
 #   to run Spark on a YARN cluster, set it to "yarn-client"
@@ -99,9 +99,9 @@ SPARK_EXECUTOR_MEMORY=1G
 
 
 # Optional: Flink configuration. Supports version 1.0.2 and 1.0.3
-FLINK_VERSION=1.1.2
+FLINK_VERSION=1.0.2
 # Flink installation directory
-FLINK_HOME=${HOME}/ap/flink-${FLINK_VERSION}
+FLINK_HOME=${HOME}/flink-${FLINK_VERSION}
 # number of slots per TaskManager (typically, the number of cores per node)
 FLINK_SLOTS=4
 # memory per TaskManager

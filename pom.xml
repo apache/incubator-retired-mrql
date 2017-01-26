@@ -49,7 +49,7 @@
     <hama.version>0.7.1</hama.version>
     <spark.version>1.6.2</spark.version>
     <scala.version>2.10</scala.version>
-    <flink.version>1.0.3</flink.version>
+    <flink.version>1.0.2</flink.version>
     <storm.version>1.0.2</storm.version>
     <skipTests>true</skipTests>
   </properties>

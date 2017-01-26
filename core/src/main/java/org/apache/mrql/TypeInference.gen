@@ -1448,6 +1448,7 @@ public class TypeInference extends Translator {
             };
         case callM(`f,_,...el):
             return type_inference(#<call(`f,...el)>);
+        case materialize(`x): return type_inference2(x);
         case true: return #<bool>;
         case false: return #<bool>;
         case null: return #<any>;

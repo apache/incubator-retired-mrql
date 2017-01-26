@@ -939,12 +939,13 @@ public class Interpreter extends TypeInference {
             ne = Simplification.simplify_all(ne);
             if (Streaming.is_streaming(ne) && !Config.incremental)
                 ne = Streaming.streamify(ne);
+            ne = Materialization.materialize_terms(ne);
             Tree plan = PlanGeneration.makePlan(ne);
             if (Config.bsp_mode) {
                 BSPTranslator.reset();
                 if (Config.trace)
                     System.out.println("Physical plan:\n"+plan.pretty(0));
-                plan = Materialization.materialize_terms(BSPTranslator.constructBSPplan(plan));
+                plan = BSPTranslator.constructBSPplan(plan);
                 if (Config.trace)
                     System.out.println("BSP plan:\n"+plan.pretty(0));
                 else {
@@ -955,7 +956,7 @@ public class Interpreter extends TypeInference {
             } else {
                 if (Config.hadoop_mode)
                     plan = PlanGeneration.physical_plan(plan);
-                plan = Materialization.materialize_terms(AlgebraicOptimization.common_factoring(plan));
+                plan = AlgebraicOptimization.common_factoring(plan);
                 if (Config.trace)
                     System.out.println("Physical plan:\n"+plan.pretty(0));
                 else {
