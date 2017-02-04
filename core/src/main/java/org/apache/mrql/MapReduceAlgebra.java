@@ -654,7 +654,7 @@ final public class MapReduceAlgebra {
                 Tuple d = (Tuple)loop.eval(s);
                 for ( int j = 0; j < d.size(); j++ )
                     if (d.get(j) instanceof Bag) {
-                        s.set(j,d.get(i));
+                        s.set(j,d.get(j));
                         ((Bag)d.get(j)).materialize();
                     } else if (d.get(j) instanceof MR_dataset) {
                         DataSet ds = ((MR_dataset)d.get(j)).dataset();
