@@ -21,7 +21,8 @@
     <href>http://mrql.incubator.apache.org/</href>
   </bannerLeft>
   <bannerRight>
-    <src>http://incubator.apache.org/images/egg-logo.png</src>
+    <src>http://incubator.apache.org/images/incubator_feather_egg_logo.png</src>
+    <width>200px</width>
     <href>http://incubator.apache.org/</href>
   </bannerRight>
 
